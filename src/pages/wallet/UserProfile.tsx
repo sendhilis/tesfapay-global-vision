@@ -1,17 +1,20 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Shield, Star, ChevronRight, Bell, HelpCircle, LogOut, Upload } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 const UserProfile = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [notifs, setNotifs] = useState(true);
+  const [kycLevel, setKycLevel] = useState(1);
 
   const menuItems = [
-    { icon: Shield, label: "Security & MPIN", sub: "Biometrics enabled", action: () => {} },
-    { icon: Star, label: "Loyalty & Rewards", sub: "1,240 Tesfa Points", action: () => {} },
-    { icon: Upload, label: "Upgrade KYC Level", sub: "Currently Level 1 → Apply Level 2", action: () => {}, badge: "Upgrade" },
-    { icon: Bell, label: "Notification Preferences", sub: "Manage alerts & nudge intensity", action: () => {} },
-    { icon: HelpCircle, label: "Help & Support", sub: "Chat with Tesfa AI or call 8711", action: () => {} },
+    { icon: Shield, label: "Security & MPIN", sub: "Biometrics enabled", action: () => toast({ title: "Coming Soon", description: "MPIN management will be available in next update." }) },
+    { icon: Star, label: "Loyalty & Rewards", sub: "1,240 Tesfa Points", action: () => navigate("/wallet/loyalty") },
+    { icon: Upload, label: "Upgrade KYC Level", sub: kycLevel === 1 ? "Currently Level 1 → Apply Level 2" : "✅ KYC Level 2 Active", action: () => kycLevel === 1 ? navigate("/wallet/kyc-upgrade") : undefined, badge: kycLevel === 1 ? "Upgrade" : undefined },
+    { icon: Bell, label: "Notification Preferences", sub: "Manage alerts & nudge intensity", action: () => toast({ title: "Coming Soon", description: "Notification preferences will be available soon." }) },
+    { icon: HelpCircle, label: "Help & Support", sub: "Chat with Tesfa AI or call 8711", action: () => toast({ title: "Help & Support", description: "Tesfa AI is available via the floating chat button." }) },
   ];
 
   return (
