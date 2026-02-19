@@ -27,6 +27,7 @@ import MerchantPay from "./pages/wallet/MerchantPay";
 import MicroLoan from "./pages/wallet/MicroLoan";
 import CashInOut from "./pages/wallet/CashInOut";
 import LoyaltyRewards from "./pages/wallet/LoyaltyRewards";
+import KYCUpgrade from "./pages/wallet/KYCUpgrade";
 import Onboarding from "./pages/Onboarding";
 import LoginPage from "./pages/LoginPage";
 
@@ -57,6 +58,7 @@ const App = () => (
             <Route path="loan" element={<MicroLoan />} />
             <Route path="cashinout" element={<CashInOut />} />
             <Route path="loyalty" element={<LoyaltyRewards />} />
+            <Route path="kyc-upgrade" element={<KYCUpgrade />} />
           </Route>
 
           {/* Admin Console Routes */}
