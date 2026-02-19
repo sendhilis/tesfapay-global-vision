@@ -1,20 +1,31 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Sparkles, CheckCircle, TrendingUp, AlertCircle } from "lucide-react";
 
 const eligibilityScore = 78;
 const maxLoan = 8000;
 
-const repaymentPlans = [
-  { months: 1, amount: 8160, monthly: 8160, interest: "2%" },
-  { months: 3, amount: 8400, monthly: 2800, interest: "5%" },
-  { months: 6, amount: 8800, monthly: 1466, interest: "10%" },
+const REPAYMENT_OPTIONS = [
+  { months: 1, interestRate: 0.02, interest: "2%" },
+  { months: 3, interestRate: 0.05, interest: "5%" },
+  { months: 6, interestRate: 0.10, interest: "10%" },
 ];
 
 const MicroLoan = () => {
   const [stage, setStage] = useState<"eligibility" | "apply" | "confirm" | "disbursed">("eligibility");
   const [loanAmount, setLoanAmount] = useState("3000");
-  const [plan, setPlan] = useState(repaymentPlans[1]);
+  const [selectedMonths, setSelectedMonths] = useState(3);
   const [purpose, setPurpose] = useState("");
+
+  const repaymentPlans = useMemo(() => {
+    const amount = parseFloat(loanAmount) || 0;
+    return REPAYMENT_OPTIONS.map(o => {
+      const total = Math.round(amount * (1 + o.interestRate));
+      const monthly = Math.round(total / o.months);
+      return { months: o.months, amount: total, monthly, interest: o.interest };
+    });
+  }, [loanAmount]);
+
+  const plan = repaymentPlans.find(p => p.months === selectedMonths) ?? repaymentPlans[1];
 
   const scoreColor = eligibilityScore >= 70 ? "text-green-400" : eligibilityScore >= 50 ? "text-gold" : "text-red-400";
   const scoreLabel = eligibilityScore >= 70 ? "Excellent" : eligibilityScore >= 50 ? "Good" : "Fair";
@@ -183,9 +194,9 @@ const MicroLoan = () => {
               {repaymentPlans.map(p => (
                 <button
                   key={p.months}
-                  onClick={() => setPlan(p)}
+                  onClick={() => setSelectedMonths(p.months)}
                   className={`w-full glass rounded-2xl p-3.5 flex items-center justify-between border-2 transition-all ${
-                    plan.months === p.months ? "border-tesfa-gold bg-tesfa-gold/10" : "border-transparent"
+                    selectedMonths === p.months ? "border-tesfa-gold bg-tesfa-gold/10" : "border-transparent"
                   }`}
                 >
                   <div className="text-left">
