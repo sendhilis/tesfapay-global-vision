@@ -82,11 +82,25 @@ const Index = () => {
               Open My Wallet <ArrowRight className="w-4 h-4" />
             </button>
             <button
-              onClick={() => navigate("/onboarding")}
-              className="w-full py-3.5 rounded-2xl font-semibold text-gold glass border border-tesfa-gold/30 flex items-center justify-center gap-2 hover:bg-tesfa-gold/10 transition-colors text-sm"
+              onClick={() => navigate("/agent")}
+              className="w-full py-3.5 rounded-2xl font-semibold text-foreground glass border border-border flex items-center justify-center gap-2 hover:border-primary/40 transition-colors text-sm"
             >
-              Create Account — ፈጠር
+              🏪 Agent Portal — ወኪል
             </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => navigate("/onboarding")}
+                className="flex-1 py-3 rounded-2xl font-semibold text-primary glass border border-primary/30 text-xs hover:bg-primary/10 transition-colors"
+              >
+                Create Account
+              </button>
+              <button
+                onClick={() => navigate("/agent/onboarding")}
+                className="flex-1 py-3 rounded-2xl font-semibold text-muted-foreground glass border border-border text-xs hover:border-primary/30 transition-colors"
+              >
+                Become an Agent
+              </button>
+            </div>
           </div>
         </div>
 

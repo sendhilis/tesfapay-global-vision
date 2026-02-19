@@ -30,6 +30,15 @@ import LoyaltyRewards from "./pages/wallet/LoyaltyRewards";
 import KYCUpgrade from "./pages/wallet/KYCUpgrade";
 import Onboarding from "./pages/Onboarding";
 import LoginPage from "./pages/LoginPage";
+import AgentOnboarding from "./pages/agent/AgentOnboarding";
+import AgentLayout from "./pages/agent/AgentLayout";
+import AgentHome from "./pages/agent/AgentHome";
+import AgentCashIn from "./pages/agent/AgentCashIn";
+import AgentCashOut from "./pages/agent/AgentCashOut";
+import AgentCustomers from "./pages/agent/AgentCustomers";
+import AgentCommission from "./pages/agent/AgentCommission";
+import AgentFloat from "./pages/agent/AgentFloat";
+import AgentProfile from "./pages/agent/AgentProfile";
 
 const queryClient = new QueryClient();
 
@@ -71,6 +80,18 @@ const App = () => (
             <Route path="emoney" element={<AdminEMoney />} />
             <Route path="reports" element={<AdminReports />} />
             <Route path="analytics" element={<AdminAnalytics />} />
+          </Route>
+
+          {/* Agent Portal Routes */}
+          <Route path="/agent/onboarding" element={<AgentOnboarding />} />
+          <Route path="/agent" element={<AgentLayout />}>
+            <Route index element={<AgentHome />} />
+            <Route path="cashin" element={<AgentCashIn />} />
+            <Route path="cashout" element={<AgentCashOut />} />
+            <Route path="customers" element={<AgentCustomers />} />
+            <Route path="commission" element={<AgentCommission />} />
+            <Route path="float" element={<AgentFloat />} />
+            <Route path="profile" element={<AgentProfile />} />
           </Route>
 
           <Route path="*" element={<NotFound />} />
