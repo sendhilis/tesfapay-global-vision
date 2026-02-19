@@ -7,11 +7,16 @@ import {
 import tesfaLogo from "@/assets/tesfa-logo.png";
 import adminHeroBg from "@/assets/admin-hero-bg.jpg";
 
+import { Banknote, Building2, FileText as ReportIcon } from "lucide-react";
+
 const navItems = [
   { to: "/admin", icon: LayoutDashboard, label: "Dashboard", end: true },
   { to: "/admin/users", icon: Users, label: "Users & KYC" },
   { to: "/admin/transactions", icon: ArrowLeftRight, label: "Transactions" },
   { to: "/admin/kyc", icon: FileCheck, label: "KYC Review" },
+  { to: "/admin/agents", icon: Building2, label: "Agents & Merchants" },
+  { to: "/admin/emoney", icon: Banknote, label: "EMoney Mgmt" },
+  { to: "/admin/reports", icon: ReportIcon, label: "Reports" },
   { to: "/admin/analytics", icon: BarChart2, label: "Analytics" },
 ];
 

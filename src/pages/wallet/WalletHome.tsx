@@ -5,10 +5,13 @@ import { useNavigate } from "react-router-dom";
 const quickActions = [
   { label: "Send Money", icon: "💸", color: "bg-tesfa-gold/15 border-tesfa-gold/20", to: "/wallet/send" },
   { label: "Pay Bills", icon: "📄", color: "bg-blue-500/15 border-blue-500/20", to: "/wallet/pay" },
-  { label: "Savings", icon: "🏦", color: "bg-green-500/15 border-green-500/20", to: "/wallet/savings" },
-  { label: "Airtime", icon: "📱", color: "bg-purple-500/15 border-purple-500/20", to: "/wallet/pay" },
-  { label: "Request", icon: "🤝", color: "bg-orange-500/15 border-orange-500/20", to: "/wallet/send" },
-  { label: "Merchant Pay", icon: "🏪", color: "bg-pink-500/15 border-pink-500/20", to: "/wallet/pay" },
+  { label: "Request", icon: "🤝", color: "bg-orange-500/15 border-orange-500/20", to: "/wallet/request" },
+  { label: "Airtime", icon: "📱", color: "bg-purple-500/15 border-purple-500/20", to: "/wallet/airtime" },
+  { label: "Cash In/Out", icon: "🏧", color: "bg-green-500/15 border-green-500/20", to: "/wallet/cashinout" },
+  { label: "Merchant Pay", icon: "🏪", color: "bg-pink-500/15 border-pink-500/20", to: "/wallet/merchant" },
+  { label: "Micro-Loan", icon: "💳", color: "bg-red-500/15 border-red-500/20", to: "/wallet/loan" },
+  { label: "Rewards", icon: "🌟", color: "bg-yellow-500/15 border-yellow-500/20", to: "/wallet/loyalty" },
+  { label: "Savings", icon: "🏦", color: "bg-teal-500/15 border-teal-500/20", to: "/wallet/savings" },
 ];
 
 const recentTxns = [

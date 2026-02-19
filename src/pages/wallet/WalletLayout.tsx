@@ -1,6 +1,7 @@
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import { Home, Send, Receipt, PiggyBank, History, User } from "lucide-react";
 import tesfaLogo from "@/assets/tesfa-logo.png";
+import TesfaAI from "@/components/TesfaAI";
 
 const navItems = [
   { to: "/wallet", icon: Home, label: "Home" },
@@ -31,6 +32,9 @@ const WalletLayout = () => {
       <div className="flex-1 overflow-y-auto scrollbar-none pb-20">
         <Outlet />
       </div>
+
+      {/* Tesfa AI floating assistant */}
+      <TesfaAI />
 
       {/* Bottom nav */}
       <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md glass border-t border-border pb-safe z-50">

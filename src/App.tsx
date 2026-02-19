@@ -11,6 +11,9 @@ import AdminTransactions from "./pages/admin/AdminTransactions";
 import AdminKYC from "./pages/admin/AdminKYC";
 import AdminAnalytics from "./pages/admin/AdminAnalytics";
 import AdminLayout from "./pages/admin/AdminLayout";
+import AdminEMoney from "./pages/admin/AdminEMoney";
+import AdminReports from "./pages/admin/AdminReports";
+import AdminAgents from "./pages/admin/AdminAgents";
 import WalletHome from "./pages/wallet/WalletHome";
 import SendMoney from "./pages/wallet/SendMoney";
 import PayBills from "./pages/wallet/PayBills";
@@ -18,6 +21,12 @@ import SavingsGoals from "./pages/wallet/SavingsGoals";
 import TransactionHistory from "./pages/wallet/TransactionHistory";
 import UserProfile from "./pages/wallet/UserProfile";
 import WalletLayout from "./pages/wallet/WalletLayout";
+import RequestMoney from "./pages/wallet/RequestMoney";
+import AirtimeTopup from "./pages/wallet/AirtimeTopup";
+import MerchantPay from "./pages/wallet/MerchantPay";
+import MicroLoan from "./pages/wallet/MicroLoan";
+import CashInOut from "./pages/wallet/CashInOut";
+import LoyaltyRewards from "./pages/wallet/LoyaltyRewards";
 import Onboarding from "./pages/Onboarding";
 import LoginPage from "./pages/LoginPage";
 
@@ -38,10 +47,16 @@ const App = () => (
           <Route path="/wallet" element={<WalletLayout />}>
             <Route index element={<WalletHome />} />
             <Route path="send" element={<SendMoney />} />
+            <Route path="request" element={<RequestMoney />} />
             <Route path="pay" element={<PayBills />} />
+            <Route path="airtime" element={<AirtimeTopup />} />
+            <Route path="merchant" element={<MerchantPay />} />
             <Route path="savings" element={<SavingsGoals />} />
             <Route path="history" element={<TransactionHistory />} />
             <Route path="profile" element={<UserProfile />} />
+            <Route path="loan" element={<MicroLoan />} />
+            <Route path="cashinout" element={<CashInOut />} />
+            <Route path="loyalty" element={<LoyaltyRewards />} />
           </Route>
 
           {/* Admin Console Routes */}
@@ -50,6 +65,9 @@ const App = () => (
             <Route path="users" element={<AdminUsers />} />
             <Route path="transactions" element={<AdminTransactions />} />
             <Route path="kyc" element={<AdminKYC />} />
+            <Route path="agents" element={<AdminAgents />} />
+            <Route path="emoney" element={<AdminEMoney />} />
+            <Route path="reports" element={<AdminReports />} />
             <Route path="analytics" element={<AdminAnalytics />} />
           </Route>
 
