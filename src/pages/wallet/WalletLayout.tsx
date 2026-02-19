@@ -15,7 +15,7 @@ const navItems = [
 const WalletLayout = () => {
   const navigate = useNavigate();
   return (
-    <div className="min-h-screen bg-background flex flex-col max-w-md mx-auto relative">
+    <div className="min-h-screen min-h-dvh bg-background flex flex-col max-w-md mx-auto relative overflow-x-hidden">
       {/* Top status bar */}
       <div className="flex items-center justify-between px-5 py-3 pt-safe glass border-b border-border">
         <div className="flex items-center gap-2" onClick={() => navigate("/")} role="button">

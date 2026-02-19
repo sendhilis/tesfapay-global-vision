@@ -16,7 +16,7 @@ export default defineConfig(({ mode }) => ({
     mode === "development" && componentTagger(),
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["favicon.ico", "robots.txt"],
+      includeAssets: ["favicon.ico", "robots.txt", "icon-192.png", "icon-512.png"],
       workbox: {
         navigateFallbackDenylist: [/^\/~oauth/],
       },
@@ -29,10 +29,17 @@ export default defineConfig(({ mode }) => ({
         display: "standalone",
         orientation: "portrait",
         start_url: "/",
+        scope: "/",
+        lang: "en",
+        categories: ["finance", "utilities"],
         icons: [
+          { src: "/icon-192.png", sizes: "192x192", type: "image/png" },
+          { src: "/icon-512.png", sizes: "512x512", type: "image/png" },
+          { src: "/icon-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
           { src: "/favicon.ico", sizes: "48x48", type: "image/x-icon" },
-          { src: "/favicon.ico", sizes: "192x192", type: "image/png" },
-          { src: "/favicon.ico", sizes: "512x512", type: "image/png", purpose: "any maskable" },
+        ],
+        screenshots: [
+          { src: "/icon-512.png", sizes: "512x512", type: "image/png", form_factor: "narrow" },
         ],
       },
     }),

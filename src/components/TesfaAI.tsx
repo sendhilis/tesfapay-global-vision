@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Sparkles, X, Send, Mic, ChevronDown } from "lucide-react";
+import { Sparkles, Send, Mic, ChevronDown } from "lucide-react";
 
 const suggestions = [
   "Check my balance",
@@ -40,10 +40,17 @@ const TesfaAI = () => {
   const [input, setInput] = useState("");
   const [typing, setTyping] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, open]);
+
+  useEffect(() => {
+    if (open) {
+      setTimeout(() => inputRef.current?.focus(), 100);
+    }
+  }, [open]);
 
   const send = (text?: string) => {
     const msg = text || input.trim();
@@ -69,7 +76,8 @@ const TesfaAI = () => {
       {/* Floating button */}
       <button
         onClick={() => setOpen(true)}
-        className={`fixed bottom-24 right-4 z-40 w-14 h-14 rounded-full bg-gradient-gold shadow-gold flex items-center justify-center transition-transform hover:scale-110 ${open ? "hidden" : ""}`}
+        aria-label="Open Tesfa AI Assistant"
+        className={`fixed bottom-24 right-4 z-40 w-14 h-14 rounded-full bg-gradient-gold shadow-gold flex items-center justify-center transition-transform active:scale-95 hover:scale-110 ${open ? "hidden" : ""}`}
       >
         <Sparkles className="w-6 h-6 text-tesfa-dark" />
         <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center text-[9px] text-white font-bold">1</span>
@@ -77,10 +85,16 @@ const TesfaAI = () => {
 
       {/* Chat panel */}
       {open && (
-        <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md z-50 animate-slide-up" style={{ bottom: "72px" }}>
-          <div className="glass border border-border rounded-t-3xl shadow-2xl overflow-hidden" style={{ maxHeight: "70vh", display: "flex", flexDirection: "column" }}>
+        <div
+          className="fixed left-1/2 -translate-x-1/2 w-full max-w-md z-50 animate-slide-up"
+          style={{ bottom: "72px" }}
+        >
+          <div
+            className="glass border border-border rounded-t-3xl shadow-2xl overflow-hidden flex flex-col"
+            style={{ maxHeight: "70dvh" }}
+          >
             {/* Header */}
-            <div className="flex items-center gap-3 p-4 border-b border-border bg-gradient-gold/5">
+            <div className="flex items-center gap-3 p-4 border-b border-border bg-secondary/10 flex-shrink-0">
               <div className="w-9 h-9 rounded-xl bg-gradient-gold flex items-center justify-center">
                 <Sparkles className="w-5 h-5 text-tesfa-dark" />
               </div>
@@ -91,13 +105,17 @@ const TesfaAI = () => {
                   <p className="text-[10px] text-muted-foreground">Online · Amharic & English</p>
                 </div>
               </div>
-              <button onClick={() => setOpen(false)} className="p-1.5 glass rounded-lg">
+              <button
+                onClick={() => setOpen(false)}
+                aria-label="Close Tesfa AI"
+                className="p-2 glass rounded-xl min-w-[36px] min-h-[36px] flex items-center justify-center"
+              >
                 <ChevronDown className="w-4 h-4 text-muted-foreground" />
               </button>
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-none">
+            <div className="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-none min-h-0">
               {messages.map((msg, i) => (
                 <div key={i} className={`flex ${msg.from === "user" ? "justify-end" : "justify-start"}`}>
                   <div className={`max-w-[80%] rounded-2xl px-3 py-2.5 text-xs leading-relaxed ${
@@ -124,10 +142,14 @@ const TesfaAI = () => {
             </div>
 
             {/* Suggestions */}
-            <div className="px-4 pb-2">
-              <div className="flex gap-2 overflow-x-auto scrollbar-none">
+            <div className="px-4 pb-2 flex-shrink-0">
+              <div className="flex gap-2 overflow-x-auto scrollbar-none pb-1">
                 {suggestions.map(s => (
-                  <button key={s} onClick={() => send(s)} className="flex-shrink-0 glass text-xs px-3 py-1.5 rounded-xl text-muted-foreground hover:text-gold hover:border-tesfa-gold/30 border border-border transition-colors">
+                  <button
+                    key={s}
+                    onClick={() => send(s)}
+                    className="flex-shrink-0 glass text-xs px-3 py-1.5 rounded-xl text-muted-foreground hover:text-gold hover:border-tesfa-gold/30 border border-border transition-colors min-h-[36px]"
+                  >
                     {s}
                   </button>
                 ))}
@@ -135,18 +157,26 @@ const TesfaAI = () => {
             </div>
 
             {/* Input */}
-            <div className="flex items-center gap-2 px-4 py-3 border-t border-border">
+            <div className="flex items-center gap-2 px-4 py-3 border-t border-border flex-shrink-0">
               <input
-                className="flex-1 bg-muted rounded-xl px-3 py-2.5 text-sm text-foreground focus:outline-none placeholder:text-muted-foreground"
+                ref={inputRef}
+                className="flex-1 bg-muted rounded-xl px-3 py-2.5 text-sm text-foreground focus:outline-none placeholder:text-muted-foreground min-h-[44px]"
                 placeholder="Ask me anything..."
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && send()}
               />
-              <button className="p-2.5 glass rounded-xl text-muted-foreground">
+              <button
+                aria-label="Voice input"
+                className="p-2.5 glass rounded-xl text-muted-foreground min-w-[44px] min-h-[44px] flex items-center justify-center"
+              >
                 <Mic className="w-4 h-4" />
               </button>
-              <button onClick={() => send()} className="p-2.5 bg-gradient-gold rounded-xl">
+              <button
+                onClick={() => send()}
+                aria-label="Send message"
+                className="p-2.5 bg-gradient-gold rounded-xl min-w-[44px] min-h-[44px] flex items-center justify-center"
+              >
                 <Send className="w-4 h-4 text-tesfa-dark" />
               </button>
             </div>

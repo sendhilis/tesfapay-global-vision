@@ -1,10 +1,25 @@
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, Shield, Zap, Globe, Star } from "lucide-react";
+import { ArrowRight, Shield, Zap, Globe, Star, Download, X } from "lucide-react";
 import tesfaHeroBg from "@/assets/tesfa-hero-bg.jpg";
 import tesfaLogo from "@/assets/tesfa-logo.png";
 
 const Index = () => {
   const navigate = useNavigate();
+  const [showInstallBanner, setShowInstallBanner] = useState(false);
+
+  useEffect(() => {
+    const isStandalone = window.matchMedia("(display-mode: standalone)").matches;
+    const dismissed = sessionStorage.getItem("installBannerDismissed");
+    if (!isStandalone && !dismissed) {
+      setTimeout(() => setShowInstallBanner(true), 2000);
+    }
+  }, []);
+
+  const dismissBanner = () => {
+    setShowInstallBanner(false);
+    sessionStorage.setItem("installBannerDismissed", "1");
+  };
 
   const features = [
     { icon: Zap, title: "Instant Transfers", desc: "Send money across Ethiopia in seconds" },
@@ -14,7 +29,7 @@ const Index = () => {
   ];
 
   return (
-    <div className="min-h-screen relative overflow-hidden">
+    <div className="min-h-dvh relative overflow-hidden">
       {/* Hero Background */}
       <div
         className="absolute inset-0 bg-cover bg-center"
@@ -28,7 +43,27 @@ const Index = () => {
           repeating-linear-gradient(-45deg, hsl(168 70% 32%) 0px, hsl(168 70% 32%) 1px, transparent 1px, transparent 20px)`,
       }} />
 
-      <div className="relative z-10 flex flex-col min-h-screen">
+      {/* PWA Install Banner */}
+      {showInstallBanner && (
+        <div className="fixed top-0 left-0 right-0 z-50 glass-gold border-b border-primary/20 px-4 py-3 flex items-center gap-3 animate-slide-up max-w-md mx-auto">
+          <img src={tesfaLogo} alt="" className="w-8 h-8 rounded-lg flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-bold text-gold leading-tight">Install TesfaPay</p>
+            <p className="text-[10px] text-muted-foreground">Add to home screen for the best experience</p>
+          </div>
+          <button
+            onClick={() => navigate("/install")}
+            className="flex-shrink-0 bg-gradient-gold text-tesfa-dark text-xs font-bold px-3 py-1.5 rounded-xl min-h-[36px] flex items-center gap-1"
+          >
+            <Download className="w-3 h-3" /> Install
+          </button>
+          <button onClick={dismissBanner} aria-label="Dismiss" className="p-1 text-muted-foreground min-w-[36px] min-h-[36px] flex items-center justify-center">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      <div className="relative z-10 flex flex-col min-h-dvh">
         {/* Header */}
         <header className="flex items-center justify-between px-6 py-5 pt-safe">
           <div className="flex items-center gap-3">

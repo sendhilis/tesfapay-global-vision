@@ -197,11 +197,43 @@
     animation: shimmer 2s infinite;
   }
 
-  /* Mobile-first bottom nav safe area */
+  /* Mobile-first safe area support (notch / home indicator) */
   .pb-safe {
     padding-bottom: max(1rem, env(safe-area-inset-bottom));
   }
   .pt-safe {
-    padding-top: max(1rem, env(safe-area-inset-top));
+    padding-top: max(0.75rem, env(safe-area-inset-top));
+  }
+  .pl-safe {
+    padding-left: max(1rem, env(safe-area-inset-left));
+  }
+  .pr-safe {
+    padding-right: max(1rem, env(safe-area-inset-right));
+  }
+
+  /* dvh for true mobile viewport height (accounts for browser chrome) */
+  .min-h-dvh {
+    min-height: 100dvh;
+  }
+  .h-dvh {
+    height: 100dvh;
+  }
+
+  /* Touch-friendly minimum target sizes */
+  .touch-target {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  /* Prevent text selection on interactive elements */
+  .no-select {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  /* Smooth momentum scroll on iOS */
+  .scroll-ios {
+    -webkit-overflow-scrolling: touch;
+    overflow-y: auto;
   }
 }
