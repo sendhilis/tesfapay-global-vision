@@ -33,7 +33,7 @@ const AdminLayout = () => {
           <img src={tesfaLogo} alt="TesfaPay" className="w-8 h-8 rounded-lg flex-shrink-0" />
           {sidebarOpen && (
             <div>
-              <p className="font-display font-bold text-sm text-gold">TesfaPay</p>
+              <p className="font-display font-bold text-sm text-gold">GlobalPay</p>
               <p className="text-[10px] text-muted-foreground">Admin Console</p>
             </div>
           )}
@@ -85,7 +85,7 @@ const AdminLayout = () => {
         <header className="h-14 glass border-b border-border flex items-center justify-between px-6 flex-shrink-0">
           <div className="flex items-center gap-3">
             <div>
-              <p className="text-sm font-bold text-foreground">Global Bank Ethiopia — TesfaPay Admin</p>
+              <p className="text-sm font-bold text-foreground">Global Bank Ethiopia — GlobalPay Admin</p>
               <p className="text-xs text-muted-foreground">Operations Dashboard · {new Date().toLocaleDateString("en-ET", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</p>
             </div>
           </div>

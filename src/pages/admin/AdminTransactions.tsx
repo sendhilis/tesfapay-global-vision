@@ -164,7 +164,7 @@ const AdminTransactions = () => {
             {selected.aiFlag && (
               <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3 mb-4">
                 <p className="text-xs text-red-400 font-bold">⚠ AI Alert: {selected.aiFlag}</p>
-                <p className="text-xs text-muted-foreground mt-1">Flagged by Tesfa AI fraud model. Requires manual review.</p>
+                <p className="text-xs text-muted-foreground mt-1">Flagged by Global AI fraud model. Requires manual review.</p>
               </div>
             )}
             <div className="flex gap-3">

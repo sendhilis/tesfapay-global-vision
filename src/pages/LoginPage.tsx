@@ -13,9 +13,9 @@ const LoginPage = () => {
     <div className="min-h-screen bg-background flex flex-col items-center justify-center px-5 max-w-md mx-auto">
       <div className="w-full animate-slide-up">
         <div className="text-center mb-8">
-          <img src={tesfaLogo} alt="TesfaPay" className="w-16 h-16 mx-auto mb-4 rounded-2xl shadow-gold animate-float" />
+          <img src={tesfaLogo} alt="GlobalPay" className="w-16 h-16 mx-auto mb-4 rounded-2xl shadow-gold animate-float" />
           <h1 className="font-display font-bold text-2xl text-foreground">Sign In</h1>
-          <p className="text-muted-foreground text-sm">Welcome back to TesfaPay</p>
+          <p className="text-muted-foreground text-sm">Welcome back to GlobalPay</p>
         </div>
 
         {step === "phone" ? (

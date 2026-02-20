@@ -165,7 +165,7 @@ const KYCUpgrade = () => {
         </button>
         <div className="flex-1">
           <h1 className="font-display font-bold text-sm text-foreground">KYC Level 2 Upgrade</h1>
-          <p className="text-[10px] text-muted-foreground">Secured by Tesfa AI · NBE Compliant</p>
+          <p className="text-[10px] text-muted-foreground">Secured by Global AI · NBE Compliant</p>
         </div>
         <div className="flex gap-1">
           {STEPS.slice(0, -2).map((s, i) => (
@@ -216,8 +216,8 @@ const KYCUpgrade = () => {
             <div className="glass rounded-2xl p-3 flex gap-2 items-start">
               <span className="text-lg">🤖</span>
               <div>
-                <p className="text-xs font-bold text-gold">Tesfa AI</p>
-                <p className="text-xs text-muted-foreground">This process takes approximately 2–3 minutes. Your documents are encrypted and processed securely by Tesfa AI. Data is stored per NBE and PDPO Ethiopia guidelines.</p>
+                <p className="text-xs font-bold text-gold">Global AI</p>
+                <p className="text-xs text-muted-foreground">This process takes approximately 2–3 minutes. Your documents are encrypted and processed securely by Global AI. Data is stored per NBE and PDPO Ethiopia guidelines.</p>
               </div>
             </div>
 

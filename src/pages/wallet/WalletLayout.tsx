@@ -19,8 +19,8 @@ const WalletLayout = () => {
       {/* Top status bar */}
       <div className="flex items-center justify-between px-5 py-3 pt-safe glass border-b border-border">
         <div className="flex items-center gap-2" onClick={() => navigate("/")} role="button">
-          <img src={tesfaLogo} alt="TesfaPay" className="w-7 h-7 rounded-lg" />
-          <span className="font-display font-bold text-sm text-gold">TesfaPay</span>
+          <img src={tesfaLogo} alt="GlobalPay" className="w-7 h-7 rounded-lg" />
+          <span className="font-display font-bold text-sm text-gold">GlobalPay</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
@@ -33,7 +33,7 @@ const WalletLayout = () => {
         <Outlet />
       </div>
 
-      {/* Tesfa AI floating assistant */}
+      {/* Global AI floating assistant */}
       <TesfaAI />
 
       {/* Bottom nav */}

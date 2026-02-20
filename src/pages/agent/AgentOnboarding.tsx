@@ -74,17 +74,17 @@ const AgentOnboarding = () => {
     <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6 py-10">
       <div className="w-full max-w-md text-center animate-scale-in">
         <div className="flex items-center justify-center gap-3 mb-8">
-          <img src={tesfaLogo} alt="TesfaPay" className="w-12 h-12 rounded-xl" />
-          <span className="font-display font-bold text-xl text-primary">TesfaPay</span>
+          <img src={tesfaLogo} alt="GlobalPay" className="w-12 h-12 rounded-xl" />
+          <span className="font-display font-bold text-xl text-primary">GlobalPay</span>
         </div>
 
         <div className="glass rounded-3xl p-8 mb-6">
           <div className="w-16 h-16 rounded-2xl bg-secondary/30 flex items-center justify-center mx-auto mb-4">
             <Building2 className="w-8 h-8 text-primary" />
           </div>
-          <h1 className="font-display font-bold text-2xl text-foreground mb-2">Become a TesfaPay Agent</h1>
+          <h1 className="font-display font-bold text-2xl text-foreground mb-2">Become a GlobalPay Agent</h1>
           <p className="text-muted-foreground text-sm leading-relaxed">
-            As an authorized TesfaPay agent, you'll earn commissions on every Cash In / Cash Out transaction while providing essential financial services to your community.
+            As an authorized GlobalPay agent, you'll earn commissions on every Cash In / Cash Out transaction while providing essential financial services to your community.
           </p>
         </div>
 
@@ -104,7 +104,7 @@ const AgentOnboarding = () => {
         </div>
 
         <p className="text-xs text-muted-foreground mb-4">
-          You are applying as an existing TesfaPay wallet user.<br />
+          You are applying as an existing GlobalPay wallet user.<br />
           Wallet ID: <span className="text-primary font-mono font-semibold">{walletId}</span>
         </p>
 
@@ -188,7 +188,7 @@ const AgentOnboarding = () => {
         <div className="animate-slide-up space-y-4">
           <div className="mb-4">
             <h2 className="font-display font-bold text-xl text-foreground">Personal Details</h2>
-            <p className="text-xs text-muted-foreground mt-1">Pre-filled from your TesfaPay wallet profile</p>
+            <p className="text-xs text-muted-foreground mt-1">Pre-filled from your GlobalPay wallet profile</p>
           </div>
 
           <div className="glass-gold rounded-2xl p-4 flex items-center gap-3 mb-2">

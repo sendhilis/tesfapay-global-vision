@@ -53,7 +53,7 @@ const MicroLoan = () => {
         ))}
       </div>
       <div className="glass-gold rounded-2xl p-3 w-full mb-4 text-left">
-        <p className="text-xs text-gold">🤖 Tesfa AI: Repay on time to boost your credit score and unlock higher loan limits. Set up auto-repay in your profile.</p>
+        <p className="text-xs text-gold">🤖 Global AI: Repay on time to boost your credit score and unlock higher loan limits. Set up auto-repay in your profile.</p>
       </div>
       <button onClick={() => setStage("eligibility")} className="w-full py-4 rounded-2xl font-bold text-tesfa-dark bg-gradient-gold">
         View Loan Details
@@ -63,7 +63,7 @@ const MicroLoan = () => {
 
   return (
     <div className="px-4 py-4">
-      <h2 className="font-display font-bold text-xl text-foreground mb-4">Tesfa Micro-Loan</h2>
+      <h2 className="font-display font-bold text-xl text-foreground mb-4">Global Micro-Loan</h2>
 
       {stage === "eligibility" && (
         <div className="animate-slide-up space-y-4">
@@ -74,7 +74,7 @@ const MicroLoan = () => {
                 <Sparkles className="w-5 h-5 text-tesfa-dark" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Tesfa AI Credit Score</p>
+                <p className="text-xs text-muted-foreground">Global AI Credit Score</p>
                 <p className={`text-2xl font-display font-bold ${scoreColor}`}>{eligibilityScore}/100</p>
               </div>
               <div className="ml-auto">
@@ -152,7 +152,7 @@ const MicroLoan = () => {
       {stage === "apply" && (
         <div className="animate-slide-up space-y-4">
           <div className="glass-gold rounded-2xl p-3">
-            <p className="text-xs text-gold">🤖 Tesfa AI suggests ETB 3,000 based on your repayment capacity</p>
+            <p className="text-xs text-gold">🤖 Global AI suggests ETB 3,000 based on your repayment capacity</p>
           </div>
 
           <div>
@@ -245,7 +245,7 @@ const MicroLoan = () => {
 
           <div className="glass rounded-xl p-3 flex gap-2">
             <AlertCircle className="w-4 h-4 text-gold flex-shrink-0 mt-0.5" />
-            <p className="text-xs text-muted-foreground">By confirming, you agree to the Tesfa Micro-Loan terms and authorize automatic repayments from your wallet on due dates.</p>
+            <p className="text-xs text-muted-foreground">By confirming, you agree to the Global Micro-Loan terms and authorize automatic repayments from your wallet on due dates.</p>
           </div>
 
           <div className="flex gap-3">

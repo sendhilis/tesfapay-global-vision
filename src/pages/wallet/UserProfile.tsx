@@ -11,10 +11,10 @@ const UserProfile = () => {
 
   const menuItems = [
     { icon: Shield, label: "Security & MPIN", sub: "Biometrics enabled", action: () => toast({ title: "Coming Soon", description: "MPIN management will be available in next update." }) },
-    { icon: Star, label: "Loyalty & Rewards", sub: "1,240 Tesfa Points", action: () => navigate("/wallet/loyalty") },
+    { icon: Star, label: "Loyalty & Rewards", sub: "1,240 Global Points", action: () => navigate("/wallet/loyalty") },
     { icon: Upload, label: "Upgrade KYC Level", sub: kycLevel === 1 ? "Currently Level 1 → Apply Level 2" : "✅ KYC Level 2 Active", action: () => kycLevel === 1 ? navigate("/wallet/kyc-upgrade") : undefined, badge: kycLevel === 1 ? "Upgrade" : undefined },
     { icon: Bell, label: "Notification Preferences", sub: "Manage alerts & nudge intensity", action: () => toast({ title: "Coming Soon", description: "Notification preferences will be available soon." }) },
-    { icon: HelpCircle, label: "Help & Support", sub: "Chat with Tesfa AI or call 8711", action: () => toast({ title: "Help & Support", description: "Tesfa AI is available via the floating chat button." }) },
+    { icon: HelpCircle, label: "Help & Support", sub: "Chat with Global AI or call 8711", action: () => toast({ title: "Help & Support", description: "Global AI is available via the floating chat button." }) },
   ];
 
   return (
@@ -35,7 +35,7 @@ const UserProfile = () => {
       <div className="glass rounded-2xl p-3 mb-5 flex gap-2 items-start">
         <span className="text-lg">🤖</span>
         <div>
-          <p className="text-xs font-bold text-gold">Tesfa AI Advisor</p>
+          <p className="text-xs font-bold text-gold">Global AI Advisor</p>
           <p className="text-xs text-muted-foreground">Upgrade to KYC Level 2 to unlock ETB 50,000/day limit and micro-loan eligibility. Takes 2 minutes with your Fayda ID.</p>
         </div>
       </div>
@@ -89,7 +89,7 @@ const UserProfile = () => {
         <LogOut className="w-4 h-4" /> Sign Out
       </button>
 
-      <p className="text-xs text-muted-foreground text-center mt-4">TesfaPay v2.1.0 · Global Bank Ethiopia · Licensed by NBE</p>
+      <p className="text-xs text-muted-foreground text-center mt-4">GlobalPay v2.1.0 · Global Bank Ethiopia · Licensed by NBE</p>
     </div>
   );
 };

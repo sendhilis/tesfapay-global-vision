@@ -36,7 +36,7 @@ const LoyaltyRewards = () => {
 
   return (
     <div className="px-4 py-4">
-      <h2 className="font-display font-bold text-xl text-foreground mb-4">Tesfa Rewards</h2>
+      <h2 className="font-display font-bold text-xl text-foreground mb-4">Global Rewards</h2>
 
       {/* Points card */}
       <div className="relative rounded-3xl overflow-hidden mb-4">
@@ -94,7 +94,7 @@ const LoyaltyRewards = () => {
       {tab === "overview" && (
         <div className="space-y-3">
           <div className="glass-gold rounded-2xl p-3">
-            <p className="text-xs text-gold font-bold mb-1">🤖 Tesfa AI</p>
+            <p className="text-xs text-gold font-bold mb-1">🤖 Global AI</p>
             <p className="text-xs text-foreground">You earn 10 pts per ETB 100 transaction. Pay 2 more bills this month to reach Silver tier!</p>
           </div>
 

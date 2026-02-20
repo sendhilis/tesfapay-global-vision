@@ -21,8 +21,8 @@ export default defineConfig(({ mode }) => ({
         navigateFallbackDenylist: [/^\/~oauth/],
       },
       manifest: {
-        name: "TesfaPay — Global Bank Ethiopia",
-        short_name: "TesfaPay",
+        name: "GlobalPay — Global Bank Ethiopia",
+        short_name: "GlobalPay",
         description: "Ethiopia's premier mobile e-wallet by Global Bank Ethiopia",
         theme_color: "#1a6645",
         background_color: "#0d1520",

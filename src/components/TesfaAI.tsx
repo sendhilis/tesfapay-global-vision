@@ -10,12 +10,12 @@ const suggestions = [
 ];
 
 const botReplies: Record<string, string> = {
-  "check my balance": "Your main wallet balance is **ETB 12,450.00**. Savings wallet: **ETB 5,200**. You also have **1,240 Tesfa Points** 🌟",
+  "check my balance": "Your main wallet balance is **ETB 12,450.00**. Savings wallet: **ETB 5,200**. You also have **1,240 Global Points** 🌟",
   "send money": "Sure! To send money, tap the **Send Money** quick action on your home screen, or tell me: *who* and *how much* — e.g., 'Send ETB 500 to Tigist'",
   "pay": "I can help you pay bills! Which service? **Ethio Telecom, Electricity, Water, EthioSat TV, or others?** Say the name and I'll get you there.",
   "kyc": "To upgrade from **KYC Level 1 to Level 2**, go to **Profile → Upgrade KYC** and have your National ID front/back and a selfie ready. It takes about 5 minutes! ✅",
-  "loan": "Based on your activity, you're eligible for up to **ETB 8,000** through Tesfa Micro-Loan. Your AI credit score is **78/100 (Excellent)**. Go to **Home → Micro-Loan** to apply!",
-  "default": "I'm Tesfa AI, your financial assistant! I can help you **send money**, **pay bills**, **check your balance**, manage **savings goals**, or apply for a **micro-loan**. How can I help? 😊",
+  "loan": "Based on your activity, you're eligible for up to **ETB 8,000** through Global Micro-Loan. Your AI credit score is **78/100 (Excellent)**. Go to **Home → Micro-Loan** to apply!",
+  "default": "I'm Global AI, your financial assistant! I can help you **send money**, **pay bills**, **check your balance**, manage **savings goals**, or apply for a **micro-loan**. How can I help? 😊",
 };
 
 const getReply = (msg: string): string => {
@@ -35,7 +35,7 @@ interface Message {
 const TesfaAI = () => {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
-    { from: "bot", text: "Hi! I'm **Tesfa AI** 🤖 Your intelligent financial assistant for TesfaPay. I speak Amharic and English. How can I help you today?", time: "Now" },
+    { from: "bot", text: "Hi! I'm **Global AI** 🤖 Your intelligent financial assistant for GlobalPay. I speak Amharic and English. How can I help you today?", time: "Now" },
   ]);
   const [input, setInput] = useState("");
   const [typing, setTyping] = useState(false);
@@ -76,7 +76,7 @@ const TesfaAI = () => {
       {/* Floating button */}
       <button
         onClick={() => setOpen(true)}
-        aria-label="Open Tesfa AI Assistant"
+        aria-label="Open Global AI Assistant"
         className={`fixed bottom-24 right-4 z-40 w-14 h-14 rounded-full bg-gradient-gold shadow-gold flex items-center justify-center transition-transform active:scale-95 hover:scale-110 ${open ? "hidden" : ""}`}
       >
         <Sparkles className="w-6 h-6 text-tesfa-dark" />
@@ -99,7 +99,7 @@ const TesfaAI = () => {
                 <Sparkles className="w-5 h-5 text-tesfa-dark" />
               </div>
               <div className="flex-1">
-                <p className="text-sm font-bold text-foreground">Tesfa AI</p>
+                <p className="text-sm font-bold text-foreground">Global AI</p>
                 <div className="flex items-center gap-1">
                   <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
                   <p className="text-[10px] text-muted-foreground">Online · Amharic & English</p>
@@ -107,7 +107,7 @@ const TesfaAI = () => {
               </div>
               <button
                 onClick={() => setOpen(false)}
-                aria-label="Close Tesfa AI"
+                aria-label="Close Global AI"
                 className="p-2 glass rounded-xl min-w-[36px] min-h-[36px] flex items-center justify-center"
               >
                 <ChevronDown className="w-4 h-4 text-muted-foreground" />

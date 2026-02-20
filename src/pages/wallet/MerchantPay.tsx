@@ -147,7 +147,7 @@ const MerchantPay = () => {
 
           <div className="glass rounded-2xl p-3 text-left">
             <p className="text-xs text-gold font-semibold mb-1">💡 Did you know?</p>
-            <p className="text-xs text-muted-foreground">All TesfaPay merchants display a standard QR code. Scan once to pay in seconds and earn Tesfa Points automatically.</p>
+            <p className="text-xs text-muted-foreground">All GlobalPay merchants display a standard QR code. Scan once to pay in seconds and earn Global Points automatically.</p>
           </div>
         </div>
       ) : (

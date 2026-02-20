@@ -65,7 +65,7 @@ const WalletHome = () => {
               <p className="text-sm font-bold text-white">{showBalance ? "ETB 5,200" : "ETB ••••"}</p>
             </div>
             <div className="bg-white/10 rounded-2xl p-3">
-              <p className="text-xs text-white/60">Tesfa Points</p>
+              <p className="text-xs text-white/60">Global Points</p>
               <p className="text-sm font-bold text-gold">{showBalance ? "🌟 1,240 pts" : "🌟 ••••"}</p>
             </div>
           </div>
@@ -87,13 +87,13 @@ const WalletHome = () => {
         </div>
       </div>
 
-      {/* Tesfa AI Insight */}
+      {/* Global AI Insight */}
       <div className="glass-gold rounded-2xl p-3.5 flex gap-3">
         <div className="w-8 h-8 rounded-xl bg-gradient-gold flex items-center justify-center flex-shrink-0">
           <Sparkles className="w-4 h-4 text-tesfa-dark" />
         </div>
         <div>
-          <p className="text-xs font-bold text-gold mb-0.5">Tesfa AI Insight</p>
+          <p className="text-xs font-bold text-gold mb-0.5">Global AI Insight</p>
           <p className="text-xs text-foreground">You spend 35% less on bills this month. Consider moving ETB 500 to your savings goal. 📈</p>
         </div>
       </div>
@@ -144,7 +144,7 @@ const WalletHome = () => {
         <Zap className="w-8 h-8 text-gold flex-shrink-0" />
         <div>
           <p className="text-sm font-bold text-gold">Double Points Weekend!</p>
-          <p className="text-xs text-muted-foreground">Earn 2x Tesfa Points on all transactions this weekend. Ends Sunday.</p>
+          <p className="text-xs text-muted-foreground">Earn 2x Global Points on all transactions this weekend. Ends Sunday.</p>
         </div>
       </div>
     </div>
