@@ -454,7 +454,7 @@ const AgentOnboarding = () => {
 
           <div className="glass rounded-2xl p-3 border border-primary/20">
             <p className="text-xs text-muted-foreground leading-relaxed">
-              By submitting, you agree to the TesfaPay Agent Agreement and acknowledge that your application will be reviewed by Global Bank Ethiopia compliance officers within 24–48 hours. An NBE-issued agent code will be assigned upon approval.
+              By submitting, you agree to the GlobalPay Agent Agreement and acknowledge that your application will be reviewed by Global Bank Ethiopia compliance officers within 24–48 hours. An NBE-issued agent code will be assigned upon approval.
             </p>
           </div>
 
