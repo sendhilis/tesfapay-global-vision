@@ -9,7 +9,7 @@
 
 @layer base {
   :root {
-    /* ── TesfaPay Core Palette ── */
+    /* ── GlobalPay Core Palette ── */
     --tesfa-green:          168 70% 22%;   /* Deep Ethiopian forest green */
     --tesfa-green-mid:      162 55% 32%;
     --tesfa-green-light:    158 46% 48%;
