@@ -95,7 +95,7 @@ const AgentHome = () => {
       <div className="glass rounded-2xl p-3 flex gap-2 items-start">
         <span className="text-base">🤖</span>
         <div>
-          <p className="text-xs font-bold text-primary">Tesfa AI Agent Advisor</p>
+          <p className="text-xs font-bold text-primary">Global AI Agent Advisor</p>
           <p className="text-xs text-muted-foreground">
             Your busiest Cash Out hour is 8–10 AM. Consider starting with full float each morning to maximize commission earnings.
           </p>

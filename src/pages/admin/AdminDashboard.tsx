@@ -29,7 +29,7 @@ const alerts = [
   { type: "fraud", msg: "Suspicious velocity detected — Account TPY-09423", time: "2 min ago", color: "text-red-400 bg-red-500/10 border-red-500/20" },
   { type: "kyc", msg: "156 KYC documents awaiting review", time: "15 min ago", color: "text-gold bg-tesfa-gold/10 border-tesfa-gold/20" },
   { type: "system", msg: "EMoney reconciliation completed — ETB 2.4B matched", time: "1 hr ago", color: "text-green-400 bg-green-500/10 border-green-500/20" },
-  { type: "ai", msg: "Tesfa AI flagged 12 high-risk accounts for review", time: "2 hr ago", color: "text-blue-400 bg-blue-500/10 border-blue-500/20" },
+  { type: "ai", msg: "Global AI flagged 12 high-risk accounts for review", time: "2 hr ago", color: "text-blue-400 bg-blue-500/10 border-blue-500/20" },
 ];
 
 const StatCard = ({ title, value, sub, icon: Icon, trend, color }: any) => (

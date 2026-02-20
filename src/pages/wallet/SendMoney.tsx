@@ -30,7 +30,7 @@ const SendMoney = () => {
       <p className="text-muted-foreground text-sm mb-2">
         ETB {parseFloat(amount || "0").toLocaleString()} sent to {selected?.name}
       </p>
-      <p className="text-xs text-gold mb-6">+15 Tesfa Points earned!</p>
+      <p className="text-xs text-gold mb-6">+15 Global Points earned!</p>
       <div className="glass rounded-2xl p-4 w-full max-w-xs mb-4 space-y-2">
         <div className="flex justify-between text-sm">
           <span className="text-muted-foreground">Reference</span>
@@ -184,7 +184,7 @@ const SendMoney = () => {
               { label: "Amount", value: `ETB ${parseFloat(amount).toLocaleString()}`, highlight: true },
               { label: "Transfer Fee", value: "ETB 2.50", highlight: false },
               { label: "Total Deducted", value: `ETB ${(parseFloat(amount) + 2.5).toLocaleString()}`, highlight: true },
-              { label: "Tesfa Points Earned", value: "+15 pts 🌟", highlight: false },
+              { label: "Global Points Earned", value: "+15 pts 🌟", highlight: false },
               ...(note ? [{ label: "Note", value: note, highlight: false }] : []),
             ].map((row) => (
               <div key={row.label} className="flex justify-between items-center text-sm">
@@ -196,7 +196,7 @@ const SendMoney = () => {
 
           <div className="glass-gold rounded-2xl p-3 mb-4">
             <p className="text-xs text-muted-foreground">
-              🔒 This transaction is protected by 256-bit encryption and TesfaPay fraud monitoring.
+              🔒 This transaction is protected by 256-bit encryption and GlobalPay fraud monitoring.
             </p>
           </div>
 

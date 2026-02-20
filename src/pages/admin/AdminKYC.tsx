@@ -29,7 +29,7 @@ const AdminKYC = () => {
           <p className="text-sm text-muted-foreground">156 pending · AI pre-screened · Manual review required for flagged</p>
         </div>
         <div className="flex items-center gap-2 glass-gold px-3 py-1.5 rounded-xl">
-          <span className="text-xs text-gold font-bold">🤖 Tesfa AI Active</span>
+          <span className="text-xs text-gold font-bold">🤖 Global AI Active</span>
         </div>
       </div>
 
@@ -113,7 +113,7 @@ const AdminKYC = () => {
 
             {/* AI Analysis */}
             <div className="glass-gold rounded-xl p-3 mb-4">
-              <p className="text-xs font-bold text-gold mb-1">🤖 Tesfa AI Analysis</p>
+              <p className="text-xs font-bold text-gold mb-1">🤖 Global AI Analysis</p>
               <div className="grid grid-cols-2 gap-2">
                 {[
                   { label: "Document Quality", value: "98%", ok: true },

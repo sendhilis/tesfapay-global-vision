@@ -42,7 +42,7 @@ const SavingsGoals = () => {
       <div className="glass rounded-2xl p-3 mb-4 flex gap-2">
         <span className="text-lg">🤖</span>
         <div>
-          <p className="text-xs font-bold text-gold">Tesfa AI</p>
+          <p className="text-xs font-bold text-gold">Global AI</p>
           <p className="text-xs text-muted-foreground">At your current pace, you'll reach your School Fees goal in 4 months. Add ETB 300/month to meet the deadline.</p>
         </div>
       </div>
@@ -86,7 +86,7 @@ const SavingsGoals = () => {
         <div className="flex items-center gap-3 mb-2">
           <Target className="w-6 h-6 text-tesfa-green-light" />
           <div>
-            <p className="text-sm font-bold text-foreground">Tesfa Micro-Loan</p>
+            <p className="text-sm font-bold text-foreground">Global Micro-Loan</p>
             <p className="text-xs text-muted-foreground">AI-powered instant credit up to ETB 10,000</p>
           </div>
         </div>

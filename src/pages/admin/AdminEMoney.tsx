@@ -178,7 +178,7 @@ const AdminEMoney = () => {
           </div>
 
           <div className="glass-gold rounded-2xl p-4">
-            <p className="text-xs text-gold font-bold mb-1">🤖 Tesfa AI Anomaly Detection</p>
+            <p className="text-xs text-gold font-bold mb-1">🤖 Global AI Anomaly Detection</p>
             <p className="text-xs text-muted-foreground">No reconciliation anomalies detected in the last 24 hours. EMoney positions are fully balanced. ✅</p>
           </div>
         </div>

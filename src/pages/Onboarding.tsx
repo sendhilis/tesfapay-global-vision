@@ -43,7 +43,7 @@ const Onboarding = () => {
               <ArrowLeft className="w-4 h-4" />
             </button>
           )}
-          <img src={tesfaLogo} alt="TesfaPay" className="w-8 h-8 rounded-lg" />
+          <img src={tesfaLogo} alt="GlobalPay" className="w-8 h-8 rounded-lg" />
           <div>
             <p className="text-xs text-muted-foreground">Step {step} of {steps.length}</p>
             <p className="font-display font-bold text-sm text-gold">{steps[step - 1].title}</p>
@@ -63,12 +63,12 @@ const Onboarding = () => {
         {step === 1 && (
           <div className="animate-slide-up">
             <h2 className="font-display font-bold text-2xl text-foreground mb-2">
-              ወደ TesfaPay ይቀላቀሉ
+              ወደ GlobalPay ይቀላቀሉ
             </h2>
             <p className="text-muted-foreground text-sm mb-6">Join millions of Ethiopians managing money smarter</p>
 
             <div className="glass-gold rounded-2xl p-4 mb-4">
-              <p className="text-gold font-semibold text-sm mb-2">🤖 Tesfa AI says:</p>
+              <p className="text-gold font-semibold text-sm mb-2">🤖 Global AI says:</p>
               <p className="text-sm text-foreground">
                 "Hello! I'll guide you through each step. This takes about 3 minutes. 
                 Your information is encrypted and secure."
@@ -79,7 +79,7 @@ const Onboarding = () => {
               {[
                 { icon: "🔒", text: "Bank-grade encryption" },
                 { icon: "⚡", text: "Instant account activation" },
-                { icon: "🎁", text: "500 Tesfa Points welcome bonus" },
+                { icon: "🎁", text: "500 Global Points welcome bonus" },
                 { icon: "🌍", text: "Send money anywhere in Ethiopia" },
               ].map((item) => (
                 <div key={item.text} className="flex items-center gap-3 glass rounded-xl p-3">
@@ -151,7 +151,7 @@ const Onboarding = () => {
                 className="mt-0.5"
               />
               <p className="text-xs text-muted-foreground">
-                I consent to Tesfa AI using my data for personalized financial recommendations and fraud protection
+                I consent to Global AI using my data for personalized financial recommendations and fraud protection
               </p>
             </div>
           </div>
@@ -210,7 +210,7 @@ const Onboarding = () => {
             </div>
 
             <div className="glass-gold rounded-xl p-3">
-              <p className="text-xs text-gold">🤖 Tesfa AI: "Please ensure the photo is clear, well-lit, and all text is visible. I'll auto-validate your document quality."</p>
+              <p className="text-xs text-gold">🤖 Global AI: "Please ensure the photo is clear, well-lit, and all text is visible. I'll auto-validate your document quality."</p>
             </div>
           </div>
         )}
@@ -265,13 +265,13 @@ const Onboarding = () => {
             <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-green flex items-center justify-center animate-glow-gold">
               <Check className="w-10 h-10 text-foreground" />
             </div>
-            <h2 className="font-display font-bold text-2xl text-gold mb-2">Welcome to TesfaPay! 🎉</h2>
+            <h2 className="font-display font-bold text-2xl text-gold mb-2">Welcome to GlobalPay! 🎉</h2>
             <p className="text-foreground font-semibold mb-1">Abebe Girma</p>
             <p className="text-muted-foreground text-sm mb-6">Your KYC Level 1 wallet is activated</p>
 
             <div className="glass-gold rounded-2xl p-4 mb-4 text-left">
               <p className="text-gold font-semibold mb-2">🎁 Welcome Bonus!</p>
-              <p className="text-sm text-foreground">500 Tesfa Points credited to your account</p>
+              <p className="text-sm text-foreground">500 Global Points credited to your account</p>
             </div>
 
             <div className="space-y-2 mb-6">

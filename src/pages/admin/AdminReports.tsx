@@ -149,7 +149,7 @@ const AdminReports = () => {
 
       {/* AI Analytics */}
       <div className="glass-gold rounded-2xl p-4">
-        <p className="text-xs text-gold font-bold mb-2">🤖 Tesfa AI — Smart Reports</p>
+        <p className="text-xs text-gold font-bold mb-2">🤖 Global AI — Smart Reports</p>
         <p className="text-xs text-muted-foreground mb-3">AI-driven dashboards with Customer 360, profitability analysis, and agent performance scores. Powered by real-time data.</p>
         <div className="grid grid-cols-2 gap-2">
           {["Customer 360", "AI Risk Score Dashboard", "Agent Performance AI", "Onboarding Funnel"].map(d => (

@@ -57,7 +57,7 @@ const AgentCustomers = () => {
       <div className="flex items-center justify-between mb-5">
         <div>
           <h2 className="font-display font-bold text-lg text-foreground">Customer Registration</h2>
-          <p className="text-xs text-muted-foreground">Onboard new TesfaPay wallet users</p>
+          <p className="text-xs text-muted-foreground">Onboard new GlobalPay wallet users</p>
         </div>
         {step === "list" && (
           <button onClick={() => setStep("form")} className="flex items-center gap-1.5 bg-primary text-primary-foreground text-xs font-bold px-3 py-2 rounded-xl">

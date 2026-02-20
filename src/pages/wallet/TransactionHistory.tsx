@@ -8,7 +8,7 @@ const transactions = [
   { id: 4, name: "Selam Bekele", type: "received", amount: 500, date: "Yesterday", ref: "TXN004", status: "completed" },
   { id: 5, name: "Addis Power", type: "bill", amount: -350, date: "Feb 15", ref: "TXN005", status: "completed" },
   { id: 6, name: "Yonas Tesfaye", type: "sent", amount: -1200, date: "Feb 14", ref: "TXN006", status: "completed" },
-  { id: 7, name: "Tesfa Savings Goal", type: "savings", amount: -500, date: "Feb 13", ref: "TXN007", status: "completed" },
+  { id: 7, name: "Global Savings Goal", type: "savings", amount: -500, date: "Feb 13", ref: "TXN007", status: "completed" },
   { id: 8, name: "Loan Disbursement", type: "received", amount: 3000, date: "Feb 12", ref: "TXN008", status: "completed" },
 ];
 

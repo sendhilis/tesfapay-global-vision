@@ -68,7 +68,7 @@ const AdminAgents = () => {
       </div>
 
       <div className="glass-gold rounded-2xl p-4 mb-4">
-        <p className="text-xs text-gold font-bold mb-1">🤖 Tesfa AI Agent Analysis</p>
+        <p className="text-xs text-gold font-bold mb-1">🤖 Global AI Agent Analysis</p>
         <p className="text-xs text-muted-foreground">This agent shows consistent performance. Float management is healthy. Consider offering float top-up credit to expand transaction capacity.</p>
       </div>
 

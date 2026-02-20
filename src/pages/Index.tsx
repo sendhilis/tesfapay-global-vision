@@ -25,7 +25,7 @@ const Index = () => {
     { icon: Zap, title: "Instant Transfers", desc: "Send money across Ethiopia in seconds" },
     { icon: Shield, title: "Bank-Grade Security", desc: "256-bit encryption & biometric auth" },
     { icon: Globe, title: "Multi-Channel", desc: "Mobile, USSD, agent & web access" },
-    { icon: Star, title: "Loyalty Rewards", desc: "Earn Tesfa Points on every transaction" },
+    { icon: Star, title: "Loyalty Rewards", desc: "Earn Global Points on every transaction" },
   ];
 
   return (
@@ -48,7 +48,7 @@ const Index = () => {
         <div className="fixed top-0 left-0 right-0 z-50 glass-gold border-b border-primary/20 px-4 py-3 flex items-center gap-3 animate-slide-up max-w-md mx-auto">
           <img src={tesfaLogo} alt="" className="w-8 h-8 rounded-lg flex-shrink-0" />
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-bold text-gold leading-tight">Install TesfaPay</p>
+            <p className="text-xs font-bold text-gold leading-tight">Install GlobalPay</p>
             <p className="text-[10px] text-muted-foreground">Add to home screen for the best experience</p>
           </div>
           <button
@@ -67,9 +67,9 @@ const Index = () => {
         {/* Header */}
         <header className="flex items-center justify-between px-6 py-5 pt-safe">
           <div className="flex items-center gap-3">
-            <img src={tesfaLogo} alt="TesfaPay" className="w-10 h-10 rounded-xl" />
+            <img src={tesfaLogo} alt="GlobalPay" className="w-10 h-10 rounded-xl" />
             <div>
-              <p className="font-display font-bold text-lg text-gold leading-none">TesfaPay</p>
+              <p className="font-display font-bold text-lg text-gold leading-none">GlobalPay</p>
               <p className="text-xs text-muted-foreground">Global Bank Ethiopia</p>
             </div>
           </div>
@@ -84,14 +84,14 @@ const Index = () => {
         {/* Hero Content */}
         <div className="flex-1 flex flex-col items-center justify-center px-6 py-8 text-center">
           <div className="animate-float mb-6">
-            <img src={tesfaLogo} alt="TesfaPay" className="w-24 h-24 mx-auto rounded-2xl shadow-gold" />
+            <img src={tesfaLogo} alt="GlobalPay" className="w-24 h-24 mx-auto rounded-2xl shadow-gold" />
           </div>
 
           <h1 className="font-display font-bold text-4xl md:text-5xl mb-3 leading-tight">
-            <span className="text-gold">ተስፋ</span>
+            <span className="text-gold">ግሎባል</span>
             <span className="text-foreground"> Pay</span>
           </h1>
-          <p className="text-xl font-display font-semibold text-foreground mb-2">Your Hope. Your Wallet.</p>
+          <p className="text-xl font-display font-semibold text-foreground mb-2">Your Trust. Your Wallet.</p>
           <p className="text-muted-foreground text-sm max-w-xs mb-8 leading-relaxed">
             Ethiopia's most trusted digital wallet — powered by Global Bank Ethiopia. 
             Fast, secure, and built for every Ethiopian.

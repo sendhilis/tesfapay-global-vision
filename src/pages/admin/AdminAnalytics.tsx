@@ -48,7 +48,7 @@ const AdminAnalytics = () => {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="font-display font-bold text-xl text-foreground">Analytics & AI Insights</h1>
-          <p className="text-sm text-muted-foreground">Powered by Tesfa AI · Customer 360 · BI Dashboards</p>
+          <p className="text-sm text-muted-foreground">Powered by Global AI · Customer 360 · BI Dashboards</p>
         </div>
         <div className="glass-gold px-3 py-1.5 rounded-xl flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-tesfa-gold animate-pulse" />
@@ -167,7 +167,7 @@ const AdminAnalytics = () => {
 
       {/* AI Anomaly Detection */}
       <div className="glass rounded-2xl p-5">
-        <p className="font-display font-bold text-sm text-foreground mb-4">🤖 Tesfa AI — Anomaly Detection & Recommendations</p>
+        <p className="font-display font-bold text-sm text-foreground mb-4">🤖 Global AI — Anomaly Detection & Recommendations</p>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           {[
             { title: "Fraud Prevention", desc: "12 accounts flagged for unusual velocity (3+ transactions under 60s). Recommend step-up auth.", severity: "High", action: "Review Now" },
