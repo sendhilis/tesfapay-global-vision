@@ -40,6 +40,7 @@ import AgentCommission from "./pages/agent/AgentCommission";
 import AgentFloat from "./pages/agent/AgentFloat";
 import AgentProfile from "./pages/agent/AgentProfile";
 import InstallPage from "./pages/InstallPage";
+import ProposalDocument from "./pages/ProposalDocument";
 
 const queryClient = new QueryClient();
 
@@ -54,6 +55,7 @@ const App = () => (
           <Route path="/login" element={<LoginPage />} />
           <Route path="/onboarding" element={<Onboarding />} />
           <Route path="/install" element={<InstallPage />} />
+          <Route path="/proposal" element={<ProposalDocument />} />
 
           {/* Wallet App Routes */}
           <Route path="/wallet" element={<WalletLayout />}>
