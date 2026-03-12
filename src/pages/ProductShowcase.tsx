@@ -435,7 +435,7 @@ const ProductShowcase = () => {
 
         {/* ═══════ TECHNICAL ARCHITECTURE ═══════ */}
         <div className="page-break" />
-        <section className="min-h-[1120px] py-20 px-8" style={{ background: "hsl(220 30% 7%)" }}>
+        <section className="pdf-section min-h-[1120px] py-20 px-8" style={{ background: "hsl(220 30% 7%)" }}>
           <div className="max-w-5xl mx-auto">
             <SectionHeader icon={Layers} title="Technical Architecture" subtitle="Cloud-native, microservices-based platform built for scale" number="06" />
 
