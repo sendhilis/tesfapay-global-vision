@@ -330,8 +330,7 @@ const ProductShowcase = () => {
         </section>
 
         {/* ═══════ ADMIN CONSOLE ═══════ */}
-        <div className="page-break" />
-        <section className="pdf-section min-h-[1120px] py-20 px-8" style={{ background: "hsl(220 30% 7%)" }}>
+        <section className="pdf-page pdf-page-padded min-h-[1120px] py-20 px-8" style={{ background: "hsl(220 30% 7%)" }}>
           <div className="max-w-5xl mx-auto">
             <SectionHeader icon={BarChart3} title="Enterprise Admin Console" subtitle="Complete operational command center for GlobalPay" number="04" />
             <div className="flex justify-center mt-8 mb-12">
