@@ -85,38 +85,31 @@ const ProductShowcase = () => {
           max-width: 794px !important;
           width: 794px !important;
         }
-        .pdf-export-mode .pdf-section {
-          min-height: 1122px !important;
-          max-height: 1122px !important;
+        .pdf-export-mode .pdf-page {
           height: 1122px !important;
+          max-height: 1122px !important;
           overflow: hidden !important;
           box-sizing: border-box !important;
-          padding: 48px 40px !important;
         }
-        .pdf-export-mode .pdf-cover {
-          min-height: 1122px !important;
-          max-height: 1122px !important;
-          height: 1122px !important;
+        .pdf-export-mode .pdf-page-padded {
+          padding: 40px 36px !important;
         }
-        .pdf-export-mode .page-break {
-          height: 0 !important;
-          page-break-before: always !important;
-        }
-        .pdf-export-mode .pdf-section img.section-img {
-          max-height: 240px !important;
+        .pdf-export-mode .pdf-page img.section-img {
+          max-height: 220px !important;
           object-fit: contain !important;
         }
-        .pdf-export-mode .pdf-section .text-3xl {
-          font-size: 1.25rem !important;
-        }
-        .pdf-export-mode .pdf-section .text-2xl {
-          font-size: 1.125rem !important;
-        }
-        .pdf-export-mode .pdf-section h2 {
-          font-size: 1.5rem !important;
-        }
+        .pdf-export-mode .pdf-page .text-3xl { font-size: 1.25rem !important; }
+        .pdf-export-mode .pdf-page .text-2xl { font-size: 1.1rem !important; }
+        .pdf-export-mode .pdf-page h2 { font-size: 1.4rem !important; }
+        .pdf-export-mode .pdf-page .gap-12 { gap: 1.5rem !important; }
+        .pdf-export-mode .pdf-page .gap-8 { gap: 1rem !important; }
+        .pdf-export-mode .pdf-page .mt-16 { margin-top: 2rem !important; }
+        .pdf-export-mode .pdf-page .mt-12 { margin-top: 1.5rem !important; }
+        .pdf-export-mode .pdf-page .py-20 { padding-top: 0 !important; padding-bottom: 0 !important; }
+        .pdf-export-mode .pdf-page .mb-12 { margin-bottom: 1.5rem !important; }
+        .pdf-export-mode .pdf-page .mb-10 { margin-bottom: 1.5rem !important; }
+        .pdf-export-mode .pdf-page .space-y-6 > * + * { margin-top: 0.75rem !important; }
         @media print {
-          .page-break { page-break-before: always; }
           .print\\:hidden { display: none !important; }
         }
       `}</style>
