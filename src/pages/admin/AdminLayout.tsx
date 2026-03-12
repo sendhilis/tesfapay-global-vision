@@ -19,6 +19,7 @@ const navItems = [
   { to: "/admin/reports", icon: ReportIcon, label: "Reports" },
   { to: "/admin/analytics", icon: BarChart2, label: "Analytics" },
   { to: "/proposal", icon: ScrollText, label: "Proposal Doc" },
+  { to: "/showcase", icon: Presentation, label: "Product Showcase" },
 ];
 
 const AdminLayout = () => {

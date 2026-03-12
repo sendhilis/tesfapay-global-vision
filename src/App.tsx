@@ -57,6 +57,7 @@ const App = () => (
           <Route path="/onboarding" element={<Onboarding />} />
           <Route path="/install" element={<InstallPage />} />
           <Route path="/proposal" element={<ProposalDocument />} />
+          <Route path="/showcase" element={<ProductShowcase />} />
 
           {/* Wallet App Routes */}
           <Route path="/wallet" element={<WalletLayout />}>
