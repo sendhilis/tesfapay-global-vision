@@ -547,7 +547,7 @@ const ProductShowcase = () => {
 
         {/* ═══════ CLOSING / CTA ═══════ */}
         <div className="page-break" />
-        <section className="min-h-[1120px] flex flex-col items-center justify-center py-20 px-8 relative" style={{ background: "hsl(220 35% 6%)" }}>
+        <section className="pdf-cover pdf-section min-h-[1120px] flex flex-col items-center justify-center py-20 px-8 relative" style={{ background: "hsl(220 35% 6%)" }}>
           <div className="absolute inset-0 opacity-15">
             <img src={heroBg} alt="" className="w-full h-full object-cover" />
           </div>
