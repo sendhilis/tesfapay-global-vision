@@ -26,22 +26,34 @@ const ProductShowcase = () => {
     if (!contentRef.current || exporting) return;
     setExporting(true);
     try {
+      // Temporarily add print-mode class for PDF-specific sizing
+      contentRef.current.classList.add("pdf-export-mode");
+      // Allow reflow
+      await new Promise(r => setTimeout(r, 100));
+
       const html2pdf = (await import("html2pdf.js")).default;
+      const contentWidth = 794; // A4 width in px at 96dpi
       const opt = {
-        margin: 0,
+        margin: [0, 0, 0, 0],
         filename: "GlobalPay-Product-Showcase-TechMonk.pdf",
-        image: { type: "jpeg", quality: 0.98 },
+        image: { type: "jpeg", quality: 0.95 },
         html2canvas: {
           scale: 2,
           useCORS: true,
           logging: false,
-          width: contentRef.current.scrollWidth,
-          windowWidth: contentRef.current.scrollWidth,
+          width: contentWidth,
+          windowWidth: contentWidth,
+          scrollY: 0,
+          scrollX: 0,
         },
-        jsPDF: { unit: "in", format: "a4", orientation: "portrait" },
-        pagebreak: { mode: ["css", "legacy"], before: ".page-break" },
+        jsPDF: { unit: "pt", format: "a4", orientation: "portrait" },
+        pagebreak: { mode: ["css"], before: ".page-break" },
       };
       await html2pdf().set(opt).from(contentRef.current).save();
+      contentRef.current.classList.remove("pdf-export-mode");
+    } catch (e) {
+      contentRef.current?.classList.remove("pdf-export-mode");
+      console.error("PDF export failed:", e);
     } finally {
       setExporting(false);
     }
