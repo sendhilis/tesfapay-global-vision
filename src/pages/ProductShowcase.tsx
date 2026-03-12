@@ -118,7 +118,7 @@ const ProductShowcase = () => {
       <div ref={contentRef} className="bg-background text-foreground max-w-[1200px] mx-auto">
 
         {/* ═══════ COVER PAGE ═══════ */}
-        <section className="pdf-cover relative min-h-[1120px] flex flex-col items-center justify-center overflow-hidden" style={{ background: "hsl(220 35% 6%)" }}>
+        <section className="pdf-page relative min-h-[1120px] flex flex-col items-center justify-center overflow-hidden" style={{ background: "hsl(220 35% 6%)" }}>
           <div className="absolute inset-0 opacity-30">
             <img src={heroBg} alt="" className="w-full h-full object-cover" />
           </div>
