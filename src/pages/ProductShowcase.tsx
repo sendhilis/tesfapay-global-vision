@@ -345,7 +345,7 @@ const ProductShowcase = () => {
           <div className="max-w-5xl mx-auto">
             <SectionHeader icon={BarChart3} title="Enterprise Admin Console" subtitle="Complete operational command center for GlobalPay" number="04" />
             <div className="flex justify-center mt-8 mb-12">
-              <img src={adminConsole} alt="Admin Console" className="w-full max-w-2xl drop-shadow-2xl" />
+              <img src={adminConsole} alt="Admin Console" className="section-img w-full max-w-2xl drop-shadow-2xl" />
             </div>
 
             <div className="grid md:grid-cols-3 gap-5">
