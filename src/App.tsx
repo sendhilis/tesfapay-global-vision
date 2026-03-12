@@ -41,6 +41,7 @@ import AgentFloat from "./pages/agent/AgentFloat";
 import AgentProfile from "./pages/agent/AgentProfile";
 import InstallPage from "./pages/InstallPage";
 import ProposalDocument from "./pages/ProposalDocument";
+import ProductShowcase from "./pages/ProductShowcase";
 
 const queryClient = new QueryClient();
 
