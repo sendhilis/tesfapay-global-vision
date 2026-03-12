@@ -26,22 +26,34 @@ const ProductShowcase = () => {
     if (!contentRef.current || exporting) return;
     setExporting(true);
     try {
+      // Temporarily add print-mode class for PDF-specific sizing
+      contentRef.current.classList.add("pdf-export-mode");
+      // Allow reflow
+      await new Promise(r => setTimeout(r, 100));
+
       const html2pdf = (await import("html2pdf.js")).default;
+      const contentWidth = 794; // A4 width in px at 96dpi
       const opt = {
-        margin: 0,
+        margin: [0, 0, 0, 0],
         filename: "GlobalPay-Product-Showcase-TechMonk.pdf",
-        image: { type: "jpeg", quality: 0.98 },
+        image: { type: "jpeg", quality: 0.95 },
         html2canvas: {
           scale: 2,
           useCORS: true,
           logging: false,
-          width: contentRef.current.scrollWidth,
-          windowWidth: contentRef.current.scrollWidth,
+          width: contentWidth,
+          windowWidth: contentWidth,
+          scrollY: 0,
+          scrollX: 0,
         },
-        jsPDF: { unit: "in", format: "a4", orientation: "portrait" },
-        pagebreak: { mode: ["css", "legacy"], before: ".page-break" },
+        jsPDF: { unit: "pt", format: "a4", orientation: "portrait" },
+        pagebreak: { mode: ["css"], before: ".page-break" },
       };
       await html2pdf().set(opt).from(contentRef.current).save();
+      contentRef.current.classList.remove("pdf-export-mode");
+    } catch (e) {
+      contentRef.current?.classList.remove("pdf-export-mode");
+      console.error("PDF export failed:", e);
     } finally {
       setExporting(false);
     }
@@ -67,11 +79,53 @@ const ProductShowcase = () => {
         </div>
       </div>
 
+      {/* PDF print styles */}
+      <style>{`
+        .pdf-export-mode {
+          max-width: 794px !important;
+          width: 794px !important;
+        }
+        .pdf-export-mode .pdf-section {
+          min-height: 1122px !important;
+          max-height: 1122px !important;
+          height: 1122px !important;
+          overflow: hidden !important;
+          box-sizing: border-box !important;
+          padding: 48px 40px !important;
+        }
+        .pdf-export-mode .pdf-cover {
+          min-height: 1122px !important;
+          max-height: 1122px !important;
+          height: 1122px !important;
+        }
+        .pdf-export-mode .page-break {
+          height: 0 !important;
+          page-break-before: always !important;
+        }
+        .pdf-export-mode .pdf-section img.section-img {
+          max-height: 240px !important;
+          object-fit: contain !important;
+        }
+        .pdf-export-mode .pdf-section .text-3xl {
+          font-size: 1.25rem !important;
+        }
+        .pdf-export-mode .pdf-section .text-2xl {
+          font-size: 1.125rem !important;
+        }
+        .pdf-export-mode .pdf-section h2 {
+          font-size: 1.5rem !important;
+        }
+        @media print {
+          .page-break { page-break-before: always; }
+          .print\\:hidden { display: none !important; }
+        }
+      `}</style>
+
       {/* PDF Content — fixed width for consistent PDF rendering */}
       <div ref={contentRef} className="bg-background text-foreground max-w-[1200px] mx-auto">
 
         {/* ═══════ COVER PAGE ═══════ */}
-        <section className="relative min-h-[1120px] flex flex-col items-center justify-center overflow-hidden" style={{ background: "hsl(220 35% 6%)" }}>
+        <section className="pdf-cover relative min-h-[1120px] flex flex-col items-center justify-center overflow-hidden" style={{ background: "hsl(220 35% 6%)" }}>
           <div className="absolute inset-0 opacity-30">
             <img src={heroBg} alt="" className="w-full h-full object-cover" />
           </div>
@@ -119,12 +173,12 @@ const ProductShowcase = () => {
 
         {/* ═══════ WALLET ECOSYSTEM ═══════ */}
         <div className="page-break" />
-        <section className="min-h-[1120px] py-20 px-8">
+        <section className="pdf-section min-h-[1120px] py-20 px-8">
           <div className="max-w-5xl mx-auto">
             <SectionHeader icon={Smartphone} title="Customer Wallet Ecosystem" subtitle="Complete financial services in every customer's pocket" number="01" />
             <div className="grid md:grid-cols-2 gap-12 mt-12 items-center">
               <div>
-                <img src={walletEcosystem} alt="Wallet Ecosystem" className="w-full max-w-md mx-auto drop-shadow-2xl" />
+                <img src={walletEcosystem} alt="Wallet Ecosystem" className="section-img w-full max-w-md mx-auto drop-shadow-2xl" />
               </div>
               <div className="space-y-4">
                 {[
@@ -172,7 +226,7 @@ const ProductShowcase = () => {
 
         {/* ═══════ AGENT BANKING ═══════ */}
         <div className="page-break" />
-        <section className="min-h-[1120px] py-20 px-8" style={{ background: "hsl(220 30% 7%)" }}>
+        <section className="pdf-section min-h-[1120px] py-20 px-8" style={{ background: "hsl(220 30% 7%)" }}>
           <div className="max-w-5xl mx-auto">
             <SectionHeader icon={Building2} title="Agent Banking Network" subtitle="Extending financial services to every corner of the market" number="02" />
             <div className="grid md:grid-cols-4 gap-6 mt-12">
@@ -238,7 +292,7 @@ const ProductShowcase = () => {
 
         {/* ═══════ AI COPILOT ═══════ */}
         <div className="page-break" />
-        <section className="min-h-[1120px] py-20 px-8">
+        <section className="pdf-section min-h-[1120px] py-20 px-8">
           <div className="max-w-5xl mx-auto">
             <SectionHeader icon={Brain} title="AI Copilot — Smart Assistant" subtitle="Intelligent automation across every layer of the platform" number="03" />
             <div className="grid md:grid-cols-2 gap-12 mt-12 items-center">
@@ -255,7 +309,7 @@ const ProductShowcase = () => {
                 ))}
               </div>
               <div className="flex justify-center">
-                <img src={aiBrain} alt="AI Copilot" className="w-full max-w-sm drop-shadow-2xl" />
+                <img src={aiBrain} alt="AI Copilot" className="section-img w-full max-w-sm drop-shadow-2xl" />
               </div>
             </div>
 
@@ -287,11 +341,11 @@ const ProductShowcase = () => {
 
         {/* ═══════ ADMIN CONSOLE ═══════ */}
         <div className="page-break" />
-        <section className="min-h-[1120px] py-20 px-8" style={{ background: "hsl(220 30% 7%)" }}>
+        <section className="pdf-section min-h-[1120px] py-20 px-8" style={{ background: "hsl(220 30% 7%)" }}>
           <div className="max-w-5xl mx-auto">
             <SectionHeader icon={BarChart3} title="Enterprise Admin Console" subtitle="Complete operational command center for GlobalPay" number="04" />
             <div className="flex justify-center mt-8 mb-12">
-              <img src={adminConsole} alt="Admin Console" className="w-full max-w-2xl drop-shadow-2xl" />
+              <img src={adminConsole} alt="Admin Console" className="section-img w-full max-w-2xl drop-shadow-2xl" />
             </div>
 
             <div className="grid md:grid-cols-3 gap-5">
@@ -328,12 +382,12 @@ const ProductShowcase = () => {
 
         {/* ═══════ SECURITY & COMPLIANCE ═══════ */}
         <div className="page-break" />
-        <section className="min-h-[1120px] py-20 px-8">
+        <section className="pdf-section min-h-[1120px] py-20 px-8">
           <div className="max-w-5xl mx-auto">
             <SectionHeader icon={ShieldCheck} title="Security & Regulatory Compliance" subtitle="Banking-grade security aligned with global regulatory standards" number="05" />
             <div className="grid md:grid-cols-2 gap-12 mt-12 items-center">
               <div className="flex justify-center">
-                <img src={securityImg} alt="Security" className="w-64 drop-shadow-2xl" />
+                <img src={securityImg} alt="Security" className="section-img w-64 drop-shadow-2xl" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 {[
@@ -381,7 +435,7 @@ const ProductShowcase = () => {
 
         {/* ═══════ TECHNICAL ARCHITECTURE ═══════ */}
         <div className="page-break" />
-        <section className="min-h-[1120px] py-20 px-8" style={{ background: "hsl(220 30% 7%)" }}>
+        <section className="pdf-section min-h-[1120px] py-20 px-8" style={{ background: "hsl(220 30% 7%)" }}>
           <div className="max-w-5xl mx-auto">
             <SectionHeader icon={Layers} title="Technical Architecture" subtitle="Cloud-native, microservices-based platform built for scale" number="06" />
 
@@ -445,7 +499,7 @@ const ProductShowcase = () => {
 
         {/* ═══════ WHY GLOBALPAY ═══════ */}
         <div className="page-break" />
-        <section className="min-h-[1120px] py-20 px-8">
+        <section className="pdf-section min-h-[1120px] py-20 px-8">
           <div className="max-w-5xl mx-auto">
             <SectionHeader icon={Star} title="Why GlobalPay?" subtitle="The competitive advantage for your financial institution" number="07" />
 
@@ -493,7 +547,7 @@ const ProductShowcase = () => {
 
         {/* ═══════ CLOSING / CTA ═══════ */}
         <div className="page-break" />
-        <section className="min-h-[1120px] flex flex-col items-center justify-center py-20 px-8 relative" style={{ background: "hsl(220 35% 6%)" }}>
+        <section className="pdf-cover pdf-section min-h-[1120px] flex flex-col items-center justify-center py-20 px-8 relative" style={{ background: "hsl(220 35% 6%)" }}>
           <div className="absolute inset-0 opacity-15">
             <img src={heroBg} alt="" className="w-full h-full object-cover" />
           </div>
