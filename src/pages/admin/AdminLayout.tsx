@@ -7,7 +7,7 @@ import {
 import tesfaLogo from "@/assets/tesfa-logo.png";
 import adminHeroBg from "@/assets/admin-hero-bg.jpg";
 
-import { Banknote, Building2, FileText as ReportIcon, ScrollText } from "lucide-react";
+import { Banknote, Building2, FileText as ReportIcon, ScrollText, Presentation } from "lucide-react";
 
 const navItems = [
   { to: "/admin", icon: LayoutDashboard, label: "Dashboard", end: true },
@@ -19,6 +19,7 @@ const navItems = [
   { to: "/admin/reports", icon: ReportIcon, label: "Reports" },
   { to: "/admin/analytics", icon: BarChart2, label: "Analytics" },
   { to: "/proposal", icon: ScrollText, label: "Proposal Doc" },
+  { to: "/showcase", icon: Presentation, label: "Product Showcase" },
 ];
 
 const AdminLayout = () => {
