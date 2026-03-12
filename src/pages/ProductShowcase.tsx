@@ -309,7 +309,7 @@ const ProductShowcase = () => {
                 ))}
               </div>
               <div className="flex justify-center">
-                <img src={aiBrain} alt="AI Copilot" className="w-full max-w-sm drop-shadow-2xl" />
+                <img src={aiBrain} alt="AI Copilot" className="section-img w-full max-w-sm drop-shadow-2xl" />
               </div>
             </div>
 
