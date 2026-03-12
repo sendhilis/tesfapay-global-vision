@@ -178,7 +178,7 @@ const ProductShowcase = () => {
             <SectionHeader icon={Smartphone} title="Customer Wallet Ecosystem" subtitle="Complete financial services in every customer's pocket" number="01" />
             <div className="grid md:grid-cols-2 gap-12 mt-12 items-center">
               <div>
-                <img src={walletEcosystem} alt="Wallet Ecosystem" className="w-full max-w-md mx-auto drop-shadow-2xl" />
+                <img src={walletEcosystem} alt="Wallet Ecosystem" className="section-img w-full max-w-md mx-auto drop-shadow-2xl" />
               </div>
               <div className="space-y-4">
                 {[
