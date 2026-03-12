@@ -499,7 +499,7 @@ const ProductShowcase = () => {
 
         {/* ═══════ WHY GLOBALPAY ═══════ */}
         <div className="page-break" />
-        <section className="min-h-[1120px] py-20 px-8">
+        <section className="pdf-section min-h-[1120px] py-20 px-8">
           <div className="max-w-5xl mx-auto">
             <SectionHeader icon={Star} title="Why GlobalPay?" subtitle="The competitive advantage for your financial institution" number="07" />
 
