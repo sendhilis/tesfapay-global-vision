@@ -79,11 +79,53 @@ const ProductShowcase = () => {
         </div>
       </div>
 
+      {/* PDF print styles */}
+      <style>{`
+        .pdf-export-mode {
+          max-width: 794px !important;
+          width: 794px !important;
+        }
+        .pdf-export-mode .pdf-section {
+          min-height: 1122px !important;
+          max-height: 1122px !important;
+          height: 1122px !important;
+          overflow: hidden !important;
+          box-sizing: border-box !important;
+          padding: 48px 40px !important;
+        }
+        .pdf-export-mode .pdf-cover {
+          min-height: 1122px !important;
+          max-height: 1122px !important;
+          height: 1122px !important;
+        }
+        .pdf-export-mode .page-break {
+          height: 0 !important;
+          page-break-before: always !important;
+        }
+        .pdf-export-mode .pdf-section img.section-img {
+          max-height: 240px !important;
+          object-fit: contain !important;
+        }
+        .pdf-export-mode .pdf-section .text-3xl {
+          font-size: 1.25rem !important;
+        }
+        .pdf-export-mode .pdf-section .text-2xl {
+          font-size: 1.125rem !important;
+        }
+        .pdf-export-mode .pdf-section h2 {
+          font-size: 1.5rem !important;
+        }
+        @media print {
+          .page-break { page-break-before: always; }
+          .print\\:hidden { display: none !important; }
+        }
+      `}</style>
+
       {/* PDF Content — fixed width for consistent PDF rendering */}
       <div ref={contentRef} className="bg-background text-foreground max-w-[1200px] mx-auto">
 
         {/* ═══════ COVER PAGE ═══════ */}
-        <section className="relative min-h-[1120px] flex flex-col items-center justify-center overflow-hidden" style={{ background: "hsl(220 35% 6%)" }}>
+        <section className="pdf-cover relative min-h-[1120px] flex flex-col items-center justify-center overflow-hidden" style={{ background: "hsl(220 35% 6%)" }}>
           <div className="absolute inset-0 opacity-30">
             <img src={heroBg} alt="" className="w-full h-full object-cover" />
           </div>
