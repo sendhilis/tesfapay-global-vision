@@ -165,8 +165,7 @@ const ProductShowcase = () => {
         </section>
 
         {/* ═══════ WALLET ECOSYSTEM ═══════ */}
-        <div className="page-break" />
-        <section className="pdf-section min-h-[1120px] py-20 px-8">
+        <section className="pdf-page pdf-page-padded min-h-[1120px] py-20 px-8">
           <div className="max-w-5xl mx-auto">
             <SectionHeader icon={Smartphone} title="Customer Wallet Ecosystem" subtitle="Complete financial services in every customer's pocket" number="01" />
             <div className="grid md:grid-cols-2 gap-12 mt-12 items-center">
