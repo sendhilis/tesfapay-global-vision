@@ -47,7 +47,7 @@ const ProductShowcase = () => {
           scrollX: 0,
         },
         jsPDF: { unit: "pt", format: "a4", orientation: "portrait" },
-        pagebreak: { mode: ["css"], before: ".page-break" },
+        pagebreak: { mode: ["css"], avoid: ["img", "li", ".glass"] },
       };
       await html2pdf().set(opt).from(contentRef.current).save();
       contentRef.current.classList.remove("pdf-export-mode");
