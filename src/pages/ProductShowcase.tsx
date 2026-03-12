@@ -387,7 +387,7 @@ const ProductShowcase = () => {
             <SectionHeader icon={ShieldCheck} title="Security & Regulatory Compliance" subtitle="Banking-grade security aligned with global regulatory standards" number="05" />
             <div className="grid md:grid-cols-2 gap-12 mt-12 items-center">
               <div className="flex justify-center">
-                <img src={securityImg} alt="Security" className="w-64 drop-shadow-2xl" />
+                <img src={securityImg} alt="Security" className="section-img w-64 drop-shadow-2xl" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 {[
