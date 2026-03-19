@@ -355,10 +355,16 @@ const LiveCamera = ({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const simCanvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const mountedRef = useRef(true);
   const [cameraReady, setCameraReady] = useState(false);
   const [useSimulation, setUseSimulation] = useState(false);
   const [flashEffect, setFlashEffect] = useState(false);
   const [scanLineY, setScanLineY] = useState(0);
+
+  // Stable callback for SimulatedCameraCanvas
+  const onSimReady = useCallback(() => {
+    if (mountedRef.current) setCameraReady(true);
+  }, []);
 
   const startCamera = useCallback(async () => {
     try {
@@ -366,23 +372,32 @@ const LiveCamera = ({
       setUseSimulation(false);
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((t) => t.stop());
+        streamRef.current = null;
       }
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode, width: { ideal: 1920 }, height: { ideal: 1080 } },
+        video: { facingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
         audio: false,
       });
+      if (!mountedRef.current) {
+        stream.getTracks().forEach((t) => t.stop());
+        return;
+      }
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         videoRef.current.onloadedmetadata = () => {
-          videoRef.current?.play();
-          setCameraReady(true);
+          videoRef.current?.play().then(() => {
+            if (mountedRef.current) setCameraReady(true);
+          }).catch(() => {
+            if (mountedRef.current) setCameraReady(true);
+          });
         };
       }
     } catch {
-      // Fallback to simulation mode
       console.log("Camera unavailable, using simulation mode");
-      setUseSimulation(true);
+      if (mountedRef.current) {
+        setUseSimulation(true);
+      }
     }
   }, [facingMode]);
 
