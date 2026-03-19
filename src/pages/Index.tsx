@@ -1,3 +1,22 @@
+/**
+ * Index — Landing page / marketing homepage.
+ *
+ * @route /
+ * @module Public
+ *
+ * @description Hero section with branding, feature highlights, and CTAs
+ * to Login, Register, Admin Console, and Agent Portal. Includes PWA
+ * install prompt banner. No authentication required.
+ *
+ * @api_endpoints None — static marketing page.
+ *
+ * @navigation
+ * - "Get Started" → /onboarding
+ * - "Sign In" → /login
+ * - Admin link → /admin
+ * - Agent link → /agent
+ * - Install link → /install
+ */
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, Shield, Zap, Globe, Star, Download, X } from "lucide-react";

@@ -1,3 +1,14 @@
+/**
+ * NotFound — 404 error page.
+ *
+ * @route /* (catch-all)
+ * @module Public
+ *
+ * @description Displayed when no route matches. Logs the attempted path
+ * to console for debugging. Provides link back to home page.
+ *
+ * @api_endpoints None.
+ */
 import { useLocation } from "react-router-dom";
 import { useEffect } from "react";
 

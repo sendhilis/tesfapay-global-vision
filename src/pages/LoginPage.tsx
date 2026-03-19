@@ -1,3 +1,22 @@
+/**
+ * LoginPage — User authentication screen with MPIN.
+ *
+ * @route /login
+ * @module Public
+ *
+ * @description Two-step login: (1) Enter phone number with +251 prefix,
+ * (2) Enter 6-digit MPIN via numeric keypad. Auto-submits on 6th digit.
+ * Also offers biometric login shortcut and link to registration.
+ *
+ * @api_endpoints
+ * - POST /v1/auth/login            → { phone, pin } → JWT tokens + user profile
+ * - POST /v1/auth/login/biometric  → { userId, biometricToken } → JWT tokens
+ *
+ * @tables users, user_sessions
+ *
+ * @mock_data No real auth — navigates directly to /wallet on PIN entry.
+ * Replace with useMutation to /auth/login, store JWT in secure storage.
+ */
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
