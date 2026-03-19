@@ -8,6 +8,7 @@
  */
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { useKycApplications } from "@/contexts/KycApplicationContext";
 import {
   ChevronLeft, ChevronRight, Camera, CheckCircle2,
   Shield, Zap, AlertTriangle, ScanFace, FileText, Eye, RefreshCw,
