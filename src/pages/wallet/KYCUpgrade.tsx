@@ -32,9 +32,9 @@ const LIVENESS_INSTRUCTIONS = [
   { label: "Smile for the camera", icon: "😊", action: "smile" },
 ];
 
-/* Mock extracted data that appears as if the AI reads the ID */
-const MOCK_FRONT_DATA = [
-  { label: "Full Name", value: "Abebe Girma Tadesse", delay: 600 },
+/* Mock extracted data — name is injected dynamically */
+const getMockFrontData = (name: string) => [
+  { label: "Full Name", value: name || "Abebe Girma Tadesse", delay: 600 },
   { label: "Date of Birth", value: "15 Mar 1990", delay: 1100 },
   { label: "Gender", value: "Male", delay: 1500 },
   { label: "Nationality", value: "Ethiopian", delay: 1900 },
@@ -355,10 +355,16 @@ const LiveCamera = ({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const simCanvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const mountedRef = useRef(true);
   const [cameraReady, setCameraReady] = useState(false);
   const [useSimulation, setUseSimulation] = useState(false);
   const [flashEffect, setFlashEffect] = useState(false);
   const [scanLineY, setScanLineY] = useState(0);
+
+  // Stable callback for SimulatedCameraCanvas
+  const onSimReady = useCallback(() => {
+    if (mountedRef.current) setCameraReady(true);
+  }, []);
 
   const startCamera = useCallback(async () => {
     try {
@@ -366,23 +372,32 @@ const LiveCamera = ({
       setUseSimulation(false);
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((t) => t.stop());
+        streamRef.current = null;
       }
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode, width: { ideal: 1920 }, height: { ideal: 1080 } },
+        video: { facingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
         audio: false,
       });
+      if (!mountedRef.current) {
+        stream.getTracks().forEach((t) => t.stop());
+        return;
+      }
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         videoRef.current.onloadedmetadata = () => {
-          videoRef.current?.play();
-          setCameraReady(true);
+          videoRef.current?.play().then(() => {
+            if (mountedRef.current) setCameraReady(true);
+          }).catch(() => {
+            if (mountedRef.current) setCameraReady(true);
+          });
         };
       }
     } catch {
-      // Fallback to simulation mode
       console.log("Camera unavailable, using simulation mode");
-      setUseSimulation(true);
+      if (mountedRef.current) {
+        setUseSimulation(true);
+      }
     }
   }, [facingMode]);
 
@@ -394,10 +409,14 @@ const LiveCamera = ({
   }, []);
 
   useEffect(() => {
+    mountedRef.current = true;
     if (!capturedImage) {
       startCamera();
     }
-    return () => stopCamera();
+    return () => {
+      mountedRef.current = false;
+      stopCamera();
+    };
   }, [capturedImage, startCamera, stopCamera]);
 
   // Animated scan line
@@ -448,7 +467,6 @@ const LiveCamera = ({
     onCapture(dataUrl);
   };
 
-  const isReady = cameraReady || (useSimulation && cameraReady);
   const showFeed = cameraReady || useSimulation;
 
   return (
@@ -484,7 +502,7 @@ const LiveCamera = ({
               <SimulatedCameraCanvas
                 facingMode={facingMode}
                 canvasRef={simCanvasRef}
-                onReady={() => setCameraReady(true)}
+                onReady={onSimReady}
               />
             )}
             {!showFeed && (
@@ -1019,6 +1037,7 @@ const KYCUpgrade = () => {
   const navigate = useNavigate();
   const [step, setStep] = useState<Step>("intro");
   const [docType, setDocType] = useState("fayda");
+  const [applicantName, setApplicantName] = useState("");
   const [frontImage, setFrontImage] = useState<string | null>(null);
   const [backImage, setBackImage] = useState<string | null>(null);
   const [selfieImage, setSelfieImage] = useState<string | null>(null);
@@ -1184,7 +1203,26 @@ const KYCUpgrade = () => {
               </div>
             </div>
 
-            <button onClick={() => setStep("camera-check")} className="w-full py-4 rounded-2xl bg-gradient-to-r from-primary to-primary/80 text-primary-foreground font-bold text-sm flex items-center justify-center gap-2">
+            {/* Applicant name input */}
+            <div className="glass rounded-2xl p-4">
+              <label className="text-xs font-bold text-foreground block mb-2">👤 Your Full Name (as on ID)</label>
+              <input
+                type="text"
+                value={applicantName}
+                onChange={(e) => setApplicantName(e.target.value)}
+                placeholder="e.g. Abebe Girma Tadesse"
+                className="w-full rounded-xl border border-border bg-card px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+              />
+              {applicantName.trim().length > 0 && applicantName.trim().split(" ").length < 2 && (
+                <p className="text-[10px] text-yellow-400 mt-1.5">Please enter your full name (first and last)</p>
+              )}
+            </div>
+
+            <button
+              onClick={() => setStep("camera-check")}
+              disabled={applicantName.trim().split(" ").length < 2}
+              className="w-full py-4 rounded-2xl bg-gradient-to-r from-primary to-primary/80 text-primary-foreground font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
               <Zap className="w-4 h-4" /> Start Live Verification
             </button>
           </div>
@@ -1251,7 +1289,7 @@ const KYCUpgrade = () => {
               </div>
             )}
             {/* Show extracted data from front side */}
-            <ExtractedDataOverlay data={MOCK_FRONT_DATA} visible={showFrontData} />
+            <ExtractedDataOverlay data={getMockFrontData(applicantName)} visible={showFrontData} />
             <button disabled={!frontImage || !showFrontData} onClick={() => setStep("doc-back")}
               className="w-full py-4 rounded-2xl bg-gradient-to-r from-primary to-primary/80 text-primary-foreground font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed">
               Continue to Back Side <ChevronRight className="w-4 h-4" />
@@ -1408,7 +1446,7 @@ const KYCUpgrade = () => {
             <div className="glass rounded-2xl p-4">
               <p className="text-xs font-bold text-foreground mb-3">📋 Extracted Information</p>
               <div className="space-y-2">
-                {[...MOCK_FRONT_DATA, ...MOCK_BACK_DATA].map(({ label, value }) => (
+                {[...getMockFrontData(applicantName), ...MOCK_BACK_DATA].map(({ label, value }) => (
                   <div key={label} className="flex justify-between text-xs">
                     <span className="text-muted-foreground">{label}</span>
                     <span className="font-semibold text-foreground font-mono">{value}</span>
