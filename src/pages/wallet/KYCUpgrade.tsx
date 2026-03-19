@@ -644,20 +644,25 @@ const LivenessCamera = ({ onComplete }: { onComplete: () => void }) => {
 
       <div className="glass rounded-2xl overflow-hidden">
         <div className="relative aspect-square bg-card overflow-hidden">
-          {cameraError ? (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-6">
-              <AlertTriangle className="w-10 h-10 text-destructive" />
-              <p className="text-xs text-center text-muted-foreground">{cameraError}</p>
-            </div>
-          ) : (
             <>
-              <video
-                ref={videoRef}
-                autoPlay
-                playsInline
-                muted
-                className="absolute inset-0 w-full h-full object-cover scale-x-[-1]"
-              />
+              {/* Real camera video */}
+              {!useSimulation && (
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className="absolute inset-0 w-full h-full object-cover scale-x-[-1]"
+                />
+              )}
+              {/* Simulated camera canvas */}
+              {useSimulation && (
+                <SimulatedCameraCanvas
+                  facingMode="user"
+                  canvasRef={simCanvasRef}
+                  onReady={() => {}}
+                />
+              )}
               {!cameraReady && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-card/90 z-10">
                   <Loader2 className="w-10 h-10 text-primary animate-spin" />
@@ -718,15 +723,14 @@ const LivenessCamera = ({ onComplete }: { onComplete: () => void }) => {
                 </div>
               )}
 
-              {/* LIVE indicator */}
+              {/* LIVE/DEMO indicator */}
               {cameraReady && (
                 <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 glass rounded-full px-3 py-1">
                   <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                  <span className="text-[10px] text-foreground font-bold tracking-widest">LIVE</span>
+                  <span className="text-[10px] text-foreground font-bold tracking-widest">{useSimulation ? "DEMO" : "LIVE"}</span>
                 </div>
               )}
             </>
-          )}
         </div>
 
         {/* Current instruction panel */}
