@@ -970,11 +970,14 @@ const KYCUpgrade = () => {
               </div>
             </div>
 
-            <button onClick={() => setStep("doc-type")} className="w-full py-4 rounded-2xl bg-gradient-to-r from-primary to-primary/80 text-primary-foreground font-bold text-sm flex items-center justify-center gap-2">
+            <button onClick={() => setStep("camera-check")} className="w-full py-4 rounded-2xl bg-gradient-to-r from-primary to-primary/80 text-primary-foreground font-bold text-sm flex items-center justify-center gap-2">
               <Zap className="w-4 h-4" /> Start Live Verification
             </button>
           </div>
         )}
+
+        {/* ── CAMERA PRE-CHECK ── */}
+        {step === "camera-check" && <CameraPreCheck onPass={() => setStep("doc-type")} />}
 
         {/* ── DOCUMENT TYPE ── */}
         {step === "doc-type" && (
