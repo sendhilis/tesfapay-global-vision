@@ -32,9 +32,9 @@ const LIVENESS_INSTRUCTIONS = [
   { label: "Smile for the camera", icon: "😊", action: "smile" },
 ];
 
-/* Mock extracted data that appears as if the AI reads the ID */
-const MOCK_FRONT_DATA = [
-  { label: "Full Name", value: "Abebe Girma Tadesse", delay: 600 },
+/* Mock extracted data — name is injected dynamically */
+const getMockFrontData = (name: string) => [
+  { label: "Full Name", value: name || "Abebe Girma Tadesse", delay: 600 },
   { label: "Date of Birth", value: "15 Mar 1990", delay: 1100 },
   { label: "Gender", value: "Male", delay: 1500 },
   { label: "Nationality", value: "Ethiopian", delay: 1900 },
