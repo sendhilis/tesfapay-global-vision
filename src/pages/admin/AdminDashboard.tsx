@@ -1,3 +1,22 @@
+/**
+ * AdminDashboard — System-wide admin overview dashboard.
+ *
+ * @route /admin
+ * @module Admin Console
+ *
+ * @description KPI cards (Total Users, Today's Transactions, Active Agents, Fraud Alerts),
+ * transaction volume trend chart (6-month area chart), KYC distribution pie chart,
+ * agent performance bar chart, and real-time system alerts feed.
+ *
+ * @api_endpoints
+ * - GET /v1/admin/dashboard  → { totalUsers, todayTransactionVolume, activeAgents,
+ *                                fraudAlerts, monthlyTrend[], kycDistribution[],
+ *                                agentPerformance[], alerts[] }
+ *
+ * @tables users, transactions, agents, fraud_alerts, kyc_applications
+ *
+ * @mock_data All KPIs, charts, and alerts hardcoded. Replace with useQuery.
+ */
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { TrendingUp, TrendingDown, Users, ArrowLeftRight, Shield, Zap } from "lucide-react";
 

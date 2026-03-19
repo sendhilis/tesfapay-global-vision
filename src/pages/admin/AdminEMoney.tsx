@@ -1,3 +1,22 @@
+/**
+ * AdminEMoney — E-money trust account management dashboard.
+ *
+ * @route /admin/emoney
+ * @module Admin Console
+ *
+ * @description Regulatory compliance view: total e-money issued vs trust account
+ * balance, reconciliation status, float distribution breakdown (user wallets,
+ * agent float, merchant holdings, system reserve). Includes charts for
+ * e-money growth trend and distribution.
+ *
+ * @api_endpoints
+ * - GET /v1/admin/emoney  → { totalEMoneyIssued, trustAccountBalance,
+ *                             reconciliationStatus, floatDistribution[] }
+ *
+ * @tables emoney_trust_account, emoney_distribution
+ *
+ * @mock_data All e-money data hardcoded. Replace with useQuery.
+ */
 import { useState } from "react";
 import { ArrowUpRight, Users, Banknote, AlertTriangle, CheckCircle, TrendingUp, Download, Filter } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";

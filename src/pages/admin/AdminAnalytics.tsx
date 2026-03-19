@@ -1,3 +1,21 @@
+/**
+ * AdminAnalytics — Advanced analytics and data visualization.
+ *
+ * @route /admin/analytics
+ * @module Admin Console
+ *
+ * @description Customer 360 radar chart, user growth line chart, transaction
+ * scatter plot (volume vs value), revenue breakdown by type, and regional
+ * performance metrics. Designed for executive-level insights.
+ *
+ * @api_endpoints
+ * - GET /v1/admin/analytics?period=7d|30d|90d|1y  → { userGrowth[], transactionTrend[],
+ *                                                     revenueByType[], topRegions[] }
+ *
+ * @tables users, transactions, agents, loyalty_accounts
+ *
+ * @mock_data All chart data hardcoded. Replace with useQuery.
+ */
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, RadarChart, Radar, PolarGrid, PolarAngleAxis, ScatterChart, Scatter, ZAxis } from "recharts";
 
 const customer360 = [
