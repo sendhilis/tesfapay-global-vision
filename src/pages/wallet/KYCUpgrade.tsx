@@ -1426,7 +1426,7 @@ const KYCUpgrade = () => {
             <div className="glass rounded-2xl p-4">
               <p className="text-xs font-bold text-foreground mb-3">📋 Extracted Information</p>
               <div className="space-y-2">
-                {[...MOCK_FRONT_DATA, ...MOCK_BACK_DATA].map(({ label, value }) => (
+                {[...getMockFrontData(applicantName), ...MOCK_BACK_DATA].map(({ label, value }) => (
                   <div key={label} className="flex justify-between text-xs">
                     <span className="text-muted-foreground">{label}</span>
                     <span className="font-semibold text-foreground font-mono">{value}</span>
