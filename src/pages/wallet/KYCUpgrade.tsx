@@ -1037,6 +1037,7 @@ const KYCUpgrade = () => {
   const navigate = useNavigate();
   const [step, setStep] = useState<Step>("intro");
   const [docType, setDocType] = useState("fayda");
+  const [applicantName, setApplicantName] = useState("");
   const [frontImage, setFrontImage] = useState<string | null>(null);
   const [backImage, setBackImage] = useState<string | null>(null);
   const [selfieImage, setSelfieImage] = useState<string | null>(null);
