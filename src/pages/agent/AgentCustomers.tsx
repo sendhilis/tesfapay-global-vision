@@ -1,3 +1,21 @@
+/**
+ * AgentCustomers — Customer management and registration for agents.
+ *
+ * @route /agent/customers
+ * @module Agent Portal
+ *
+ * @description Lists customers served by this agent with search. Allows
+ * agent-assisted new customer registration: (1) Customer list, (2) Registration
+ * form (name, phone, ID type), (3) Document capture, (4) Success.
+ *
+ * @api_endpoints
+ * - GET  /v1/agent/customers?search=...&page=0  → paginated customer list
+ * - POST /v1/agent/customers/register            → { firstName, lastName, phone, documentType, documentNumber }
+ *
+ * @tables users, agents, kyc_applications
+ *
+ * @mock_data Customer list hardcoded. Replace with useQuery.
+ */
 import { useState } from "react";
 import { UserPlus, CheckCircle, Camera, Phone, User, MapPin } from "lucide-react";
 

@@ -1,3 +1,21 @@
+/**
+ * AgentCashIn — Agent-side cash deposit processing.
+ *
+ * @route /agent/cashin
+ * @module Agent Portal
+ *
+ * @description Multi-step flow: (1) Look up customer by phone/wallet ID,
+ * (2) Enter deposit amount (shows commission preview at 0.3% min ETB 2),
+ * (3) Confirm transaction details, (4) Enter customer OTP, (5) Success receipt.
+ *
+ * @api_endpoints
+ * - POST /v1/agent/customers/lookup  → { query } → customer details
+ * - POST /v1/agent/cashin            → { customerPhone, amount, otp, agentPin } → result
+ *
+ * @tables agents, users, transactions, agent_commissions, agent_float_history, otp_verifications
+ *
+ * @mock_data Customer lookup returns hardcoded "Tigist Alemu". Replace with API call.
+ */
 import { useState } from "react";
 import { Search, CheckCircle, ArrowDownLeft, Phone, CreditCard } from "lucide-react";
 

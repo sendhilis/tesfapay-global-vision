@@ -1,3 +1,21 @@
+/**
+ * AgentFloat — Float (working capital) management screen.
+ *
+ * @route /agent/float
+ * @module Agent Portal
+ *
+ * @description Displays current float balance/limit, allows requesting float
+ * top-up from super agent. Steps: (1) Enter amount + note, (2) Confirm,
+ * (3) Request submitted. Also shows float history (top-ups and debits).
+ *
+ * @api_endpoints
+ * - GET  /v1/agent/float          → { balance, limit, superAgentName, history[] }
+ * - POST /v1/agent/float/request  → { amount, note } → top-up request created
+ *
+ * @tables agents, agent_float_history, agent_float_requests
+ *
+ * @mock_data Float balance and history hardcoded. Replace with useQuery.
+ */
 import { useState } from "react";
 import { RefreshCw, CheckCircle, AlertCircle } from "lucide-react";
 

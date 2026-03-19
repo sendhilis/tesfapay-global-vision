@@ -1,3 +1,22 @@
+/**
+ * AgentOnboarding — Multi-step agent registration wizard.
+ *
+ * @route /agent/onboarding
+ * @module Agent Portal
+ *
+ * @description Standalone page (not inside AgentLayout). Steps: (1) Welcome,
+ * (2) Personal info, (3) Business details (name, region, address),
+ * (4) Document upload, (5) Terms & conditions, (6) Submission success.
+ * After approval, agent can access the Agent Portal.
+ *
+ * @api_endpoints
+ * - POST /v1/auth/register                → create user account
+ * - POST /v1/agent/register (new)         → { businessName, region, address, documents }
+ *
+ * @tables users, user_roles, agents, kyc_applications
+ *
+ * @mock_data All form steps are UI-only. Replace with multi-step form submission.
+ */
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
