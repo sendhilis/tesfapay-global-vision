@@ -1,3 +1,24 @@
+/**
+ * LoyaltyRewards — Loyalty points dashboard with redemption catalog.
+ *
+ * @route /wallet/loyalty
+ * @module Wallet
+ *
+ * @description Three tabs: (1) Overview — points, tier, progress to next tier,
+ * (2) Redeem — catalog of rewards with point costs, (3) History — points earned/spent.
+ * Tier system: Bronze (0-999), Silver (1K-5K), Gold (5K-20K), Platinum (20K+).
+ * Points value: 1 point = ETB 0.05.
+ *
+ * @api_endpoints
+ * - GET  /v1/loyalty                → { points, tier, progressToNextTier }
+ * - GET  /v1/loyalty/history        → paginated points history
+ * - GET  /v1/loyalty/redemptions    → available rewards catalog
+ * - POST /v1/loyalty/redeem         → { redemptionId } → redeem reward
+ *
+ * @tables loyalty_accounts, loyalty_history, redemption_catalog, redemptions
+ *
+ * @mock_data 1,240 points / Silver tier hardcoded. Replace with useQuery.
+ */
 import { useState } from "react";
 import { Star, TrendingUp, Gift } from "lucide-react";
 

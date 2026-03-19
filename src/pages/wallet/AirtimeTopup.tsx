@@ -1,3 +1,20 @@
+/**
+ * AirtimeTopup — Airtime and data bundle purchase screen.
+ *
+ * @route /wallet/airtime
+ * @module Wallet
+ *
+ * @description Select operator (Ethio Telecom / Safaricom ET), choose self or
+ * other, pick a bundle (data or airtime), confirm, and purchase.
+ *
+ * @api_endpoints
+ * - GET  /v1/airtime/operators    → operators with their bundles
+ * - POST /v1/airtime/topup        → { operatorId, bundleId, recipientPhone, isSelfTopup, pin }
+ *
+ * @tables telecom_operators, airtime_bundles, transactions, wallets
+ *
+ * @mock_data Operators and bundles hardcoded. Replace with useQuery.
+ */
 import { useState } from "react";
 import { CheckCircle } from "lucide-react";
 

@@ -1,3 +1,23 @@
+/**
+ * SavingsGoals — Savings goal management screen.
+ *
+ * @route /wallet/savings
+ * @module Wallet
+ *
+ * @description Displays total saved across all goals, lists individual goals
+ * with progress bars, and provides deposit/withdraw actions per goal.
+ * Includes AI suggestion for optimal savings pace.
+ *
+ * @api_endpoints
+ * - GET  /v1/savings/goals                       → goals list with totals
+ * - POST /v1/savings/goals                       → { name, targetAmount, deadline } → create goal
+ * - POST /v1/savings/goals/{goalId}/deposit      → { amount, pin } → deposit
+ * - POST /v1/savings/goals/{goalId}/withdraw     → { amount, pin } → withdraw
+ *
+ * @tables savings_goals, wallets, transactions
+ *
+ * @mock_data Goals list hardcoded. Replace with useQuery/useMutation.
+ */
 import { useState } from "react";
 import { Plus, Target, TrendingUp } from "lucide-react";
 

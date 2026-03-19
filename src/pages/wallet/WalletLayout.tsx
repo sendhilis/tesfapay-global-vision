@@ -1,3 +1,21 @@
+/**
+ * WalletLayout — Mobile wallet app shell with bottom navigation.
+ *
+ * @route /wallet/* (parent layout)
+ * @module Wallet
+ *
+ * @description Wraps all wallet child routes. Provides: top bar with logo + user name,
+ * scrollable content area (<Outlet />), floating AI assistant (TesfaAI), and
+ * bottom navigation bar (Home, Send, Pay, Savings, History, Profile).
+ * Constrained to max-w-md for mobile-first design.
+ *
+ * @children WalletHome, SendMoney, PayBills, SavingsGoals, TransactionHistory,
+ *           UserProfile, RequestMoney, AirtimeTopup, MerchantPay, MicroLoan,
+ *           CashInOut, LoyaltyRewards, KYCUpgrade
+ *
+ * @api_endpoints
+ * - GET /v1/users/me  → user name for top bar display
+ */
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import { Home, Send, Receipt, PiggyBank, History, User } from "lucide-react";
 import tesfaLogo from "@/assets/tesfa-logo.png";

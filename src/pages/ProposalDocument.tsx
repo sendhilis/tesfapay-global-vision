@@ -1,3 +1,18 @@
+/**
+ * ProposalDocument — Functional & Technical Specification document.
+ *
+ * @route /proposal
+ * @module Public / Sales
+ *
+ * @description Comprehensive specification document for Global Bank Ethiopia
+ * with 200+ requirement IDs, 15+ operational workflows, 50+ AI feature
+ * definitions, and a 27-table database schema. Supports printing and
+ * text-based downloading. Accessible from Admin sidebar.
+ *
+ * @api_endpoints None — static document page.
+ *
+ * @dependencies None (pure React rendering, no external libs)
+ */
 import { useState } from "react";
 import { Download, FileText, ChevronLeft, Printer } from "lucide-react";
 import { useNavigate } from "react-router-dom";

@@ -1,3 +1,18 @@
+/**
+ * ProductShowcase — Marketing presentation with PDF export.
+ *
+ * @route /showcase
+ * @module Public / Sales
+ *
+ * @description Multi-section product showcase covering: Hero, Wallet Features,
+ * Agent Network, Admin Console, Security & KYC, AI Features, and Contact.
+ * Includes PDF export functionality using html2pdf.js with A4 page formatting.
+ * Accessible from Admin sidebar.
+ *
+ * @api_endpoints None — static presentation page.
+ *
+ * @dependencies html2pdf.js for PDF generation
+ */
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {

@@ -1,3 +1,21 @@
+/**
+ * AdminKYC — KYC document review queue.
+ *
+ * @route /admin/kyc
+ * @module Admin Console
+ *
+ * @description Queue of pending KYC Level 2 applications. Each entry shows:
+ * user info, document type, AI verification score, AI verdict, risk level.
+ * Actions: View documents, Approve, Reject with note.
+ *
+ * @api_endpoints
+ * - GET /v1/admin/kyc/pending?page=0&size=20                → pending applications
+ * - PUT /v1/admin/kyc/{applicationId}/review  → { decision: APPROVED|REJECTED, note }
+ *
+ * @tables kyc_applications, users
+ *
+ * @mock_data 5 KYC applications hardcoded. Replace with useQuery.
+ */
 import { useState } from "react";
 import { Check, X, AlertTriangle, Clock, Eye } from "lucide-react";
 

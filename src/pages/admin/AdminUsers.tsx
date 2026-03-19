@@ -1,3 +1,21 @@
+/**
+ * AdminUsers — User management table with search and filters.
+ *
+ * @route /admin/users
+ * @module Admin Console
+ *
+ * @description Paginated data table of all registered users with columns:
+ * Wallet ID, Name, Phone, KYC Level, Status, Type, Balance, Region, AI Risk.
+ * Searchable and filterable. Actions: view detail, suspend/activate user.
+ *
+ * @api_endpoints
+ * - GET /v1/admin/users?search=...&kycLevel=...&status=...&page=0&size=20  → paginated users
+ * - PUT /v1/admin/users/{userId}/status  → { status, reason } → suspend/activate
+ *
+ * @tables users, wallets, loyalty_accounts
+ *
+ * @mock_data 7 users hardcoded. Replace with paginated useQuery.
+ */
 import { useState } from "react";
 import { Search, Filter, MoreVertical, ChevronDown } from "lucide-react";
 

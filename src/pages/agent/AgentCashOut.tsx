@@ -1,3 +1,21 @@
+/**
+ * AgentCashOut — Agent-side cash withdrawal processing.
+ *
+ * @route /agent/cashout
+ * @module Agent Portal
+ *
+ * @description Mirror of AgentCashIn for withdrawals. Steps: (1) Customer lookup,
+ * (2) Enter withdrawal amount (validates against customer balance + agent float),
+ * (3) Confirm, (4) OTP verification, (5) Success with commission receipt.
+ *
+ * @api_endpoints
+ * - POST /v1/agent/customers/lookup  → { query } → customer details
+ * - POST /v1/agent/cashout           → { customerPhone, amount, otp, agentPin } → result
+ *
+ * @tables agents, users, transactions, agent_commissions, agent_float_history, otp_verifications
+ *
+ * @mock_data Customer lookup hardcoded. Replace with API call.
+ */
 import { useState } from "react";
 import { Search, CheckCircle, ArrowUpRight } from "lucide-react";
 

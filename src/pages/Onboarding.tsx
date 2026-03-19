@@ -1,3 +1,22 @@
+/**
+ * Onboarding — New user registration wizard.
+ *
+ * @route /onboarding
+ * @module Public
+ *
+ * @description Multi-step registration: (1) Welcome screen, (2) Personal info
+ * (name), (3) Phone number entry, (4) OTP verification, (5) Create 6-digit MPIN,
+ * (6) ID document capture (optional KYC Level 1), (7) Success.
+ *
+ * @api_endpoints
+ * - POST /v1/auth/register     → { phone, firstName, lastName, pin } → userId + OTP sent
+ * - POST /v1/auth/verify-otp   → { phone, otp } → JWT tokens
+ *
+ * @tables users, wallets, user_roles, otp_verifications
+ *
+ * @mock_data No real registration — navigates to /wallet on completion.
+ * Replace with useMutation for register + OTP verify flow.
+ */
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, ArrowRight, Check, User, Phone, Shield, Camera } from "lucide-react";

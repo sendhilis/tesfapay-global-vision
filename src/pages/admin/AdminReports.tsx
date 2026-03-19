@@ -1,3 +1,20 @@
+/**
+ * AdminReports — Report generation and download center.
+ *
+ * @route /admin/reports
+ * @module Admin Console
+ *
+ * @description Browse report categories (Transaction Summary, Agent Performance,
+ * KYC Audit, Reconciliation, etc.). Generate and download reports in PDF/CSV
+ * format with date range filters.
+ *
+ * @api_endpoints
+ * - GET /v1/admin/reports?type=...&date=...&format=JSON|PDF|CSV  → report data or file
+ *
+ * @tables transactions, agents, kyc_applications, emoney_trust_account, audit_log
+ *
+ * @mock_data Report categories and sample data hardcoded.
+ */
 import { useState } from "react";
 import { Download, Filter, FileText, TrendingUp, Users, Zap, ShoppingBag } from "lucide-react";
 

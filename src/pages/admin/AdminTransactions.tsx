@@ -1,3 +1,22 @@
+/**
+ * AdminTransactions — System-wide transaction monitoring table.
+ *
+ * @route /admin/transactions
+ * @module Admin Console
+ *
+ * @description Full transaction ledger with columns: ID, From, To, Type, Amount,
+ * Fee, Status, Date, Channel, AI Flag. Searchable, filterable by type/status/date.
+ * Supports CSV/PDF export and transaction reversal.
+ *
+ * @api_endpoints
+ * - GET  /v1/admin/transactions?type=...&status=...&page=0&size=50  → paginated txns
+ * - POST /v1/admin/transactions/{id}/reverse  → { reason, adminPin } → reversal
+ * - GET  /v1/admin/transactions/export?format=CSV|PDF              → file download
+ *
+ * @tables transactions, users
+ *
+ * @mock_data 8 transactions hardcoded. Replace with paginated useQuery.
+ */
 import { useState } from "react";
 import { Search, ArrowUpRight, ArrowDownLeft, Receipt, Download } from "lucide-react";
 

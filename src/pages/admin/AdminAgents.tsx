@@ -1,3 +1,21 @@
+/**
+ * AdminAgents — Agent and merchant management console.
+ *
+ * @route /admin/agents
+ * @module Admin Console
+ *
+ * @description Data table of all agents/merchants/super-agents. Columns: Code,
+ * Name, Type, Zone, Sub-agents, Float Balance, Today's Txns, Commission, Status,
+ * Rating. Supports search, filter by type/status, and float limit adjustment.
+ *
+ * @api_endpoints
+ * - GET /v1/admin/agents?type=...&status=...&region=...&page=0  → paginated agents
+ * - PUT /v1/admin/agents/{agentId}/float-limit  → { newLimit, reason }
+ *
+ * @tables agents, agent_commissions, users
+ *
+ * @mock_data 6 agents hardcoded. Replace with paginated useQuery.
+ */
 import { useState } from "react";
 import { Search, MapPin, Plus, Filter, TrendingUp, TrendingDown } from "lucide-react";
 

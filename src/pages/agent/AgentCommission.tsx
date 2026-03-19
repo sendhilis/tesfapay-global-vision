@@ -1,3 +1,19 @@
+/**
+ * AgentCommission — Commission tracking and reporting.
+ *
+ * @route /agent/commission
+ * @module Agent Portal
+ *
+ * @description Shows total/monthly/today commission earnings, breakdown by
+ * cash-in vs cash-out, monthly trend chart, and per-transaction commission log.
+ *
+ * @api_endpoints
+ * - GET /v1/agent/commission?period=TODAY|WEEK|MONTH  → { totalCommission, breakdown[], dailyTrend[] }
+ *
+ * @tables agent_commissions, transactions
+ *
+ * @mock_data Monthly commission data and recent logs hardcoded.
+ */
 import { TrendingUp, ArrowDownLeft, ArrowUpRight, Download } from "lucide-react";
 
 const monthlyData = [

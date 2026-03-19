@@ -1,3 +1,20 @@
+/**
+ * AgentHome — Agent portal dashboard.
+ *
+ * @route /agent
+ * @module Agent Portal
+ *
+ * @description Displays agent's float balance with usage bar and low-float warning,
+ * today's stats (transaction count, commission, monthly total), recent cash-in/out
+ * transactions with commission earned per transaction, and quick action buttons.
+ *
+ * @api_endpoints
+ * - GET /v1/agent/dashboard  → { floatBalance, floatLimit, todayStats, recentTransactions[] }
+ *
+ * @tables agents, agent_commissions, transactions, agent_float_history
+ *
+ * @mock_data Float balance (42,500/50,000), stats, and 4 recent txns hardcoded.
+ */
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {

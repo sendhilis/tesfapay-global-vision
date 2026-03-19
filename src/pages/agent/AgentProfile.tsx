@@ -1,3 +1,20 @@
+/**
+ * AgentProfile — Agent account profile and settings.
+ *
+ * @route /agent/profile
+ * @module Agent Portal
+ *
+ * @description Shows agent name, code (AGT-001), type, KYC level, region/zone,
+ * contact info, and settings menu (Security, Commission History, Float Mgmt, etc.).
+ *
+ * @api_endpoints
+ * - GET /v1/users/me       → user profile
+ * - GET /v1/agent/dashboard → agent-specific info (code, type, region)
+ *
+ * @tables users, agents, user_roles
+ *
+ * @mock_data Agent "Dawit Haile" profile hardcoded.
+ */
 import { useNavigate } from "react-router-dom";
 import { LogOut, ChevronRight, Shield, Star, Building2, MapPin, Phone, CreditCard } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";

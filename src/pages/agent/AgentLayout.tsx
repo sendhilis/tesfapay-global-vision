@@ -1,3 +1,21 @@
+/**
+ * AgentLayout — Mobile agent portal shell with bottom navigation.
+ *
+ * @route /agent/* (parent layout)
+ * @module Agent Portal
+ *
+ * @description Wraps all agent child routes. Provides: top bar with logo +
+ * agent name/code, scrollable content area (<Outlet />), and bottom navigation
+ * (Dashboard, Cash In, Cash Out, Customers, Commission, Profile).
+ * Constrained to max-w-md for mobile-first design.
+ *
+ * @children AgentHome, AgentCashIn, AgentCashOut, AgentCustomers,
+ *           AgentCommission, AgentProfile
+ *
+ * @api_endpoints
+ * - GET /v1/users/me          → agent name for top bar
+ * - GET /v1/agent/dashboard   → agent code (AGT-XXX) for display
+ */
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import { Home, ArrowDownLeft, ArrowUpRight, Users, BarChart3, User } from "lucide-react";
 import tesfaLogo from "@/assets/tesfa-logo.png";

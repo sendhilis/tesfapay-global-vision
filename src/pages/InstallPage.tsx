@@ -1,3 +1,15 @@
+/**
+ * InstallPage — PWA installation instructions.
+ *
+ * @route /install
+ * @module Public
+ *
+ * @description Step-by-step guide for installing GlobalPay as a Progressive
+ * Web App on iOS (Safari), Android (Chrome), and desktop browsers.
+ * Detects platform and shows relevant instructions.
+ *
+ * @api_endpoints None — static instructional page.
+ */
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Download, Share, Plus, ArrowLeft, Smartphone, CheckCircle2 } from "lucide-react";

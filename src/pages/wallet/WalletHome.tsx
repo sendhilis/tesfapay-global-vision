@@ -1,3 +1,28 @@
+/**
+ * WalletHome — Main wallet dashboard screen.
+ *
+ * @route /wallet
+ * @module Wallet
+ *
+ * @description Displays the user's main wallet balance, savings wallet balance,
+ * loyalty points, quick action grid, and recent transactions list.
+ *
+ * @data_dependencies
+ * - User balance (main, savings, loyalty points)
+ * - Recent transactions (last 5)
+ * - Quick action menu items (static)
+ *
+ * @api_endpoints
+ * - GET /v1/wallet/balance        → { mainBalance, savingsBalance, loyaltyPoints }
+ * - GET /v1/wallet/summary        → { todayIn, todayOut, weeklyIn, weeklyOut }
+ * - GET /v1/transactions?size=5   → recent transactions for preview list
+ * - GET /v1/notifications         → unread notification count (bell icon badge)
+ *
+ * @tables wallets, transactions, loyalty_accounts, notifications
+ *
+ * @mock_data All balances and transactions are currently hardcoded.
+ * Replace with useQuery() calls to the above endpoints.
+ */
 import { useState } from "react";
 import { Eye, EyeOff, ArrowUpRight, ArrowDownLeft, Zap, MoreHorizontal, Bell, Sparkles } from "lucide-react";
 import { useNavigate } from "react-router-dom";

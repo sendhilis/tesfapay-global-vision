@@ -1,3 +1,22 @@
+/**
+ * RequestMoney — P2P money request screen.
+ *
+ * @route /wallet/request
+ * @module Wallet
+ *
+ * @description Allows user to request money from a contact. Multi-step flow:
+ * (1) Select contact, (2) Enter amount + note, (3) Confirm, (4) Success.
+ * Generates a shareable request link and reference number.
+ *
+ * @api_endpoints
+ * - GET  /v1/contacts                         → contact list
+ * - POST /v1/transfers/request                → { fromPhone, amount, note } → request created
+ * - GET  /v1/transfers/requests?direction=outgoing → list sent requests
+ *
+ * @tables users, contacts, money_requests
+ *
+ * @mock_data Contacts hardcoded. Replace with useQuery/useMutation.
+ */
 import { useState } from "react";
 import { Search, Copy, Share2, CheckCircle } from "lucide-react";
 
