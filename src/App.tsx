@@ -106,6 +106,7 @@ const App = () => (
         </Routes>
       </BrowserRouter>
     </TooltipProvider>
+    </KycApplicationProvider>
   </QueryClientProvider>
 );
 
