@@ -1,3 +1,21 @@
+/**
+ * MerchantPay — QR code / search-based merchant payment screen.
+ *
+ * @route /wallet/merchant
+ * @module Wallet
+ *
+ * @description Two modes: (1) QR scan to resolve merchant, (2) Search/browse
+ * merchants by name/category. Select merchant, enter amount, confirm payment.
+ *
+ * @api_endpoints
+ * - GET  /v1/merchants?search=...&category=...  → merchant directory
+ * - POST /v1/merchants/scan                      → { qrPayload } → resolve merchant
+ * - POST /v1/merchants/{merchantId}/pay           → { amount, pin } → payment result
+ *
+ * @tables merchants, transactions, wallets, loyalty_accounts
+ *
+ * @mock_data Merchants list hardcoded. Replace with useQuery.
+ */
 import { useState } from "react";
 import { QrCode, Search, CheckCircle, ScanLine } from "lucide-react";
 

@@ -1,3 +1,24 @@
+/**
+ * KYCUpgrade — Multi-step KYC Level 1 → Level 2 upgrade wizard.
+ *
+ * @route /wallet/kyc-upgrade
+ * @module Wallet
+ *
+ * @description 8-step wizard: (1) Intro with benefits, (2) Document type selection
+ * (Fayda ID, Passport, Driver's License, Kebele ID), (3) Front capture,
+ * (4) Back capture, (5) Selfie capture, (6) Liveness check, (7) Review all,
+ * (8) Processing → Success. Unlocks ETB 50,000 daily limit.
+ *
+ * @api_endpoints
+ * - POST /v1/users/me/kyc/upgrade   → multipart: { documentType, documentFront,
+ *                                      documentBack, selfieImage, livenessToken }
+ * - GET  /v1/users/me/kyc/status    → { kycLevel, status, dailyLimit }
+ *
+ * @tables kyc_applications, users
+ *
+ * @mock_data Camera capture simulated with emoji placeholders.
+ * Replace with real camera API + file upload to backend.
+ */
 import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {

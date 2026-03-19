@@ -1,3 +1,22 @@
+/**
+ * TransactionHistory — Full transaction history with filters and search.
+ *
+ * @route /wallet/history
+ * @module Wallet
+ *
+ * @description Displays paginated list of all user transactions. Filterable by
+ * type (All/Sent/Received/Bills/Savings) and searchable by name or reference.
+ * Shows net amount summary and supports PDF/CSV export.
+ *
+ * @api_endpoints
+ * - GET /v1/transactions?type=...&search=...&page=0&size=20  → paginated history
+ * - GET /v1/transactions/{id}                                 → single txn detail
+ * - GET /v1/transactions/export?format=PDF|CSV                → file download
+ *
+ * @tables transactions
+ *
+ * @mock_data 8 hardcoded transactions. Replace with useQuery with pagination.
+ */
 import { useState } from "react";
 import { Search, ArrowUpRight, ArrowDownLeft, Receipt } from "lucide-react";
 

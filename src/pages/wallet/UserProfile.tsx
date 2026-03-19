@@ -1,3 +1,24 @@
+/**
+ * UserProfile — User account profile and settings screen.
+ *
+ * @route /wallet/profile
+ * @module Wallet
+ *
+ * @description Shows user's avatar, name, phone, KYC level, loyalty points,
+ * and wallet ID. Menu items: Security/MPIN, Loyalty & Rewards, KYC Upgrade,
+ * Notification Preferences, Help & Support. Stats row shows total transactions,
+ * monthly volume, and loyalty tier.
+ *
+ * @api_endpoints
+ * - GET /v1/users/me                 → full user profile
+ * - PUT /v1/users/me                 → update profile settings
+ * - GET /v1/users/me/kyc/status      → current KYC level + limits
+ *
+ * @tables users, loyalty_accounts, wallets
+ *
+ * @mock_data Profile data hardcoded (Abebe Girma, KYC Level 1, 1240 pts).
+ * Replace with useQuery to /users/me.
+ */
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Shield, Star, ChevronRight, Bell, HelpCircle, LogOut, Upload } from "lucide-react";

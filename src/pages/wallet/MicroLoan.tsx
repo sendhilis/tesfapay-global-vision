@@ -1,3 +1,26 @@
+/**
+ * MicroLoan — AI-driven micro-loan application screen.
+ *
+ * @route /wallet/loan
+ * @module Wallet
+ *
+ * @description Multi-stage flow: (1) View AI credit score + eligibility with
+ * factor breakdown, (2) Select loan amount + repayment term (1/3/6 months),
+ * (3) Confirm loan details, (4) Disbursement success with repayment schedule.
+ * Interest rates: 2% (1mo), 5% (3mo), 10% (6mo).
+ *
+ * @api_endpoints
+ * - GET  /v1/loans/eligibility     → { aiCreditScore, maxLoanAmount, factors[] }
+ * - GET  /v1/loans/plans?amount=X  → repayment plan options
+ * - POST /v1/loans/apply           → { amount, termMonths, purpose, pin } → disbursement
+ * - GET  /v1/loans/active          → active loan details
+ * - POST /v1/loans/{loanId}/repay  → { amount, pin } → repayment
+ *
+ * @tables loans, loan_repayments, credit_scores, wallets, transactions
+ *
+ * @mock_data Credit score (78/100), max loan (ETB 8,000) hardcoded.
+ * Replace with useQuery to /loans/eligibility.
+ */
 import { useState, useMemo } from "react";
 import { Sparkles, CheckCircle, TrendingUp, AlertCircle } from "lucide-react";
 

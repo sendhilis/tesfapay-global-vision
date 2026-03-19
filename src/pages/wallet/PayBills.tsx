@@ -1,3 +1,21 @@
+/**
+ * PayBills — Bill payment screen.
+ *
+ * @route /wallet/pay
+ * @module Wallet
+ *
+ * @description Browse billers by category (Telecom, Utility, Water, TV, Education),
+ * select a biller, enter account number + amount, confirm, and pay.
+ *
+ * @api_endpoints
+ * - GET  /v1/billers?category=...             → biller list with categories
+ * - POST /v1/billers/{billerId}/validate      → { accountNumber } → validate account
+ * - POST /v1/billers/{billerId}/pay           → { accountNumber, amount, pin } → payment result
+ *
+ * @tables billers, transactions, wallets
+ *
+ * @mock_data Billers list and categories hardcoded. Replace with useQuery.
+ */
 import { useState } from "react";
 import { Search } from "lucide-react";
 

@@ -1,3 +1,28 @@
+/**
+ * SendMoney — P2P money transfer screen.
+ *
+ * @route /wallet/send
+ * @module Wallet
+ *
+ * @description Multi-step flow: (1) Select recipient from contacts or enter phone,
+ * (2) Enter amount + optional note, (3) Confirm details, (4) Success with receipt.
+ * Shows fee (ETB 2.50), loyalty points earned, and transaction reference.
+ *
+ * @data_dependencies
+ * - User's saved contacts with favorites
+ * - Contact lookup by phone number
+ * - Transfer fee calculation
+ *
+ * @api_endpoints
+ * - GET  /v1/contacts                  → contact list with favorites
+ * - POST /v1/contacts/lookup           → { phone } → resolve recipient name
+ * - POST /v1/transfers/send            → { recipientPhone, amount, note, pin } → transaction result
+ *
+ * @tables users, contacts, transactions, wallets, loyalty_accounts
+ *
+ * @mock_data Contacts list and transfer response are hardcoded.
+ * Replace contacts[] with useQuery and form submission with useMutation.
+ */
 import { useState } from "react";
 import { Search, ArrowRight, Star, Clock } from "lucide-react";
 

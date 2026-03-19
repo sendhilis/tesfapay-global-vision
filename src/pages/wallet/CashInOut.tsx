@@ -1,3 +1,22 @@
+/**
+ * CashInOut — Agent-assisted cash deposit/withdrawal screen.
+ *
+ * @route /wallet/cashinout
+ * @module Wallet
+ *
+ * @description Toggle between Cash In / Cash Out. Steps: (1) Browse nearby agents
+ * with distance/rating, (2) Select agent, enter amount, (3) Enter OTP for
+ * agent confirmation, (4) Success receipt with fee (ETB 5.00).
+ *
+ * @api_endpoints
+ * - GET  /v1/agents/nearby?lat=...&lng=...  → nearby agents with distance
+ * - POST /v1/cash/in                         → { agentCode, amount, pin } → OTP issued
+ * - POST /v1/cash/out                        → { agentCode, amount, pin } → OTP issued
+ *
+ * @tables agents, transactions, wallets, otp_verifications
+ *
+ * @mock_data Agent list hardcoded. Replace with geolocation + useQuery.
+ */
 import { useState } from "react";
 import { MapPin, CheckCircle, ArrowDownLeft, ArrowUpRight } from "lucide-react";
 
