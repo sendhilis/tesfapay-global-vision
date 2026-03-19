@@ -502,7 +502,7 @@ const LiveCamera = ({
               <SimulatedCameraCanvas
                 facingMode={facingMode}
                 canvasRef={simCanvasRef}
-                onReady={() => setCameraReady(true)}
+                onReady={onSimReady}
               />
             )}
             {!showFeed && (
