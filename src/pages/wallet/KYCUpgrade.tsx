@@ -1036,6 +1036,7 @@ const CameraPreCheck = ({ onPass }: { onPass: () => void }) => {
 /* ─── Main Component ────────────────────────────────── */
 const KYCUpgrade = () => {
   const navigate = useNavigate();
+  const { submitApplication } = useKycApplications();
   const [step, setStep] = useState<Step>("intro");
   const [docType, setDocType] = useState("fayda");
   const [applicantName, setApplicantName] = useState("");
