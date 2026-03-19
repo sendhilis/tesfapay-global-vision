@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 
 /* ─── Types ─────────────────────────────────────────── */
-type Step = "intro" | "doc-type" | "doc-front" | "doc-back" | "selfie" | "liveness" | "review" | "processing" | "success";
+type Step = "intro" | "camera-check" | "doc-type" | "doc-front" | "doc-back" | "selfie" | "liveness" | "review" | "processing" | "success";
 
 const DOC_TYPES = [
   { id: "fayda", label: "Fayda National ID", icon: "🪪", recommended: true },
