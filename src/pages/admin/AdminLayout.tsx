@@ -1,3 +1,20 @@
+/**
+ * AdminLayout — Desktop admin console shell with collapsible sidebar.
+ *
+ * @route /admin/* (parent layout)
+ * @module Admin Console
+ *
+ * @description Wraps all admin child routes. Provides: collapsible sidebar with
+ * navigation (Dashboard, Users & KYC, Transactions, KYC Review, Agents,
+ * EMoney, Reports, Analytics, Proposal Doc, Product Showcase), top header bar
+ * with system status indicator and admin avatar, and scrollable main content.
+ *
+ * @children AdminDashboard, AdminUsers, AdminTransactions, AdminKYC,
+ *           AdminAgents, AdminEMoney, AdminReports, AdminAnalytics
+ *
+ * @api_endpoints
+ * - GET /v1/notifications  → unread count for bell icon badge
+ */
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import {
