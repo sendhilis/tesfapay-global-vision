@@ -1203,7 +1203,26 @@ const KYCUpgrade = () => {
               </div>
             </div>
 
-            <button onClick={() => setStep("camera-check")} className="w-full py-4 rounded-2xl bg-gradient-to-r from-primary to-primary/80 text-primary-foreground font-bold text-sm flex items-center justify-center gap-2">
+            {/* Applicant name input */}
+            <div className="glass rounded-2xl p-4">
+              <label className="text-xs font-bold text-foreground block mb-2">👤 Your Full Name (as on ID)</label>
+              <input
+                type="text"
+                value={applicantName}
+                onChange={(e) => setApplicantName(e.target.value)}
+                placeholder="e.g. Abebe Girma Tadesse"
+                className="w-full rounded-xl border border-border bg-card px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+              />
+              {applicantName.trim().length > 0 && applicantName.trim().split(" ").length < 2 && (
+                <p className="text-[10px] text-yellow-400 mt-1.5">Please enter your full name (first and last)</p>
+              )}
+            </div>
+
+            <button
+              onClick={() => setStep("camera-check")}
+              disabled={applicantName.trim().split(" ").length < 2}
+              className="w-full py-4 rounded-2xl bg-gradient-to-r from-primary to-primary/80 text-primary-foreground font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
               <Zap className="w-4 h-4" /> Start Live Verification
             </button>
           </div>
