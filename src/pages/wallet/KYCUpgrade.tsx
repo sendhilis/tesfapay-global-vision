@@ -817,7 +817,7 @@ const KYCUpgrade = () => {
   const aiScores = { docQuality: 97, faceMatch: 93, liveness: 100, dataExtract: 99 };
   const overall = Math.round(Object.values(aiScores).reduce((a, b) => a + b) / 4);
 
-  const STEPS: Step[] = ["intro", "doc-type", "doc-front", "doc-back", "selfie", "liveness", "review", "processing", "success"];
+  const STEPS: Step[] = ["intro", "camera-check", "doc-type", "doc-front", "doc-back", "selfie", "liveness", "review", "processing", "success"];
   const stepIdx = STEPS.indexOf(step);
 
   const handleFrontCapture = (dataUrl: string) => {
