@@ -1269,7 +1269,7 @@ const KYCUpgrade = () => {
               </div>
             )}
             {/* Show extracted data from front side */}
-            <ExtractedDataOverlay data={MOCK_FRONT_DATA} visible={showFrontData} />
+            <ExtractedDataOverlay data={getMockFrontData(applicantName)} visible={showFrontData} />
             <button disabled={!frontImage || !showFrontData} onClick={() => setStep("doc-back")}
               className="w-full py-4 rounded-2xl bg-gradient-to-r from-primary to-primary/80 text-primary-foreground font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed">
               Continue to Back Side <ChevronRight className="w-4 h-4" />
