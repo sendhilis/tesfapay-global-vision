@@ -102,12 +102,14 @@ export const KycApplicationProvider = ({ children }: { children: ReactNode }) =>
   }, [persistApps]);
 
   const reviewApplication = useCallback((id: string, decision: "approved" | "rejected", note?: string) => {
-    setApplications(prev =>
-      prev.map(app =>
+    setApplications(prev => {
+      const updated = prev.map(app =>
         app.id === id ? { ...app, status: decision, reviewNote: note } : app
-      )
-    );
-  }, []);
+      );
+      persistApps(updated);
+      return updated;
+    });
+  }, [persistApps]);
 
   return (
     <KycApplicationContext.Provider value={{ applications, submitApplication, reviewApplication }}>
