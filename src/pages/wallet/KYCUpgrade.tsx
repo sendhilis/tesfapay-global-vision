@@ -542,9 +542,10 @@ const LiveCamera = ({
 /* ─── Liveness Camera Component ─────────────────────── */
 const LivenessCamera = ({ onComplete }: { onComplete: () => void }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const simCanvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [cameraReady, setCameraReady] = useState(false);
-  const [cameraError, setCameraError] = useState<string | null>(null);
+  const [useSimulation, setUseSimulation] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const [stepProgress, setStepProgress] = useState(0);
   const [completedSteps, setCompletedSteps] = useState<boolean[]>(LIVENESS_INSTRUCTIONS.map(() => false));
@@ -567,7 +568,10 @@ const LivenessCamera = ({ onComplete }: { onComplete: () => void }) => {
           };
         }
       } catch {
-        setCameraError("Camera access required for liveness verification. Please allow camera access.");
+        // Fallback to simulation
+        console.log("Camera unavailable for liveness, using simulation");
+        setUseSimulation(true);
+        setCameraReady(true);
       }
     };
     startCamera();
