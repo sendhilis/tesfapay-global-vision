@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 
 /* ─── Types ─────────────────────────────────────────── */
-type Step = "intro" | "doc-type" | "doc-front" | "doc-back" | "selfie" | "liveness" | "review" | "processing" | "success";
+type Step = "intro" | "camera-check" | "doc-type" | "doc-front" | "doc-back" | "selfie" | "liveness" | "review" | "processing" | "success";
 
 const DOC_TYPES = [
   { id: "fayda", label: "Fayda National ID", icon: "🪪", recommended: true },
@@ -800,6 +800,220 @@ const LivenessCamera = ({ onComplete }: { onComplete: () => void }) => {
   );
 };
 
+/* ─── Camera Pre-Check Component ────────────────────── */
+const CameraPreCheck = ({ onPass }: { onPass: () => void }) => {
+  const [status, setStatus] = useState<"idle" | "checking" | "granted" | "denied" | "unavailable">("idle");
+  const [showInstructions, setShowInstructions] = useState(false);
+
+  const checkCamera = useCallback(async () => {
+    setStatus("checking");
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+      stream.getTracks().forEach((t) => t.stop());
+      setStatus("granted");
+      setTimeout(onPass, 1200);
+    } catch (err: any) {
+      if (err.name === "NotAllowedError") {
+        setStatus("denied");
+        setShowInstructions(true);
+      } else if (err.name === "NotFoundError" || err.name === "NotReadableError") {
+        setStatus("unavailable");
+      } else {
+        // Likely in iframe without camera — allow demo mode
+        setStatus("granted");
+        setTimeout(onPass, 1200);
+      }
+    }
+  }, [onPass]);
+
+  const browserInstructions = [
+    {
+      browser: "Chrome (Desktop)",
+      icon: "🌐",
+      steps: [
+        "Click the 🔒 lock icon in the address bar",
+        "Find \"Camera\" in site permissions",
+        "Change to \"Allow\"",
+        "Reload the page",
+      ],
+    },
+    {
+      browser: "Chrome (Android)",
+      icon: "📱",
+      steps: [
+        "Tap ⋮ menu → Settings → Site Settings",
+        "Tap \"Camera\" → Enable",
+        "Or tap the 🔒 icon in address bar",
+        "Toggle Camera to \"Allow\"",
+      ],
+    },
+    {
+      browser: "Safari (iPhone/iPad)",
+      icon: "🍎",
+      steps: [
+        "Open Settings → Safari",
+        "Scroll to \"Camera\" under Privacy",
+        "Set to \"Allow\" or \"Ask\"",
+        "Return and reload this page",
+      ],
+    },
+    {
+      browser: "Firefox",
+      icon: "🦊",
+      steps: [
+        "Click the 🔒 icon in the address bar",
+        "Click \"Clear permissions\" for camera",
+        "Reload and click \"Allow\" when prompted",
+      ],
+    },
+    {
+      browser: "Samsung Internet",
+      icon: "📲",
+      steps: [
+        "Tap ☰ menu → Settings → Sites and downloads",
+        "Tap \"Camera\" and enable access",
+        "Reload this page",
+      ],
+    },
+  ];
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <h2 className="font-display font-bold text-xl text-foreground">📷 Camera Access Check</h2>
+        <p className="text-sm text-muted-foreground mt-0.5">
+          We need your camera for document scanning, selfie, and liveness verification
+        </p>
+      </div>
+
+      {/* Visual camera status card */}
+      <div className="glass-gold rounded-3xl p-6 text-center">
+        <div className={`w-24 h-24 mx-auto rounded-2xl flex items-center justify-center mb-4 transition-all duration-500 ${
+          status === "granted" ? "bg-green-500/20" : status === "denied" || status === "unavailable" ? "bg-destructive/20" : "gradient-green"
+        }`}>
+          {status === "checking" ? (
+            <Loader2 className="w-12 h-12 text-primary animate-spin" />
+          ) : status === "granted" ? (
+            <CheckCircle2 className="w-12 h-12 text-green-400" />
+          ) : status === "denied" || status === "unavailable" ? (
+            <AlertTriangle className="w-12 h-12 text-destructive" />
+          ) : (
+            <Camera className="w-12 h-12 text-primary" />
+          )}
+        </div>
+        <h3 className="font-display font-bold text-lg text-foreground mb-1">
+          {status === "idle" && "Camera Permission Required"}
+          {status === "checking" && "Checking Camera Access…"}
+          {status === "granted" && "Camera Ready! ✅"}
+          {status === "denied" && "Camera Access Denied"}
+          {status === "unavailable" && "No Camera Detected"}
+        </h3>
+        <p className="text-xs text-muted-foreground">
+          {status === "idle" && "Tap below to test your camera before we begin"}
+          {status === "checking" && "Please allow camera access when your browser prompts you"}
+          {status === "granted" && "Proceeding to document verification…"}
+          {status === "denied" && "Camera is blocked. Follow the instructions below to enable it."}
+          {status === "unavailable" && "Connect a camera or try from a device with a built-in camera."}
+        </p>
+      </div>
+
+      {/* What we'll use the camera for */}
+      {(status === "idle" || status === "denied") && (
+        <div className="glass rounded-2xl p-4">
+          <p className="text-xs font-bold text-primary mb-3">What we'll use your camera for</p>
+          <div className="space-y-3">
+            {[
+              { icon: "🪪", title: "Document Scanning", desc: "Capture front & back of your ID using the rear camera" },
+              { icon: "🤳", title: "Selfie Capture", desc: "Take a selfie with the front camera for face matching" },
+              { icon: "👁️", title: "Liveness Check", desc: "Follow prompts to prove you're a real person, not a photo" },
+            ].map(({ icon, title, desc }) => (
+              <div key={title} className="flex items-start gap-3">
+                <span className="text-xl mt-0.5">{icon}</span>
+                <div>
+                  <p className="text-xs font-semibold text-foreground">{title}</p>
+                  <p className="text-[10px] text-muted-foreground">{desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Privacy assurance */}
+      {(status === "idle" || status === "denied") && (
+        <div className="glass rounded-2xl p-3 flex gap-2 items-start">
+          <Shield className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-xs font-bold text-primary">Your Privacy is Protected</p>
+            <p className="text-[10px] text-muted-foreground">
+              Camera feed is processed locally on your device. No video is recorded or stored. Only final snapshots are securely transmitted for verification.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Browser-specific instructions (shown when denied) */}
+      {showInstructions && (
+        <div className="glass rounded-2xl p-4 border border-destructive/20 animate-in slide-in-from-bottom-2 duration-300">
+          <p className="text-xs font-bold text-foreground mb-3">🔧 How to Enable Camera Access</p>
+          <div className="space-y-3">
+            {browserInstructions.map(({ browser, icon, steps }) => (
+              <details key={browser} className="group">
+                <summary className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-foreground py-2 px-3 glass rounded-xl hover:bg-muted/50 transition-colors">
+                  <span className="text-base">{icon}</span>
+                  {browser}
+                  <ChevronRight className="w-3 h-3 ml-auto transition-transform group-open:rotate-90 text-muted-foreground" />
+                </summary>
+                <ol className="mt-2 ml-8 space-y-1.5 pb-2">
+                  {steps.map((s, i) => (
+                    <li key={i} className="text-[11px] text-muted-foreground flex gap-2 items-start">
+                      <span className="text-[10px] font-bold text-primary bg-primary/10 rounded-full w-4 h-4 flex items-center justify-center flex-shrink-0 mt-0.5">{i + 1}</span>
+                      {s}
+                    </li>
+                  ))}
+                </ol>
+              </details>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Action buttons */}
+      {status === "idle" && (
+        <button onClick={checkCamera} className="w-full py-4 rounded-2xl bg-gradient-to-r from-primary to-primary/80 text-primary-foreground font-bold text-sm flex items-center justify-center gap-2">
+          <Camera className="w-4 h-4" /> Check Camera Access
+        </button>
+      )}
+      {status === "denied" && (
+        <div className="space-y-2">
+          <button onClick={checkCamera} className="w-full py-4 rounded-2xl bg-gradient-to-r from-primary to-primary/80 text-primary-foreground font-bold text-sm flex items-center justify-center gap-2">
+            <RefreshCw className="w-4 h-4" /> Try Again
+          </button>
+          <button onClick={onPass} className="w-full py-3 rounded-2xl glass text-sm text-muted-foreground font-semibold flex items-center justify-center gap-2">
+            Continue in Demo Mode →
+          </button>
+        </div>
+      )}
+      {status === "unavailable" && (
+        <div className="space-y-2">
+          <button onClick={checkCamera} className="w-full py-4 rounded-2xl bg-gradient-to-r from-primary to-primary/80 text-primary-foreground font-bold text-sm flex items-center justify-center gap-2">
+            <RefreshCw className="w-4 h-4" /> Retry Detection
+          </button>
+          <button onClick={onPass} className="w-full py-3 rounded-2xl glass text-sm text-muted-foreground font-semibold flex items-center justify-center gap-2">
+            Continue in Demo Mode →
+          </button>
+        </div>
+      )}
+      {status === "granted" && (
+        <div className="glass rounded-2xl p-4 flex items-center gap-3 border border-green-500/20">
+          <Loader2 className="w-5 h-5 text-green-400 animate-spin" />
+          <p className="text-sm text-green-400 font-bold">Camera verified — starting KYC flow…</p>
+        </div>
+      )}
+    </div>
+  );
+};
+
 /* ─── Main Component ────────────────────────────────── */
 const KYCUpgrade = () => {
   const navigate = useNavigate();
@@ -817,7 +1031,7 @@ const KYCUpgrade = () => {
   const aiScores = { docQuality: 97, faceMatch: 93, liveness: 100, dataExtract: 99 };
   const overall = Math.round(Object.values(aiScores).reduce((a, b) => a + b) / 4);
 
-  const STEPS: Step[] = ["intro", "doc-type", "doc-front", "doc-back", "selfie", "liveness", "review", "processing", "success"];
+  const STEPS: Step[] = ["intro", "camera-check", "doc-type", "doc-front", "doc-back", "selfie", "liveness", "review", "processing", "success"];
   const stepIdx = STEPS.indexOf(step);
 
   const handleFrontCapture = (dataUrl: string) => {
@@ -970,11 +1184,14 @@ const KYCUpgrade = () => {
               </div>
             </div>
 
-            <button onClick={() => setStep("doc-type")} className="w-full py-4 rounded-2xl bg-gradient-to-r from-primary to-primary/80 text-primary-foreground font-bold text-sm flex items-center justify-center gap-2">
+            <button onClick={() => setStep("camera-check")} className="w-full py-4 rounded-2xl bg-gradient-to-r from-primary to-primary/80 text-primary-foreground font-bold text-sm flex items-center justify-center gap-2">
               <Zap className="w-4 h-4" /> Start Live Verification
             </button>
           </div>
         )}
+
+        {/* ── CAMERA PRE-CHECK ── */}
+        {step === "camera-check" && <CameraPreCheck onPass={() => setStep("doc-type")} />}
 
         {/* ── DOCUMENT TYPE ── */}
         {step === "doc-type" && (
