@@ -132,6 +132,209 @@ const ExtractedDataOverlay = ({
   );
 };
 
+/* ─── Simulated Camera Canvas (fallback when no real camera) ── */
+const SimulatedCameraCanvas = ({
+  facingMode,
+  canvasRef,
+  onReady,
+}: {
+  facingMode: "user" | "environment";
+  canvasRef: React.RefObject<HTMLCanvasElement>;
+  onReady: () => void;
+}) => {
+  const rafRef = useRef<number>(0);
+  const timeRef = useRef(0);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    canvas.width = 640;
+    canvas.height = 480;
+
+    // Signal ready after a brief "initialization"
+    const readyTimer = setTimeout(onReady, 600);
+
+    const draw = (timestamp: number) => {
+      timeRef.current = timestamp;
+      const w = canvas.width;
+      const h = canvas.height;
+
+      // Dark background with subtle noise
+      ctx.fillStyle = "#1a1d23";
+      ctx.fillRect(0, 0, w, h);
+
+      // Animated subtle gradient
+      const grad = ctx.createLinearGradient(0, 0, w, h);
+      grad.addColorStop(0, `rgba(30,35,45,1)`);
+      grad.addColorStop(0.5, `rgba(25,30,40,${0.8 + Math.sin(timestamp / 2000) * 0.2})`);
+      grad.addColorStop(1, `rgba(20,25,35,1)`);
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, w, h);
+
+      // Subtle noise/grain effect
+      for (let i = 0; i < 800; i++) {
+        const x = Math.random() * w;
+        const y = Math.random() * h;
+        const brightness = Math.random() * 30 + 20;
+        ctx.fillStyle = `rgba(${brightness},${brightness},${brightness + 10},0.15)`;
+        ctx.fillRect(x, y, 1, 1);
+      }
+
+      if (facingMode === "user") {
+        // Draw a simulated face/head shape for selfie
+        const cx = w / 2 + Math.sin(timestamp / 3000) * 5;
+        const cy = h / 2 - 20 + Math.cos(timestamp / 2500) * 3;
+
+        // Head oval
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, 65, 85, 0, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(180,150,120,0.7)";
+        ctx.fill();
+        ctx.strokeStyle = "rgba(200,170,140,0.3)";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // Hair
+        ctx.beginPath();
+        ctx.ellipse(cx, cy - 50, 70, 45, 0, Math.PI, Math.PI * 2);
+        ctx.fillStyle = "rgba(40,30,25,0.8)";
+        ctx.fill();
+
+        // Eyes
+        const eyeY = cy - 10;
+        [-20, 20].forEach((offset) => {
+          ctx.beginPath();
+          ctx.ellipse(cx + offset, eyeY, 8, 5, 0, 0, Math.PI * 2);
+          ctx.fillStyle = "rgba(255,255,255,0.9)";
+          ctx.fill();
+          ctx.beginPath();
+          ctx.arc(cx + offset, eyeY, 3, 0, Math.PI * 2);
+          ctx.fillStyle = "rgba(50,35,25,0.9)";
+          ctx.fill();
+        });
+
+        // Nose
+        ctx.beginPath();
+        ctx.moveTo(cx - 5, cy + 5);
+        ctx.quadraticCurveTo(cx, cy + 18, cx + 5, cy + 5);
+        ctx.strokeStyle = "rgba(150,120,90,0.5)";
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        // Mouth
+        ctx.beginPath();
+        ctx.ellipse(cx, cy + 30, 15, 5, 0, 0, Math.PI);
+        ctx.fillStyle = "rgba(180,100,90,0.6)";
+        ctx.fill();
+
+        // Shoulders
+        ctx.beginPath();
+        ctx.ellipse(cx, cy + 130, 120, 60, 0, Math.PI, Math.PI * 2);
+        ctx.fillStyle = "rgba(60,70,100,0.7)";
+        ctx.fill();
+      } else {
+        // Draw simulated ID card for document scanning
+        const cardX = w / 2 - 130 + Math.sin(timestamp / 4000) * 3;
+        const cardY = h / 2 - 85 + Math.cos(timestamp / 3500) * 2;
+        const cardW = 260;
+        const cardH = 170;
+
+        // Card shadow
+        ctx.fillStyle = "rgba(0,0,0,0.3)";
+        ctx.fillRect(cardX + 4, cardY + 4, cardW, cardH);
+
+        // Card body
+        const cardGrad = ctx.createLinearGradient(cardX, cardY, cardX + cardW, cardY + cardH);
+        cardGrad.addColorStop(0, "#e8e4d8");
+        cardGrad.addColorStop(1, "#d4d0c4");
+        ctx.fillStyle = cardGrad;
+        ctx.fillRect(cardX, cardY, cardW, cardH);
+
+        // Card border
+        ctx.strokeStyle = "rgba(150,140,120,0.5)";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(cardX, cardY, cardW, cardH);
+
+        // Header stripe
+        ctx.fillStyle = "rgba(0,100,60,0.8)";
+        ctx.fillRect(cardX, cardY, cardW, 28);
+
+        // Header text
+        ctx.fillStyle = "rgba(255,255,255,0.9)";
+        ctx.font = "bold 10px monospace";
+        ctx.fillText("FEDERAL DEMOCRATIC REPUBLIC OF ETHIOPIA", cardX + 12, cardY + 18);
+
+        // Photo placeholder
+        ctx.fillStyle = "rgba(180,160,140,0.6)";
+        ctx.fillRect(cardX + 12, cardY + 38, 55, 70);
+        ctx.strokeStyle = "rgba(130,120,100,0.5)";
+        ctx.strokeRect(cardX + 12, cardY + 38, 55, 70);
+
+        // Mini face in photo
+        ctx.beginPath();
+        ctx.ellipse(cardX + 39, cardY + 58, 14, 18, 0, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(160,130,100,0.7)";
+        ctx.fill();
+
+        // Text lines
+        ctx.fillStyle = "rgba(40,40,40,0.8)";
+        ctx.font = "9px monospace";
+        const lines = [
+          "Name: Abebe Girma Tadesse",
+          "DOB: 15/03/1990",
+          "Gender: Male",
+          "Nationality: Ethiopian",
+          "ID No: FND-2847391-7821",
+        ];
+        lines.forEach((line, i) => {
+          ctx.fillText(line, cardX + 78, cardY + 50 + i * 16);
+        });
+
+        // MRZ zone
+        ctx.fillStyle = "rgba(60,60,60,0.6)";
+        ctx.font = "7px monospace";
+        ctx.fillText("P<ETH<<GIRMA<<ABEBE<<<<<<<<<<<<<<<<", cardX + 12, cardY + 128);
+        ctx.fillText("FND2847391ETH9003152M3002202<<<<<<<", cardX + 12, cardY + 140);
+
+        // Hologram effect
+        const holoX = cardX + 180 + Math.sin(timestamp / 1000) * 10;
+        const holoY = cardY + 100;
+        const holoGrad = ctx.createRadialGradient(holoX, holoY, 0, holoX, holoY, 25);
+        holoGrad.addColorStop(0, `rgba(100,200,255,${0.15 + Math.sin(timestamp / 800) * 0.1})`);
+        holoGrad.addColorStop(0.5, `rgba(200,100,255,${0.1 + Math.cos(timestamp / 600) * 0.05})`);
+        holoGrad.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.fillStyle = holoGrad;
+        ctx.fillRect(cardX, cardY, cardW, cardH);
+      }
+
+      // Vignette
+      const vignette = ctx.createRadialGradient(w / 2, h / 2, w * 0.3, w / 2, h / 2, w * 0.7);
+      vignette.addColorStop(0, "rgba(0,0,0,0)");
+      vignette.addColorStop(1, "rgba(0,0,0,0.4)");
+      ctx.fillStyle = vignette;
+      ctx.fillRect(0, 0, w, h);
+
+      rafRef.current = requestAnimationFrame(draw);
+    };
+
+    rafRef.current = requestAnimationFrame(draw);
+    return () => {
+      cancelAnimationFrame(rafRef.current);
+      clearTimeout(readyTimer);
+    };
+  }, [facingMode, canvasRef, onReady]);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      className={`absolute inset-0 w-full h-full object-cover ${facingMode === "user" ? "scale-x-[-1]" : ""}`}
+    />
+  );
+};
+
 /* ─── Live Camera Component ─────────────────────────── */
 const LiveCamera = ({
   facingMode = "environment",
@@ -150,26 +353,22 @@ const LiveCamera = ({
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const simCanvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [cameraReady, setCameraReady] = useState(false);
-  const [cameraError, setCameraError] = useState<string | null>(null);
+  const [useSimulation, setUseSimulation] = useState(false);
   const [flashEffect, setFlashEffect] = useState(false);
   const [scanLineY, setScanLineY] = useState(0);
 
   const startCamera = useCallback(async () => {
     try {
-      setCameraError(null);
       setCameraReady(false);
-      // Stop any existing stream first
+      setUseSimulation(false);
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((t) => t.stop());
       }
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode,
-          width: { ideal: 1920 },
-          height: { ideal: 1080 },
-        },
+        video: { facingMode, width: { ideal: 1920 }, height: { ideal: 1080 } },
         audio: false,
       });
       streamRef.current = stream;
@@ -180,15 +379,10 @@ const LiveCamera = ({
           setCameraReady(true);
         };
       }
-    } catch (err: any) {
-      console.error("Camera error:", err);
-      setCameraError(
-        err.name === "NotAllowedError"
-          ? "Camera permission denied. Please allow camera access in your browser settings and reload."
-          : err.name === "NotFoundError"
-          ? "No camera found on this device."
-          : "Unable to access camera. Please check permissions and try again."
-      );
+    } catch {
+      // Fallback to simulation mode
+      console.log("Camera unavailable, using simulation mode");
+      setUseSimulation(true);
     }
   }, [facingMode]);
 
@@ -197,7 +391,6 @@ const LiveCamera = ({
       streamRef.current.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
     }
-    setCameraReady(false);
   }, []);
 
   useEffect(() => {
@@ -209,7 +402,7 @@ const LiveCamera = ({
 
   // Animated scan line
   useEffect(() => {
-    if (!cameraReady || capturedImage) return;
+    if ((!cameraReady && !useSimulation) || capturedImage) return;
     let raf: number;
     let y = 0;
     const animate = () => {
@@ -219,46 +412,52 @@ const LiveCamera = ({
     };
     raf = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(raf);
-  }, [cameraReady, capturedImage]);
+  }, [cameraReady, useSimulation, capturedImage]);
 
   const takeSnapshot = () => {
-    if (!videoRef.current || !canvasRef.current) return;
     setFlashEffect(true);
     setTimeout(() => setFlashEffect(false), 400);
 
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+    const canvas = canvasRef.current || document.createElement("canvas");
 
-    if (facingMode === "user") {
-      ctx.translate(canvas.width, 0);
-      ctx.scale(-1, 1);
+    if (useSimulation && simCanvasRef.current) {
+      // Capture from simulation canvas
+      canvas.width = simCanvasRef.current.width;
+      canvas.height = simCanvasRef.current.height;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+      ctx.drawImage(simCanvasRef.current, 0, 0);
+    } else if (videoRef.current) {
+      // Capture from real camera
+      const video = videoRef.current;
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+      if (facingMode === "user") {
+        ctx.translate(canvas.width, 0);
+        ctx.scale(-1, 1);
+      }
+      ctx.drawImage(video, 0, 0);
+    } else {
+      return;
     }
-    ctx.drawImage(video, 0, 0);
+
     const dataUrl = canvas.toDataURL("image/jpeg", 0.92);
     stopCamera();
     onCapture(dataUrl);
   };
 
+  const isReady = cameraReady || (useSimulation && cameraReady);
+  const showFeed = cameraReady || useSimulation;
+
   return (
     <div className="glass rounded-2xl overflow-hidden">
       <div className="relative aspect-[4/3] bg-card overflow-hidden">
-        {cameraError ? (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-6 text-center">
-            <AlertTriangle className="w-10 h-10 text-destructive" />
-            <p className="text-xs text-muted-foreground max-w-xs">{cameraError}</p>
-            <button onClick={startCamera} className="px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-xs font-bold">
-              🔄 Retry Camera
-            </button>
-          </div>
-        ) : capturedImage ? (
+        {capturedImage ? (
           <>
             <img src={capturedImage} alt="Captured" className="absolute inset-0 w-full h-full object-cover" />
             <div className="absolute inset-0 bg-gradient-to-t from-card/60 to-transparent" />
-            {/* Scanning animation over captured image */}
             <div
               className="absolute left-0 right-0 h-1 bg-gradient-to-r from-transparent via-green-400 to-transparent z-10 transition-all"
               style={{ top: `${scanLineY}%`, opacity: capturing ? 1 : 0 }}
@@ -270,14 +469,25 @@ const LiveCamera = ({
           </>
         ) : (
           <>
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              muted
-              className={`absolute inset-0 w-full h-full object-cover ${facingMode === "user" ? "scale-x-[-1]" : ""}`}
-            />
-            {!cameraReady && (
+            {/* Real camera video */}
+            {!useSimulation && (
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                className={`absolute inset-0 w-full h-full object-cover ${facingMode === "user" ? "scale-x-[-1]" : ""}`}
+              />
+            )}
+            {/* Simulated camera canvas */}
+            {useSimulation && (
+              <SimulatedCameraCanvas
+                facingMode={facingMode}
+                canvasRef={simCanvasRef}
+                onReady={() => setCameraReady(true)}
+              />
+            )}
+            {!showFeed && (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-card/90 z-10">
                 <Loader2 className="w-10 h-10 text-primary animate-spin" />
                 <p className="text-xs text-muted-foreground">Initializing camera…</p>
@@ -285,21 +495,21 @@ const LiveCamera = ({
               </div>
             )}
             {flashEffect && <div className="absolute inset-0 bg-white z-30 animate-pulse" />}
-            {/* Moving scan line */}
-            {cameraReady && (
+            {showFeed && (
               <div
                 className="absolute left-4 right-4 h-0.5 bg-gradient-to-r from-transparent via-primary to-transparent z-10 pointer-events-none"
                 style={{ top: `${scanLineY}%` }}
               />
             )}
-            {/* LIVE badge */}
-            {cameraReady && (
+            {showFeed && (
               <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 glass rounded-full px-3 py-1 pointer-events-none">
                 <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                <span className="text-[10px] text-foreground font-bold tracking-widest">LIVE</span>
+                <span className="text-[10px] text-foreground font-bold tracking-widest">
+                  {useSimulation ? "DEMO" : "LIVE"}
+                </span>
               </div>
             )}
-            {cameraReady && overlay}
+            {showFeed && overlay}
           </>
         )}
       </div>
@@ -313,7 +523,7 @@ const LiveCamera = ({
         ) : (
           <button
             onClick={takeSnapshot}
-            disabled={!cameraReady || capturing}
+            disabled={!showFeed || capturing}
             className="flex-1 py-3 rounded-xl bg-gradient-to-r from-primary to-primary/80 text-primary-foreground text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-40"
           >
             {capturing ? (
