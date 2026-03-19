@@ -1,35 +1,29 @@
 /**
- * KYCUpgrade — Multi-step KYC Level 1 → Level 2 upgrade wizard.
+ * KYCUpgrade — Full-fledged KYC Level 1 → Level 2 upgrade simulator
+ * with LIVE camera feeds for document capture, selfie, and liveness detection.
  *
  * @route /wallet/kyc-upgrade
  * @module Wallet
  *
- * @description 8-step wizard: (1) Intro with benefits, (2) Document type selection
- * (Fayda ID, Passport, Driver's License, Kebele ID), (3) Front capture,
- * (4) Back capture, (5) Selfie capture, (6) Liveness check, (7) Review all,
- * (8) Processing → Success. Unlocks ETB 50,000 daily limit.
+ * @description 8-step wizard with real camera:
+ * (1) Intro with benefits, (2) Document type selection,
+ * (3) Front capture via rear camera, (4) Back capture via rear camera,
+ * (5) Selfie via front camera, (6) Liveness check with real-time instructions,
+ * (7) Review with AI scoring, (8) Processing → Success.
  *
- * @api_endpoints
- * - POST /v1/users/me/kyc/upgrade   → multipart: { documentType, documentFront,
- *                                      documentBack, selfieImage, livenessToken }
- * - GET  /v1/users/me/kyc/status    → { kycLevel, status, dailyLimit }
- *
- * @tables kyc_applications, users
- *
- * @mock_data Camera capture simulated with emoji placeholders.
- * Replace with real camera API + file upload to backend.
+ * Uses navigator.mediaDevices.getUserMedia for live camera feeds.
+ * Canvas-based snapshot capture. Simulated AI analysis overlays.
  */
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  ChevronLeft, ChevronRight, Camera, Upload, CheckCircle2,
-  Shield, Zap, AlertTriangle, ScanFace, FileText, Eye, RefreshCw
+  ChevronLeft, ChevronRight, Camera, CheckCircle2,
+  Shield, Zap, AlertTriangle, ScanFace, FileText, Eye, RefreshCw,
+  Video, X, Loader2
 } from "lucide-react";
 
 /* ─── Types ─────────────────────────────────────────── */
 type Step = "intro" | "doc-type" | "doc-front" | "doc-back" | "selfie" | "liveness" | "review" | "processing" | "success";
-
-interface DocCapture { label: string; emoji: string; captured: boolean; }
 
 const DOC_TYPES = [
   { id: "fayda", label: "Fayda National ID", icon: "🪪", recommended: true },
@@ -38,62 +32,17 @@ const DOC_TYPES = [
   { id: "kebele", label: "Kebele ID", icon: "🏛️" },
 ];
 
-/* ─── Helpers ───────────────────────────────────────── */
-const StepDot = ({ active, done }: { active: boolean; done: boolean }) => (
-  <div className={`w-2 h-2 rounded-full transition-all ${done ? "bg-gold" : active ? "bg-gold/60 scale-125" : "bg-muted"}`} />
-);
+const LIVENESS_INSTRUCTIONS = [
+  { label: "Look straight at the camera", icon: "👁️", action: "center" },
+  { label: "Slowly turn your head LEFT", icon: "⬅️", action: "left" },
+  { label: "Slowly turn your head RIGHT", icon: "➡️", action: "right" },
+  { label: "Blink your eyes naturally", icon: "😉", action: "blink" },
+  { label: "Smile for the camera", icon: "😊", action: "smile" },
+];
 
-/* ─── Fake camera capture card ──────────────────────── */
-const CaptureCard = ({
-  doc, onCapture, capturing, retake
-}: {
-  doc: DocCapture; onCapture: () => void; capturing: boolean; retake: () => void;
-}) => (
-  <div className="glass rounded-2xl overflow-hidden">
-    <div className="relative aspect-[4/3] flex flex-col items-center justify-center bg-tesfa-dark/40">
-      {doc.captured ? (
-        <>
-          {/* Simulated captured document */}
-          <div className="absolute inset-0 bg-gradient-to-br from-tesfa-green/20 to-tesfa-gold/10 flex items-center justify-center">
-            <div className="text-center">
-              <span className="text-5xl">{doc.emoji}</span>
-              <div className="mt-3 flex items-center justify-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4 text-green-400" />
-                <span className="text-xs text-green-400 font-bold">Captured</span>
-              </div>
-            </div>
-          </div>
-          {/* Scan lines animation */}
-          <div className="absolute inset-x-0 top-0 h-0.5 bg-green-400/60 animate-[scan_2s_ease-in-out_infinite]" />
-        </>
-      ) : (
-        <>
-          {/* Viewfinder overlay */}
-          <div className="absolute inset-4 border-2 border-dashed border-tesfa-gold/40 rounded-xl flex items-center justify-center">
-            <div className="text-center space-y-2">
-              <Camera className="w-10 h-10 text-muted-foreground mx-auto" />
-              <p className="text-xs text-muted-foreground">{doc.label}</p>
-            </div>
-          </div>
-          {/* Corner guides */}
-          {["top-3 left-3", "top-3 right-3", "bottom-3 left-3", "bottom-3 right-3"].map((pos, i) => (
-            <div key={i} className={`absolute ${pos} w-5 h-5 border-2 border-tesfa-gold rounded-sm`} />
-          ))}
-        </>
-      )}
-    </div>
-    <div className="p-3 flex gap-2">
-      {doc.captured ? (
-        <button onClick={retake} className="flex-1 py-2.5 glass rounded-xl text-xs text-muted-foreground font-semibold flex items-center justify-center gap-1.5">
-          <RefreshCw className="w-3.5 h-3.5" /> Retake
-        </button>
-      ) : (
-        <button onClick={onCapture} disabled={capturing} className="flex-1 py-2.5 rounded-xl bg-gradient-gold text-tesfa-dark text-xs font-bold flex items-center justify-center gap-1.5 disabled:opacity-60">
-          {capturing ? <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Capturing…</> : <><Camera className="w-3.5 h-3.5" /> Capture {doc.label}</>}
-        </button>
-      )}
-    </div>
-  </div>
+/* ─── Step Dot ──────────────────────────────────────── */
+const StepDot = ({ active, done }: { active: boolean; done: boolean }) => (
+  <div className={`w-2 h-2 rounded-full transition-all duration-300 ${done ? "bg-primary" : active ? "bg-primary/60 scale-125" : "bg-muted"}`} />
 );
 
 /* ─── AI Score Bar ──────────────────────────────────── */
@@ -112,26 +61,438 @@ const ScoreBar = ({ label, value, delay = 0 }: { label: string; value: number; d
   </div>
 );
 
+/* ─── Live Camera Component ─────────────────────────── */
+const LiveCamera = ({
+  facingMode = "environment",
+  onCapture,
+  capturedImage,
+  onRetake,
+  overlay,
+  capturing,
+  children,
+}: {
+  facingMode?: "user" | "environment";
+  onCapture: (dataUrl: string) => void;
+  capturedImage: string | null;
+  onRetake: () => void;
+  overlay?: React.ReactNode;
+  capturing?: boolean;
+  children?: React.ReactNode;
+}) => {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const [cameraReady, setCameraReady] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const [flashEffect, setFlashEffect] = useState(false);
+
+  const startCamera = useCallback(async () => {
+    try {
+      setCameraError(null);
+      setCameraReady(false);
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode,
+          width: { ideal: 1280 },
+          height: { ideal: 960 },
+        },
+        audio: false,
+      });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.onloadedmetadata = () => {
+          videoRef.current?.play();
+          setCameraReady(true);
+        };
+      }
+    } catch (err: any) {
+      console.error("Camera error:", err);
+      setCameraError(
+        err.name === "NotAllowedError"
+          ? "Camera permission denied. Please allow camera access."
+          : err.name === "NotFoundError"
+          ? "No camera found on this device."
+          : "Unable to access camera. Please try again."
+      );
+    }
+  }, [facingMode]);
+
+  const stopCamera = useCallback(() => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    }
+    setCameraReady(false);
+  }, []);
+
+  useEffect(() => {
+    if (!capturedImage) {
+      startCamera();
+    }
+    return () => stopCamera();
+  }, [capturedImage, startCamera, stopCamera]);
+
+  const takeSnapshot = () => {
+    if (!videoRef.current || !canvasRef.current) return;
+    setFlashEffect(true);
+    setTimeout(() => setFlashEffect(false), 300);
+
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    // Mirror for front camera
+    if (facingMode === "user") {
+      ctx.translate(canvas.width, 0);
+      ctx.scale(-1, 1);
+    }
+    ctx.drawImage(video, 0, 0);
+    const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+    stopCamera();
+    onCapture(dataUrl);
+  };
+
+  return (
+    <div className="glass rounded-2xl overflow-hidden">
+      <div className="relative aspect-[4/3] bg-card overflow-hidden">
+        {cameraError ? (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-6">
+            <AlertTriangle className="w-10 h-10 text-destructive" />
+            <p className="text-xs text-center text-muted-foreground">{cameraError}</p>
+            <button onClick={startCamera} className="px-4 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-bold">
+              Retry
+            </button>
+          </div>
+        ) : capturedImage ? (
+          <>
+            <img src={capturedImage} alt="Captured" className="absolute inset-0 w-full h-full object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-t from-card/60 to-transparent" />
+            <div className="absolute bottom-3 left-0 right-0 flex items-center justify-center gap-1.5">
+              <CheckCircle2 className="w-4 h-4 text-green-400" />
+              <span className="text-xs text-green-400 font-bold">Captured Successfully</span>
+            </div>
+            {/* Simulated scan line */}
+            <div className="absolute inset-x-0 top-0 h-0.5 bg-green-400/60 animate-[scan_2s_ease-in-out_infinite]" />
+          </>
+        ) : (
+          <>
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              className={`absolute inset-0 w-full h-full object-cover ${facingMode === "user" ? "scale-x-[-1]" : ""}`}
+            />
+            {!cameraReady && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-card/80 z-10">
+                <Loader2 className="w-8 h-8 text-primary animate-spin" />
+                <p className="text-xs text-muted-foreground">Starting camera…</p>
+              </div>
+            )}
+            {/* Flash effect */}
+            {flashEffect && <div className="absolute inset-0 bg-white z-30 animate-pulse" />}
+            {/* Overlay (guides, face oval, etc.) */}
+            {cameraReady && overlay}
+            {/* Scan line */}
+            {cameraReady && (
+              <div className="absolute inset-x-4 top-4 h-0.5 bg-gradient-to-r from-transparent via-primary/60 to-transparent animate-[scan_2s_ease-in-out_infinite]" />
+            )}
+          </>
+        )}
+      </div>
+
+      {/* Controls */}
+      <div className="p-3 flex gap-2">
+        {capturedImage ? (
+          <button onClick={onRetake} className="flex-1 py-2.5 glass rounded-xl text-xs text-muted-foreground font-semibold flex items-center justify-center gap-1.5">
+            <RefreshCw className="w-3.5 h-3.5" /> Retake
+          </button>
+        ) : (
+          <button
+            onClick={takeSnapshot}
+            disabled={!cameraReady || capturing}
+            className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-primary to-primary/80 text-primary-foreground text-xs font-bold flex items-center justify-center gap-1.5 disabled:opacity-40"
+          >
+            {capturing ? (
+              <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Processing…</>
+            ) : (
+              <><Camera className="w-3.5 h-3.5" /> Capture</>
+            )}
+          </button>
+        )}
+      </div>
+
+      {children}
+      <canvas ref={canvasRef} className="hidden" />
+    </div>
+  );
+};
+
+/* ─── Liveness Camera Component ─────────────────────── */
+const LivenessCamera = ({
+  onComplete,
+}: {
+  onComplete: () => void;
+}) => {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const [cameraReady, setCameraReady] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const [currentStep, setCurrentStep] = useState(0);
+  const [stepProgress, setStepProgress] = useState(0);
+  const [completedSteps, setCompletedSteps] = useState<boolean[]>(
+    LIVENESS_INSTRUCTIONS.map(() => false)
+  );
+  const [analysisOverlay, setAnalysisOverlay] = useState<{
+    landmarks: boolean;
+    depthMap: boolean;
+    antiSpoof: boolean;
+  }>({ landmarks: false, depthMap: false, antiSpoof: false });
+
+  useEffect(() => {
+    const startCamera = async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 960 } },
+          audio: false,
+        });
+        streamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.onloadedmetadata = () => {
+            videoRef.current?.play();
+            setCameraReady(true);
+          };
+        }
+      } catch (err: any) {
+        setCameraError("Camera access required for liveness verification.");
+      }
+    };
+    startCamera();
+    return () => {
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+    };
+  }, []);
+
+  // Run liveness sequence once camera is ready
+  useEffect(() => {
+    if (!cameraReady) return;
+
+    let stepIdx = 0;
+    let cancelled = false;
+
+    const runStep = () => {
+      if (cancelled || stepIdx >= LIVENESS_INSTRUCTIONS.length) {
+        if (!cancelled) {
+          // Show analysis overlays sequentially
+          setTimeout(() => setAnalysisOverlay((a) => ({ ...a, landmarks: true })), 0);
+          setTimeout(() => setAnalysisOverlay((a) => ({ ...a, depthMap: true })), 600);
+          setTimeout(() => setAnalysisOverlay((a) => ({ ...a, antiSpoof: true })), 1200);
+          setTimeout(() => {
+            streamRef.current?.getTracks().forEach((t) => t.stop());
+            onComplete();
+          }, 2200);
+        }
+        return;
+      }
+
+      setCurrentStep(stepIdx);
+      setStepProgress(0);
+
+      let pct = 0;
+      const interval = setInterval(() => {
+        if (cancelled) { clearInterval(interval); return; }
+        pct += 2.5;
+        setStepProgress(Math.min(pct, 100));
+        if (pct >= 100) {
+          clearInterval(interval);
+          setCompletedSteps((prev) => {
+            const next = [...prev];
+            next[stepIdx] = true;
+            return next;
+          });
+          stepIdx++;
+          setTimeout(runStep, 500);
+        }
+      }, 50);
+    };
+
+    const timeout = setTimeout(runStep, 1000);
+    return () => {
+      cancelled = true;
+      clearTimeout(timeout);
+    };
+  }, [cameraReady, onComplete]);
+
+  const currentInstruction = LIVENESS_INSTRUCTIONS[Math.min(currentStep, LIVENESS_INSTRUCTIONS.length - 1)];
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <h2 className="font-display font-bold text-xl text-foreground">Liveness Verification</h2>
+        <p className="text-sm text-muted-foreground mt-0.5">Follow instructions — AI is watching in real time</p>
+      </div>
+
+      <div className="glass rounded-2xl overflow-hidden">
+        {/* Camera view */}
+        <div className="relative aspect-square bg-card overflow-hidden">
+          {cameraError ? (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-6">
+              <AlertTriangle className="w-10 h-10 text-destructive" />
+              <p className="text-xs text-center text-muted-foreground">{cameraError}</p>
+            </div>
+          ) : (
+            <>
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                className="absolute inset-0 w-full h-full object-cover scale-x-[-1]"
+              />
+              {!cameraReady && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-card/80 z-10">
+                  <Loader2 className="w-8 h-8 text-primary animate-spin" />
+                  <p className="text-xs text-muted-foreground">Initializing camera…</p>
+                </div>
+              )}
+
+              {/* Face oval guide */}
+              <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
+                <div className={`w-52 h-64 border-[3px] rounded-[50%] transition-colors duration-500 ${
+                  completedSteps.every(Boolean) ? "border-green-400" : "border-primary/70"
+                }`} />
+              </div>
+
+              {/* Corner markers */}
+              {cameraReady && (
+                <>
+                  <div className="absolute top-4 left-4 w-6 h-6 border-t-2 border-l-2 border-primary rounded-tl-lg z-10" />
+                  <div className="absolute top-4 right-4 w-6 h-6 border-t-2 border-r-2 border-primary rounded-tr-lg z-10" />
+                  <div className="absolute bottom-4 left-4 w-6 h-6 border-b-2 border-l-2 border-primary rounded-bl-lg z-10" />
+                  <div className="absolute bottom-4 right-4 w-6 h-6 border-b-2 border-r-2 border-primary rounded-br-lg z-10" />
+                </>
+              )}
+
+              {/* Scan line */}
+              {cameraReady && (
+                <div className="absolute inset-x-4 top-4 h-0.5 bg-gradient-to-r from-transparent via-primary to-transparent animate-[scan_1.5s_ease-in-out_infinite] z-10" />
+              )}
+
+              {/* AI Analysis overlays */}
+              {analysisOverlay.landmarks && (
+                <div className="absolute inset-0 z-20 pointer-events-none">
+                  {/* Simulated landmark dots */}
+                  <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100">
+                    {/* Face outline */}
+                    <ellipse cx="50" cy="45" rx="18" ry="24" fill="none" stroke="hsl(var(--primary))" strokeWidth="0.3" opacity="0.6" />
+                    {/* Eyes */}
+                    <circle cx="42" cy="38" r="1.5" fill="hsl(var(--primary))" opacity="0.8" />
+                    <circle cx="58" cy="38" r="1.5" fill="hsl(var(--primary))" opacity="0.8" />
+                    {/* Nose */}
+                    <circle cx="50" cy="47" r="1" fill="hsl(var(--primary))" opacity="0.6" />
+                    {/* Mouth */}
+                    <path d="M44 54 Q50 58 56 54" fill="none" stroke="hsl(var(--primary))" strokeWidth="0.4" opacity="0.6" />
+                    {/* Connecting lines */}
+                    <line x1="42" y1="38" x2="50" y2="47" stroke="hsl(var(--primary))" strokeWidth="0.15" opacity="0.4" />
+                    <line x1="58" y1="38" x2="50" y2="47" stroke="hsl(var(--primary))" strokeWidth="0.15" opacity="0.4" />
+                    <line x1="42" y1="38" x2="58" y2="38" stroke="hsl(var(--primary))" strokeWidth="0.15" opacity="0.4" />
+                    {/* Additional landmark points */}
+                    {[[38,35],[62,35],[35,45],[65,45],[40,55],[60,55],[50,30],[50,62]].map(([cx,cy], i) => (
+                      <circle key={i} cx={cx} cy={cy} r="0.6" fill="hsl(var(--primary))" opacity="0.5" />
+                    ))}
+                  </svg>
+                </div>
+              )}
+
+              {analysisOverlay.depthMap && (
+                <div className="absolute top-3 right-3 z-20 glass rounded-lg px-2 py-1">
+                  <p className="text-[9px] text-green-400 font-mono font-bold">3D DEPTH ✓</p>
+                </div>
+              )}
+
+              {analysisOverlay.antiSpoof && (
+                <div className="absolute top-3 left-3 z-20 glass rounded-lg px-2 py-1">
+                  <p className="text-[9px] text-green-400 font-mono font-bold">ANTI-SPOOF ✓</p>
+                </div>
+              )}
+
+              {/* LIVE indicator */}
+              {cameraReady && (
+                <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 glass rounded-full px-3 py-1">
+                  <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                  <span className="text-[10px] text-foreground font-bold tracking-wider">LIVE</span>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* Current instruction panel */}
+        <div className="p-4 text-center" style={{ background: "var(--glass-gold-bg)" }}>
+          <div className="text-4xl mb-2">{currentInstruction.icon}</div>
+          <p className="text-sm font-bold text-foreground">{currentInstruction.label}</p>
+          <div className="mt-3 h-2 bg-muted rounded-full overflow-hidden">
+            <div
+              className="h-full rounded-full transition-all duration-75"
+              style={{
+                width: `${stepProgress}%`,
+                background: "var(--gradient-gold)",
+              }}
+            />
+          </div>
+          <p className="text-xs text-muted-foreground mt-1.5">
+            Step {Math.min(currentStep + 1, LIVENESS_INSTRUCTIONS.length)} of {LIVENESS_INSTRUCTIONS.length}
+          </p>
+        </div>
+
+        {/* Steps checklist */}
+        <div className="p-3 grid grid-cols-5 gap-1.5">
+          {LIVENESS_INSTRUCTIONS.map((inst, i) => (
+            <div
+              key={i}
+              className={`rounded-xl py-2 px-1 text-center transition-all ${
+                completedSteps[i]
+                  ? "bg-green-500/10 border border-green-500/20"
+                  : i === currentStep
+                  ? "glass border border-primary/30"
+                  : "glass opacity-40"
+              }`}
+            >
+              <span className="text-sm">{completedSteps[i] ? "✅" : inst.icon}</span>
+              <p className="text-[8px] text-muted-foreground mt-0.5 leading-tight">
+                {completedSteps[i] ? "Done" : inst.action}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Security note */}
+      <div className="glass rounded-2xl p-3 flex gap-2 items-center">
+        <Shield className="w-4 h-4 text-primary flex-shrink-0" />
+        <p className="text-xs text-muted-foreground">
+          Anti-spoofing AI active · 3D depth analysis · Facial landmark tracking · Video is not stored
+        </p>
+      </div>
+    </div>
+  );
+};
+
 /* ─── Main Component ────────────────────────────────── */
 const KYCUpgrade = () => {
   const navigate = useNavigate();
   const [step, setStep] = useState<Step>("intro");
   const [docType, setDocType] = useState("fayda");
-  const [front, setFront] = useState<DocCapture>({ label: "Front Side", emoji: "🪪", captured: false });
-  const [back, setBack] = useState<DocCapture>({ label: "Back Side", emoji: "📋", captured: false });
-  const [selfie, setSelfie] = useState<DocCapture>({ label: "Selfie", emoji: "🤳", captured: false });
-  const [capturing, setCapturing] = useState(false);
-  const [livenessStep, setLivenessStep] = useState(0);
-  const [livenessProgress, setLivenessProgress] = useState(0);
+  const [frontImage, setFrontImage] = useState<string | null>(null);
+  const [backImage, setBackImage] = useState<string | null>(null);
+  const [selfieImage, setSelfieImage] = useState<string | null>(null);
   const [processingPct, setProcessingPct] = useState(0);
-
-  const livenessInstructions = [
-    { label: "Look straight at the camera", icon: "👁️" },
-    { label: "Turn your head slightly left", icon: "←" },
-    { label: "Turn your head slightly right", icon: "→" },
-    { label: "Blink naturally", icon: "😉" },
-    { label: "Smile briefly", icon: "😊" },
-  ];
+  const [aiAnalyzing, setAiAnalyzing] = useState(false);
 
   const aiScores = { docQuality: 97, faceMatch: 93, liveness: 100, dataExtract: 99 };
   const overall = Math.round(Object.values(aiScores).reduce((a, b) => a + b) / 4);
@@ -139,30 +500,13 @@ const KYCUpgrade = () => {
   const STEPS: Step[] = ["intro", "doc-type", "doc-front", "doc-back", "selfie", "liveness", "review", "processing", "success"];
   const stepIdx = STEPS.indexOf(step);
 
-  const fakeCapture = (setter: React.Dispatch<React.SetStateAction<DocCapture>>) => {
-    setCapturing(true);
-    setTimeout(() => { setter(p => ({ ...p, captured: true })); setCapturing(false); }, 1800);
-  };
-
-  const startLiveness = () => {
-    setLivenessStep(0);
-    setLivenessProgress(0);
-    let idx = 0;
-    const tick = () => {
-      if (idx >= livenessInstructions.length) { setStep("review"); return; }
-      setLivenessStep(idx);
-      let pct = 0;
-      const prog = setInterval(() => {
-        pct += 4;
-        setLivenessProgress(pct);
-        if (pct >= 100) {
-          clearInterval(prog);
-          idx++;
-          setTimeout(tick, 400);
-        }
-      }, 60);
-    };
-    tick();
+  const handleCapture = (setter: (img: string | null) => void) => (dataUrl: string) => {
+    setAiAnalyzing(true);
+    // Simulate AI analysis delay
+    setTimeout(() => {
+      setter(dataUrl);
+      setAiAnalyzing(false);
+    }, 1200);
   };
 
   const startProcessing = () => {
@@ -175,7 +519,45 @@ const KYCUpgrade = () => {
     }, 40);
   };
 
-  /* ─── Render ──────────────────────────────────────── */
+  const docOverlay = (
+    <>
+      {/* Document frame guides */}
+      <div className="absolute inset-6 border-2 border-dashed border-primary/50 rounded-xl z-10 pointer-events-none" />
+      {["top-3 left-3", "top-3 right-3", "bottom-3 left-3", "bottom-3 right-3"].map((pos, i) => (
+        <div key={i} className={`absolute ${pos} w-6 h-6 border-2 border-primary rounded-sm z-10 pointer-events-none`} />
+      ))}
+      <div className="absolute bottom-3 left-0 right-0 text-center z-10 pointer-events-none">
+        <span className="glass rounded-full px-3 py-1 text-[10px] text-muted-foreground">
+          Align document within the frame
+        </span>
+      </div>
+    </>
+  );
+
+  const selfieOverlay = (
+    <>
+      {/* Oval face guide */}
+      <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
+        <div className="w-48 h-56 border-[3px] border-dashed border-primary/60 rounded-[50%]" />
+      </div>
+      {/* Corner markers */}
+      <div className="absolute top-4 left-4 w-6 h-6 border-t-2 border-l-2 border-primary rounded-tl-lg z-10 pointer-events-none" />
+      <div className="absolute top-4 right-4 w-6 h-6 border-t-2 border-r-2 border-primary rounded-tr-lg z-10 pointer-events-none" />
+      <div className="absolute bottom-4 left-4 w-6 h-6 border-b-2 border-l-2 border-primary rounded-bl-lg z-10 pointer-events-none" />
+      <div className="absolute bottom-4 right-4 w-6 h-6 border-b-2 border-r-2 border-primary rounded-br-lg z-10 pointer-events-none" />
+      <div className="absolute bottom-4 left-0 right-0 text-center z-10 pointer-events-none">
+        <span className="glass rounded-full px-3 py-1 text-[10px] text-muted-foreground">
+          Align your face within the oval
+        </span>
+      </div>
+      {/* LIVE badge */}
+      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1.5 glass rounded-full px-3 py-1 pointer-events-none">
+        <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+        <span className="text-[10px] text-foreground font-bold tracking-wider">LIVE</span>
+      </div>
+    </>
+  );
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -202,14 +584,14 @@ const KYCUpgrade = () => {
           <div className="space-y-4">
             <div className="glass-gold rounded-3xl p-6 text-center">
               <div className="w-20 h-20 mx-auto gradient-green rounded-2xl flex items-center justify-center mb-4">
-                <Shield className="w-10 h-10 text-gold" />
+                <Shield className="w-10 h-10 text-primary" />
               </div>
               <h2 className="font-display font-bold text-2xl text-foreground mb-1">Upgrade to Level 2</h2>
               <p className="text-sm text-muted-foreground">Unlock higher limits and premium features</p>
             </div>
 
             <div className="glass rounded-2xl p-4">
-              <p className="text-xs font-bold text-gold mb-3">What you'll unlock instantly</p>
+              <p className="text-xs font-bold text-primary mb-3">What you'll unlock instantly</p>
               <div className="space-y-2.5">
                 {[
                   { icon: "💸", label: "Daily Limit", from: "ETB 10,000", to: "ETB 50,000" },
@@ -237,18 +619,18 @@ const KYCUpgrade = () => {
             <div className="glass rounded-2xl p-3 flex gap-2 items-start">
               <span className="text-lg">🤖</span>
               <div>
-                <p className="text-xs font-bold text-gold">Global AI</p>
-                <p className="text-xs text-muted-foreground">This process takes approximately 2–3 minutes. Your documents are encrypted and processed securely by Global AI. Data is stored per NBE and PDPO Ethiopia guidelines.</p>
+                <p className="text-xs font-bold text-primary">Global AI Verification</p>
+                <p className="text-xs text-muted-foreground">This process uses your device camera for real-time document scanning, selfie capture, and liveness verification. Data is encrypted and processed per NBE and PDPO Ethiopia guidelines.</p>
               </div>
             </div>
 
-            <div className="glass rounded-2xl p-3">
-              <p className="text-xs font-bold text-foreground mb-2">What you'll need</p>
+            <div className="glass rounded-2xl p-3 border border-primary/20">
+              <p className="text-xs font-bold text-foreground mb-2">📱 What you'll need</p>
               <div className="grid grid-cols-2 gap-2">
                 {[
-                  { icon: "🪪", label: "Fayda / National ID" },
-                  { icon: "🤳", label: "Clear selfie lighting" },
-                  { icon: "📶", label: "Stable internet" },
+                  { icon: "🪪", label: "Valid ID document" },
+                  { icon: "📷", label: "Working camera" },
+                  { icon: "💡", label: "Good lighting" },
                   { icon: "⏱️", label: "2–3 minutes" },
                 ].map(({ icon, label }) => (
                   <div key={label} className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -258,8 +640,8 @@ const KYCUpgrade = () => {
               </div>
             </div>
 
-            <button onClick={() => setStep("doc-type")} className="w-full py-4 rounded-2xl bg-gradient-gold text-tesfa-dark font-bold text-sm flex items-center justify-center gap-2">
-              <Zap className="w-4 h-4" /> Start Verification
+            <button onClick={() => setStep("doc-type")} className="w-full py-4 rounded-2xl bg-gradient-to-r from-primary to-primary/80 text-primary-foreground font-bold text-sm flex items-center justify-center gap-2">
+              <Zap className="w-4 h-4" /> Start Live Verification
             </button>
           </div>
         )}
@@ -271,176 +653,126 @@ const KYCUpgrade = () => {
               <h2 className="font-display font-bold text-xl text-foreground">Choose Document Type</h2>
               <p className="text-sm text-muted-foreground mt-0.5">Select your primary identity document</p>
             </div>
-
             <div className="space-y-2.5">
               {DOC_TYPES.map(dt => (
                 <button key={dt.id} onClick={() => setDocType(dt.id)}
-                  className={`w-full p-4 rounded-2xl border text-left flex items-center gap-3 transition-all ${docType === dt.id ? "glass-gold border-tesfa-gold/40" : "glass border-border"}`}>
+                  className={`w-full p-4 rounded-2xl border text-left flex items-center gap-3 transition-all ${docType === dt.id ? "glass-gold border-primary/40" : "glass border-border"}`}>
                   <span className="text-2xl">{dt.icon}</span>
                   <div className="flex-1">
                     <p className="text-sm font-semibold text-foreground">{dt.label}</p>
-                    {dt.recommended && <span className="text-[10px] bg-gradient-gold text-tesfa-dark px-2 py-0.5 rounded-full font-bold">Recommended · Fastest</span>}
+                    {dt.recommended && <span className="text-[10px] bg-gradient-to-r from-primary to-primary/80 text-primary-foreground px-2 py-0.5 rounded-full font-bold">Recommended · Fastest</span>}
                   </div>
-                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${docType === dt.id ? "border-tesfa-gold bg-tesfa-gold" : "border-muted"}`}>
-                    {docType === dt.id && <div className="w-2.5 h-2.5 rounded-full bg-tesfa-dark" />}
+                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${docType === dt.id ? "border-primary bg-primary" : "border-muted"}`}>
+                    {docType === dt.id && <div className="w-2.5 h-2.5 rounded-full bg-primary-foreground" />}
                   </div>
                 </button>
               ))}
             </div>
-
             <div className="glass rounded-2xl p-3 flex gap-2 items-center">
               <AlertTriangle className="w-4 h-4 text-yellow-400 flex-shrink-0" />
-              <p className="text-xs text-muted-foreground">Ensure document is valid, not expired, and clearly visible. Damaged or blurry documents will be rejected.</p>
+              <p className="text-xs text-muted-foreground">Ensure document is valid, not expired, and clearly visible.</p>
             </div>
-
-            <button onClick={() => setStep("doc-front")} className="w-full py-4 rounded-2xl bg-gradient-gold text-tesfa-dark font-bold text-sm flex items-center justify-center gap-2">
+            <button onClick={() => setStep("doc-front")} className="w-full py-4 rounded-2xl bg-gradient-to-r from-primary to-primary/80 text-primary-foreground font-bold text-sm flex items-center justify-center gap-2">
               Continue <ChevronRight className="w-4 h-4" />
             </button>
           </div>
         )}
 
-        {/* ── DOCUMENT FRONT ── */}
+        {/* ── DOCUMENT FRONT (Live Camera) ── */}
         {step === "doc-front" && (
           <div className="space-y-4">
             <div>
-              <h2 className="font-display font-bold text-xl text-foreground">Capture Front Side</h2>
-              <p className="text-sm text-muted-foreground mt-0.5">Place document flat on a dark surface</p>
+              <h2 className="font-display font-bold text-xl text-foreground">Scan Front Side</h2>
+              <p className="text-sm text-muted-foreground mt-0.5">Hold document steady within the frame</p>
             </div>
-
             <div className="glass rounded-2xl p-3 flex gap-2 items-center">
-              <Eye className="w-4 h-4 text-gold flex-shrink-0" />
-              <p className="text-xs text-muted-foreground">Ensure all 4 corners are visible · Avoid glare · Good lighting required</p>
+              <Eye className="w-4 h-4 text-primary flex-shrink-0" />
+              <p className="text-xs text-muted-foreground">All 4 corners visible · Avoid glare · Good lighting</p>
             </div>
-
-            <CaptureCard doc={front} capturing={capturing} onCapture={() => fakeCapture(setFront)} retake={() => setFront(p => ({ ...p, captured: false }))} />
-
-            <button disabled={!front.captured} onClick={() => setStep("doc-back")}
-              className="w-full py-4 rounded-2xl bg-gradient-gold text-tesfa-dark font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed">
+            <LiveCamera
+              facingMode="environment"
+              capturedImage={frontImage}
+              onCapture={handleCapture(setFrontImage)}
+              onRetake={() => setFrontImage(null)}
+              overlay={docOverlay}
+              capturing={aiAnalyzing}
+            />
+            {aiAnalyzing && (
+              <div className="glass-gold rounded-xl p-3 flex items-center gap-2">
+                <Loader2 className="w-4 h-4 text-primary animate-spin" />
+                <p className="text-xs text-primary font-bold">AI analyzing document quality…</p>
+              </div>
+            )}
+            <button disabled={!frontImage} onClick={() => setStep("doc-back")}
+              className="w-full py-4 rounded-2xl bg-gradient-to-r from-primary to-primary/80 text-primary-foreground font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed">
               Continue to Back Side <ChevronRight className="w-4 h-4" />
             </button>
           </div>
         )}
 
-        {/* ── DOCUMENT BACK ── */}
+        {/* ── DOCUMENT BACK (Live Camera) ── */}
         {step === "doc-back" && (
           <div className="space-y-4">
             <div>
-              <h2 className="font-display font-bold text-xl text-foreground">Capture Back Side</h2>
-              <p className="text-sm text-muted-foreground mt-0.5">Flip document and capture the back</p>
+              <h2 className="font-display font-bold text-xl text-foreground">Scan Back Side</h2>
+              <p className="text-sm text-muted-foreground mt-0.5">Flip document and scan the back</p>
             </div>
-
-            <CaptureCard doc={back} capturing={capturing} onCapture={() => fakeCapture(setBack)} retake={() => setBack(p => ({ ...p, captured: false }))} />
-
-            <button disabled={!back.captured} onClick={() => setStep("selfie")}
-              className="w-full py-4 rounded-2xl bg-gradient-gold text-tesfa-dark font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed">
+            <LiveCamera
+              facingMode="environment"
+              capturedImage={backImage}
+              onCapture={handleCapture(setBackImage)}
+              onRetake={() => setBackImage(null)}
+              overlay={docOverlay}
+              capturing={aiAnalyzing}
+            />
+            {aiAnalyzing && (
+              <div className="glass-gold rounded-xl p-3 flex items-center gap-2">
+                <Loader2 className="w-4 h-4 text-primary animate-spin" />
+                <p className="text-xs text-primary font-bold">AI reading document data…</p>
+              </div>
+            )}
+            <button disabled={!backImage} onClick={() => setStep("selfie")}
+              className="w-full py-4 rounded-2xl bg-gradient-to-r from-primary to-primary/80 text-primary-foreground font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed">
               Continue to Selfie <ChevronRight className="w-4 h-4" />
             </button>
           </div>
         )}
 
-        {/* ── SELFIE ── */}
+        {/* ── SELFIE (Live Front Camera) ── */}
         {step === "selfie" && (
           <div className="space-y-4">
             <div>
-              <h2 className="font-display font-bold text-xl text-foreground">Capture Selfie</h2>
-              <p className="text-sm text-muted-foreground mt-0.5">Look straight into the front camera</p>
+              <h2 className="font-display font-bold text-xl text-foreground">Take Selfie</h2>
+              <p className="text-sm text-muted-foreground mt-0.5">Look straight at the front camera</p>
             </div>
-
             <div className="glass rounded-2xl p-3 flex gap-2 items-center">
-              <ScanFace className="w-4 h-4 text-gold flex-shrink-0" />
-              <p className="text-xs text-muted-foreground">Remove glasses, ensure good lighting, keep a neutral expression</p>
+              <ScanFace className="w-4 h-4 text-primary flex-shrink-0" />
+              <p className="text-xs text-muted-foreground">Remove glasses · Good lighting · Neutral expression</p>
             </div>
-
-            {/* Selfie frame */}
-            <div className="glass rounded-2xl overflow-hidden">
-              <div className="relative aspect-square flex items-center justify-center bg-tesfa-dark/40">
-                {selfie.captured ? (
-                  <div className="absolute inset-0 bg-gradient-to-br from-tesfa-green/20 to-tesfa-gold/10 flex items-center justify-center">
-                    <div className="text-center">
-                      <span className="text-6xl">🤳</span>
-                      <div className="mt-3 flex items-center justify-center gap-1.5">
-                        <CheckCircle2 className="w-4 h-4 text-green-400" />
-                        <span className="text-xs text-green-400 font-bold">Selfie Captured</span>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    {/* Oval face guide */}
-                    <div className="w-48 h-56 border-2 border-dashed border-tesfa-gold/50 rounded-full flex items-center justify-center">
-                      <span className="text-4xl opacity-30">👤</span>
-                    </div>
-                    <div className="absolute bottom-4 left-0 right-0 text-center">
-                      <p className="text-xs text-muted-foreground">Align your face within the oval</p>
-                    </div>
-                  </>
-                )}
+            <LiveCamera
+              facingMode="user"
+              capturedImage={selfieImage}
+              onCapture={handleCapture(setSelfieImage)}
+              onRetake={() => setSelfieImage(null)}
+              overlay={selfieOverlay}
+              capturing={aiAnalyzing}
+            />
+            {aiAnalyzing && (
+              <div className="glass-gold rounded-xl p-3 flex items-center gap-2">
+                <Loader2 className="w-4 h-4 text-primary animate-spin" />
+                <p className="text-xs text-primary font-bold">AI matching face to document…</p>
               </div>
-              <div className="p-3">
-                {selfie.captured ? (
-                  <button onClick={() => setSelfie(p => ({ ...p, captured: false }))} className="w-full py-2.5 glass rounded-xl text-xs text-muted-foreground font-semibold flex items-center justify-center gap-1.5">
-                    <RefreshCw className="w-3.5 h-3.5" /> Retake Selfie
-                  </button>
-                ) : (
-                  <button onClick={() => fakeCapture(setSelfie)} disabled={capturing} className="w-full py-2.5 rounded-xl bg-gradient-gold text-tesfa-dark text-xs font-bold flex items-center justify-center gap-1.5 disabled:opacity-60">
-                    {capturing ? <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Capturing…</> : <><Camera className="w-3.5 h-3.5" /> Take Selfie</>}
-                  </button>
-                )}
-              </div>
-            </div>
-
-            <button disabled={!selfie.captured} onClick={() => { setStep("liveness"); setTimeout(startLiveness, 800); }}
-              className="w-full py-4 rounded-2xl bg-gradient-gold text-tesfa-dark font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed">
+            )}
+            <button disabled={!selfieImage} onClick={() => setStep("liveness")}
+              className="w-full py-4 rounded-2xl bg-gradient-to-r from-primary to-primary/80 text-primary-foreground font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed">
               Proceed to Liveness Check <ChevronRight className="w-4 h-4" />
             </button>
           </div>
         )}
 
-        {/* ── LIVENESS ── */}
+        {/* ── LIVENESS (Real-time Camera + Instructions) ── */}
         {step === "liveness" && (
-          <div className="space-y-4">
-            <div>
-              <h2 className="font-display font-bold text-xl text-foreground">Liveness Verification</h2>
-              <p className="text-sm text-muted-foreground mt-0.5">Follow the on-screen instructions</p>
-            </div>
-
-            <div className="glass rounded-2xl overflow-hidden">
-              {/* Camera view */}
-              <div className="relative aspect-square bg-tesfa-dark/50 flex items-center justify-center">
-                <div className="w-52 h-60 border-2 border-tesfa-gold/60 rounded-full flex items-center justify-center">
-                  <span className="text-6xl animate-pulse">👤</span>
-                </div>
-                {/* Scanning effect */}
-                <div className="absolute inset-x-4 top-4 h-0.5 bg-gradient-to-r from-transparent via-tesfa-gold to-transparent animate-[scan_1.5s_ease-in-out_infinite]" />
-              </div>
-
-              {/* Current instruction */}
-              <div className="p-4 text-center glass-gold">
-                <div className="text-4xl mb-2">{livenessInstructions[Math.min(livenessStep, livenessInstructions.length - 1)].icon}</div>
-                <p className="text-sm font-bold text-foreground">
-                  {livenessInstructions[Math.min(livenessStep, livenessInstructions.length - 1)].label}
-                </p>
-                <div className="mt-3 h-1.5 bg-muted rounded-full overflow-hidden">
-                  <div className="h-full bg-gradient-gold rounded-full transition-all duration-75" style={{ width: `${livenessProgress}%` }} />
-                </div>
-                <p className="text-xs text-muted-foreground mt-1.5">Step {Math.min(livenessStep + 1, livenessInstructions.length)} of {livenessInstructions.length}</p>
-              </div>
-
-              {/* Steps checklist */}
-              <div className="p-3 grid grid-cols-5 gap-1">
-                {livenessInstructions.map((inst, i) => (
-                  <div key={i} className={`rounded-lg py-1.5 px-1 text-center transition-all ${i < livenessStep ? "glass-gold" : i === livenessStep ? "glass border border-tesfa-gold/30" : "glass opacity-40"}`}>
-                    <span className="text-xs">{i < livenessStep ? "✓" : inst.icon}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="glass rounded-2xl p-3 flex gap-2 items-center">
-              <Shield className="w-4 h-4 text-gold flex-shrink-0" />
-              <p className="text-xs text-muted-foreground">Anti-spoofing AI active · Video is not stored · NBE compliant</p>
-            </div>
-          </div>
+          <LivenessCamera onComplete={() => setStep("review")} />
         )}
 
         {/* ── REVIEW ── */}
@@ -448,22 +780,30 @@ const KYCUpgrade = () => {
           <div className="space-y-4">
             <div>
               <h2 className="font-display font-bold text-xl text-foreground">Review & Submit</h2>
-              <p className="text-sm text-muted-foreground mt-0.5">Tesfa AI has pre-screened your documents</p>
+              <p className="text-sm text-muted-foreground mt-0.5">AI has pre-screened your documents</p>
             </div>
 
-            {/* Captured docs summary */}
+            {/* Captured docs with real thumbnails */}
             <div className="glass rounded-2xl p-4">
-              <p className="text-xs font-bold text-gold mb-3">Captured Documents</p>
+              <p className="text-xs font-bold text-primary mb-3">Captured Documents</p>
               <div className="grid grid-cols-3 gap-2">
                 {[
-                  { label: "Front ID", emoji: "🪪", ok: true },
-                  { label: "Back ID", emoji: "📋", ok: true },
-                  { label: "Selfie", emoji: "🤳", ok: true },
+                  { label: "Front ID", img: frontImage },
+                  { label: "Back ID", img: backImage },
+                  { label: "Selfie", img: selfieImage },
                 ].map(d => (
-                  <div key={d.label} className="glass-gold rounded-xl aspect-video flex flex-col items-center justify-center gap-1">
-                    <span className="text-2xl">{d.emoji}</span>
-                    <p className="text-[10px] text-muted-foreground">{d.label}</p>
-                    <CheckCircle2 className="w-3 h-3 text-green-400" />
+                  <div key={d.label} className="glass-gold rounded-xl overflow-hidden">
+                    <div className="aspect-video relative">
+                      {d.img ? (
+                        <img src={d.img} alt={d.label} className="absolute inset-0 w-full h-full object-cover" />
+                      ) : (
+                        <div className="absolute inset-0 flex items-center justify-center text-2xl">📄</div>
+                      )}
+                    </div>
+                    <div className="p-1.5 flex items-center justify-center gap-1">
+                      <CheckCircle2 className="w-3 h-3 text-green-400" />
+                      <p className="text-[10px] text-muted-foreground">{d.label}</p>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -473,7 +813,7 @@ const KYCUpgrade = () => {
             <div className="glass rounded-2xl p-4">
               <div className="flex items-center gap-2 mb-3">
                 <span className="text-base">🤖</span>
-                <p className="text-xs font-bold text-gold">Tesfa AI Pre-screening Results</p>
+                <p className="text-xs font-bold text-primary">Global AI Pre-screening</p>
                 <span className="ml-auto text-xs bg-green-500/10 border border-green-500/20 text-green-400 px-2 py-0.5 rounded-lg font-bold">
                   {overall}% Score
                 </span>
@@ -511,7 +851,7 @@ const KYCUpgrade = () => {
               </p>
             </div>
 
-            <button onClick={startProcessing} className="w-full py-4 rounded-2xl bg-gradient-gold text-tesfa-dark font-bold text-sm flex items-center justify-center gap-2">
+            <button onClick={startProcessing} className="w-full py-4 rounded-2xl bg-gradient-to-r from-primary to-primary/80 text-primary-foreground font-bold text-sm flex items-center justify-center gap-2">
               <FileText className="w-4 h-4" /> Submit for Verification
             </button>
           </div>
@@ -521,21 +861,19 @@ const KYCUpgrade = () => {
         {step === "processing" && (
           <div className="flex flex-col items-center justify-center min-h-[70vh] space-y-6 text-center">
             <div className="w-28 h-28 gradient-green rounded-3xl flex items-center justify-center animate-pulse">
-              <Shield className="w-14 h-14 text-gold" />
+              <Shield className="w-14 h-14 text-primary" />
             </div>
             <div>
               <h2 className="font-display font-bold text-2xl text-foreground">Verifying…</h2>
-              <p className="text-sm text-muted-foreground mt-1">Tesfa AI is processing your documents</p>
+              <p className="text-sm text-muted-foreground mt-1">Global AI is processing your documents</p>
             </div>
-
-            {/* Progress ring simulation */}
             <div className="w-full glass rounded-2xl p-5 space-y-3">
               <div className="flex justify-between text-xs mb-1">
                 <span className="text-muted-foreground">Overall Progress</span>
-                <span className="text-gold font-bold">{processingPct}%</span>
+                <span className="text-primary font-bold">{processingPct}%</span>
               </div>
               <div className="h-2 bg-muted rounded-full overflow-hidden">
-                <div className="h-full bg-gradient-gold rounded-full transition-all duration-100" style={{ width: `${processingPct}%` }} />
+                <div className="h-full rounded-full transition-all duration-100" style={{ width: `${processingPct}%`, background: "var(--gradient-gold)" }} />
               </div>
               <div className="space-y-1.5 mt-2">
                 {[
@@ -561,7 +899,7 @@ const KYCUpgrade = () => {
         {step === "success" && (
           <div className="flex flex-col items-center justify-center min-h-[70vh] space-y-5 text-center">
             <div className="w-28 h-28 gradient-green rounded-3xl flex items-center justify-center">
-              <CheckCircle2 className="w-14 h-14 text-gold" />
+              <CheckCircle2 className="w-14 h-14 text-primary" />
             </div>
             <div>
               <div className="inline-flex items-center gap-1.5 bg-green-500/10 border border-green-500/20 text-green-400 text-xs font-bold px-3 py-1 rounded-full mb-3">
@@ -570,10 +908,8 @@ const KYCUpgrade = () => {
               <h2 className="font-display font-bold text-2xl text-foreground">You're Verified!</h2>
               <p className="text-sm text-muted-foreground mt-1">Your limits have been updated instantly</p>
             </div>
-
-            {/* Updated limits card */}
             <div className="w-full glass-gold rounded-2xl p-4">
-              <p className="text-xs font-bold text-gold mb-3 text-left">🎉 New Limits Active Now</p>
+              <p className="text-xs font-bold text-primary mb-3 text-left">🎉 New Limits Active Now</p>
               <div className="space-y-2">
                 {[
                   { icon: "💸", label: "Daily Limit", value: "ETB 50,000" },
@@ -589,25 +925,21 @@ const KYCUpgrade = () => {
                 ))}
               </div>
             </div>
-
-            {/* Loyalty bonus */}
             <div className="w-full glass rounded-2xl p-3 flex gap-3 items-center">
               <span className="text-2xl">⭐</span>
               <div className="text-left">
-                <p className="text-xs font-bold text-gold">500 Bonus Tesfa Points Awarded!</p>
+                <p className="text-xs font-bold text-primary">500 Bonus Tesfa Points Awarded!</p>
                 <p className="text-xs text-muted-foreground">For completing KYC Level 2 verification</p>
               </div>
             </div>
-
             <div className="w-full space-y-2.5">
-              <button onClick={() => navigate("/wallet")} className="w-full py-4 rounded-2xl bg-gradient-gold text-tesfa-dark font-bold text-sm">
+              <button onClick={() => navigate("/wallet")} className="w-full py-4 rounded-2xl bg-gradient-to-r from-primary to-primary/80 text-primary-foreground font-bold text-sm">
                 Return to Wallet
               </button>
               <button onClick={() => navigate("/wallet/profile")} className="w-full py-3 rounded-2xl glass text-sm text-muted-foreground font-semibold">
                 View Profile
               </button>
             </div>
-
             <p className="text-[10px] text-muted-foreground">Verification ID: KYC2-{Date.now().toString().slice(-8)} · Global Bank Ethiopia</p>
           </div>
         )}
