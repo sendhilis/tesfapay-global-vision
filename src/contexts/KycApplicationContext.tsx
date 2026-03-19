@@ -49,13 +49,36 @@ export const useKycApplications = () => {
   return ctx;
 };
 
-let nextId = 5000;
+const STORAGE_KEY = "tesfa_kyc_applications";
+const ID_KEY = "tesfa_kyc_next_id";
+
+const loadFromStorage = (): KycApplication[] => {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch { return []; }
+};
+
+const loadNextId = (): number => {
+  try {
+    const raw = localStorage.getItem(ID_KEY);
+    return raw ? Number(raw) : 5000;
+  } catch { return 5000; }
+};
+
+let nextId = loadNextId();
 
 export const KycApplicationProvider = ({ children }: { children: ReactNode }) => {
-  const [applications, setApplications] = useState<KycApplication[]>([]);
+  const [applications, setApplications] = useState<KycApplication[]>(loadFromStorage);
+
+  // Persist to localStorage whenever applications change
+  const persistApps = useCallback((apps: KycApplication[]) => {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(apps)); } catch {}
+  }, []);
 
   const submitApplication = useCallback((app: Omit<KycApplication, "id" | "submitted" | "status">) => {
     const id = `KYC-${++nextId}`;
+    try { localStorage.setItem(ID_KEY, String(nextId)); } catch {}
     const now = new Date();
     const submitted = now.toLocaleDateString("en-US", {
       month: "short", day: "numeric", year: "numeric",
@@ -70,17 +93,23 @@ export const KycApplicationProvider = ({ children }: { children: ReactNode }) =>
       status: "pending",
     };
 
-    setApplications(prev => [newApp, ...prev]);
+    setApplications(prev => {
+      const updated = [newApp, ...prev];
+      persistApps(updated);
+      return updated;
+    });
     return id;
-  }, []);
+  }, [persistApps]);
 
   const reviewApplication = useCallback((id: string, decision: "approved" | "rejected", note?: string) => {
-    setApplications(prev =>
-      prev.map(app =>
+    setApplications(prev => {
+      const updated = prev.map(app =>
         app.id === id ? { ...app, status: decision, reviewNote: note } : app
-      )
-    );
-  }, []);
+      );
+      persistApps(updated);
+      return updated;
+    });
+  }, [persistApps]);
 
   return (
     <KycApplicationContext.Provider value={{ applications, submitApplication, reviewApplication }}>
