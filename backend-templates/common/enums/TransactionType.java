@@ -1,0 +1,19 @@
+package com.globalpay.common.enums;
+
+public enum TransactionType {
+    P2P_SEND,
+    P2P_RECEIVE,
+    BILL_PAYMENT,
+    AIRTIME,
+    MERCHANT,
+    CASH_IN,
+    CASH_OUT,
+    SAVINGS_DEPOSIT,
+    SAVINGS_WITHDRAWAL,
+    LOAN_DISBURSEMENT,
+    LOAN_REPAYMENT,
+    REWARD_REDEMPTION,
+    FLOAT_TOPUP,
+    COMMISSION,
+    REVERSAL
+}
