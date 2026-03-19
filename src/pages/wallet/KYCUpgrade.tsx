@@ -409,10 +409,14 @@ const LiveCamera = ({
   }, []);
 
   useEffect(() => {
+    mountedRef.current = true;
     if (!capturedImage) {
       startCamera();
     }
-    return () => stopCamera();
+    return () => {
+      mountedRef.current = false;
+      stopCamera();
+    };
   }, [capturedImage, startCamera, stopCamera]);
 
   // Animated scan line
