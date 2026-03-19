@@ -1,0 +1,1028 @@
+{
+	"info": {
+		"_postman_id": "globalpay-api-v1",
+		"name": "GlobalPay API v1.0",
+		"description": "Complete REST API collection for GlobalPay mobile wallet backend.\n\nBase URL: {{baseUrl}}\nAuth: Bearer JWT in Authorization header\nCurrency: ETB (Ethiopian Birr)\n\nImport this collection and set the 'baseUrl' variable to your Spring Boot server (e.g., http://localhost:8080/v1).",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8080/v1",
+			"type": "string"
+		},
+		{
+			"key": "accessToken",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "refreshToken",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "userId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "testPhone",
+			"value": "+251911234567",
+			"type": "string"
+		},
+		{
+			"key": "testPin",
+			"value": "123456",
+			"type": "string"
+		}
+	],
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{accessToken}}",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [""]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"if (pm.response.code === 401) {",
+					"    console.log('Auth token expired — re-run Login or Refresh Token request');",
+					"}"
+				]
+			}
+		}
+	],
+	"item": [
+		{
+			"name": "01 — Authentication",
+			"description": "User registration, login, OTP verification, token refresh, and logout.",
+			"item": [
+				{
+					"name": "Register User",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"url": {"raw": "{{baseUrl}}/auth/register", "host": ["{{baseUrl}}"], "path": ["auth", "register"]},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"phone\": \"{{testPhone}}\",\n  \"firstName\": \"Abebe\",\n  \"lastName\": \"Girma\",\n  \"pin\": \"{{testPin}}\"\n}"
+						}
+					},
+					"event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+						"if (pm.response.code === 201) {",
+						"    var json = pm.response.json();",
+						"    pm.collectionVariables.set('userId', json.userId);",
+						"    pm.test('User created', () => pm.expect(json.otpSent).to.be.true);",
+						"}"
+					]}}]
+				},
+				{
+					"name": "Verify OTP",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"url": {"raw": "{{baseUrl}}/auth/verify-otp", "host": ["{{baseUrl}}"], "path": ["auth", "verify-otp"]},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"phone\": \"{{testPhone}}\",\n  \"otp\": \"482910\"\n}"
+						}
+					},
+					"event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+						"if (pm.response.code === 200) {",
+						"    var json = pm.response.json();",
+						"    pm.collectionVariables.set('accessToken', json.accessToken);",
+						"    pm.collectionVariables.set('refreshToken', json.refreshToken);",
+						"    pm.test('OTP verified', () => pm.expect(json.verified).to.be.true);",
+						"}"
+					]}}]
+				},
+				{
+					"name": "Login (MPIN)",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"url": {"raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"]},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"phone\": \"{{testPhone}}\",\n  \"pin\": \"{{testPin}}\"\n}"
+						}
+					},
+					"event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+						"if (pm.response.code === 200) {",
+						"    var json = pm.response.json();",
+						"    pm.collectionVariables.set('accessToken', json.accessToken);",
+						"    pm.collectionVariables.set('refreshToken', json.refreshToken);",
+						"    pm.collectionVariables.set('userId', json.user.id);",
+						"    pm.test('Login success', () => pm.expect(json.accessToken).to.not.be.empty);",
+						"}"
+					]}}]
+				},
+				{
+					"name": "Login (Biometric)",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"url": {"raw": "{{baseUrl}}/auth/login/biometric", "host": ["{{baseUrl}}"], "path": ["auth", "login", "biometric"]},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"userId\": \"{{userId}}\",\n  \"biometricToken\": \"device-signed-token\"\n}"
+						}
+					}
+				},
+				{
+					"name": "Refresh Token",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"url": {"raw": "{{baseUrl}}/auth/refresh", "host": ["{{baseUrl}}"], "path": ["auth", "refresh"]},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+						}
+					},
+					"event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+						"if (pm.response.code === 200) {",
+						"    var json = pm.response.json();",
+						"    pm.collectionVariables.set('accessToken', json.accessToken);",
+						"    pm.collectionVariables.set('refreshToken', json.refreshToken);",
+						"}"
+					]}}]
+				},
+				{
+					"name": "Logout",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {"raw": "{{baseUrl}}/auth/logout", "host": ["{{baseUrl}}"], "path": ["auth", "logout"]}
+					}
+				}
+			]
+		},
+		{
+			"name": "02 — User Profile & KYC",
+			"description": "User profile management and KYC Level 2 upgrade.",
+			"item": [
+				{
+					"name": "Get My Profile",
+					"request": {
+						"method": "GET",
+						"url": {"raw": "{{baseUrl}}/users/me", "host": ["{{baseUrl}}"], "path": ["users", "me"]}
+					},
+					"event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+						"pm.test('Profile loaded', () => {",
+						"    pm.expect(pm.response.code).to.equal(200);",
+						"    var json = pm.response.json();",
+						"    pm.expect(json.phone).to.not.be.empty;",
+						"    pm.expect(json.kycLevel).to.be.oneOf([1, 2]);",
+						"});"
+					]}}]
+				},
+				{
+					"name": "Update My Profile",
+					"request": {
+						"method": "PUT",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"url": {"raw": "{{baseUrl}}/users/me", "host": ["{{baseUrl}}"], "path": ["users", "me"]},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"firstName\": \"Abebe\",\n  \"lastName\": \"Girma\",\n  \"notificationsEnabled\": true\n}"
+						}
+					}
+				},
+				{
+					"name": "Submit KYC Upgrade (multipart)",
+					"request": {
+						"method": "POST",
+						"url": {"raw": "{{baseUrl}}/users/me/kyc/upgrade", "host": ["{{baseUrl}}"], "path": ["users", "me", "kyc", "upgrade"]},
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{"key": "documentType", "value": "FAYDA_ID", "type": "text"},
+								{"key": "documentFront", "type": "file", "src": ""},
+								{"key": "documentBack", "type": "file", "src": ""},
+								{"key": "selfieImage", "type": "file", "src": ""},
+								{"key": "livenessToken", "value": "liveness-token-123", "type": "text"}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get KYC Status",
+					"request": {
+						"method": "GET",
+						"url": {"raw": "{{baseUrl}}/users/me/kyc/status", "host": ["{{baseUrl}}"], "path": ["users", "me", "kyc", "status"]}
+					}
+				}
+			]
+		},
+		{
+			"name": "03 — Wallet & Balance",
+			"description": "Wallet balance and summary.",
+			"item": [
+				{
+					"name": "Get Wallet Balance",
+					"request": {
+						"method": "GET",
+						"url": {"raw": "{{baseUrl}}/wallet/balance", "host": ["{{baseUrl}}"], "path": ["wallet", "balance"]}
+					},
+					"event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+						"pm.test('Balance returned', () => {",
+						"    var json = pm.response.json();",
+						"    pm.expect(json.mainBalance).to.be.a('number');",
+						"    pm.expect(json.currency).to.equal('ETB');",
+						"});"
+					]}}]
+				},
+				{
+					"name": "Get Wallet Summary",
+					"request": {
+						"method": "GET",
+						"url": {"raw": "{{baseUrl}}/wallet/summary", "host": ["{{baseUrl}}"], "path": ["wallet", "summary"]}
+					}
+				}
+			]
+		},
+		{
+			"name": "04 — P2P Transfers",
+			"description": "Send money, request money, and contact management.",
+			"item": [
+				{
+					"name": "Get Contacts",
+					"request": {
+						"method": "GET",
+						"url": {"raw": "{{baseUrl}}/contacts", "host": ["{{baseUrl}}"], "path": ["contacts"]}
+					}
+				},
+				{
+					"name": "Lookup Contact by Phone",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"url": {"raw": "{{baseUrl}}/contacts/lookup", "host": ["{{baseUrl}}"], "path": ["contacts", "lookup"]},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"phone\": \"+251922345678\"\n}"
+						}
+					}
+				},
+				{
+					"name": "Send Money",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"url": {"raw": "{{baseUrl}}/transfers/send", "host": ["{{baseUrl}}"], "path": ["transfers", "send"]},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"recipientPhone\": \"+251922345678\",\n  \"amount\": 250.00,\n  \"note\": \"For lunch\",\n  \"pin\": \"{{testPin}}\"\n}"
+						}
+					},
+					"event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+						"pm.test('Transfer completed', () => {",
+						"    pm.expect(pm.response.code).to.equal(201);",
+						"    var json = pm.response.json();",
+						"    pm.expect(json.status).to.equal('COMPLETED');",
+						"    pm.expect(json.loyaltyPointsEarned).to.be.above(0);",
+						"});"
+					]}}]
+				},
+				{
+					"name": "Request Money",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"url": {"raw": "{{baseUrl}}/transfers/request", "host": ["{{baseUrl}}"], "path": ["transfers", "request"]},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"fromPhone\": \"+251922345678\",\n  \"amount\": 500.00,\n  \"note\": \"Split dinner bill\"\n}"
+						}
+					}
+				},
+				{
+					"name": "List Money Requests",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/transfers/requests?direction=incoming&status=PENDING",
+							"host": ["{{baseUrl}}"],
+							"path": ["transfers", "requests"],
+							"query": [
+								{"key": "direction", "value": "incoming"},
+								{"key": "status", "value": "PENDING"}
+							]
+						}
+					}
+				},
+				{
+					"name": "Accept/Decline Money Request",
+					"request": {
+						"method": "PUT",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"url": {"raw": "{{baseUrl}}/transfers/requests/{{requestId}}", "host": ["{{baseUrl}}"], "path": ["transfers", "requests", "{{requestId}}"]},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"action\": \"ACCEPT\",\n  \"pin\": \"{{testPin}}\"\n}"
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "05 — Bill Payments",
+			"description": "Browse billers, validate accounts, and pay bills.",
+			"item": [
+				{
+					"name": "List Billers",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/billers?category=telecom",
+							"host": ["{{baseUrl}}"],
+							"path": ["billers"],
+							"query": [{"key": "category", "value": "telecom"}]
+						}
+					}
+				},
+				{
+					"name": "Validate Biller Account",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"url": {"raw": "{{baseUrl}}/billers/{{billerId}}/validate", "host": ["{{baseUrl}}"], "path": ["billers", "{{billerId}}", "validate"]},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"accountNumber\": \"0911234567\"\n}"
+						}
+					}
+				},
+				{
+					"name": "Pay Bill",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"url": {"raw": "{{baseUrl}}/billers/{{billerId}}/pay", "host": ["{{baseUrl}}"], "path": ["billers", "{{billerId}}", "pay"]},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"accountNumber\": \"0911234567\",\n  \"amount\": 350.00,\n  \"pin\": \"{{testPin}}\"\n}"
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "06 — Airtime & Data",
+			"description": "Telecom operators, bundles, and top-up.",
+			"item": [
+				{
+					"name": "List Operators & Bundles",
+					"request": {
+						"method": "GET",
+						"url": {"raw": "{{baseUrl}}/airtime/operators", "host": ["{{baseUrl}}"], "path": ["airtime", "operators"]}
+					}
+				},
+				{
+					"name": "Purchase Airtime/Data",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"url": {"raw": "{{baseUrl}}/airtime/topup", "host": ["{{baseUrl}}"], "path": ["airtime", "topup"]},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"operatorId\": \"ethio-telecom\",\n  \"bundleId\": \"bundle-003\",\n  \"recipientPhone\": null,\n  \"isSelfTopup\": true,\n  \"pin\": \"{{testPin}}\"\n}"
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "07 — Merchant Payments",
+			"description": "Merchant directory, QR scan, and payment.",
+			"item": [
+				{
+					"name": "Search Merchants",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/merchants?search=cafe&category=RESTAURANT",
+							"host": ["{{baseUrl}}"],
+							"path": ["merchants"],
+							"query": [
+								{"key": "search", "value": "cafe"},
+								{"key": "category", "value": "RESTAURANT"}
+							]
+						}
+					}
+				},
+				{
+					"name": "Scan QR Code",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"url": {"raw": "{{baseUrl}}/merchants/scan", "host": ["{{baseUrl}}"], "path": ["merchants", "scan"]},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"qrPayload\": \"globalpay://pay?merchant=MERCH-001\"\n}"
+						}
+					}
+				},
+				{
+					"name": "Pay Merchant",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"url": {"raw": "{{baseUrl}}/merchants/{{merchantId}}/pay", "host": ["{{baseUrl}}"], "path": ["merchants", "{{merchantId}}", "pay"]},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"amount\": 250.00,\n  \"pin\": \"{{testPin}}\"\n}"
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "08 — Cash In / Cash Out",
+			"description": "Agent-assisted cash operations.",
+			"item": [
+				{
+					"name": "Find Nearby Agents",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/agents/nearby?lat=9.0192&lng=38.7525&radius=5",
+							"host": ["{{baseUrl}}"],
+							"path": ["agents", "nearby"],
+							"query": [
+								{"key": "lat", "value": "9.0192"},
+								{"key": "lng", "value": "38.7525"},
+								{"key": "radius", "value": "5"}
+							]
+						}
+					}
+				},
+				{
+					"name": "Initiate Cash In",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"url": {"raw": "{{baseUrl}}/cash/in", "host": ["{{baseUrl}}"], "path": ["cash", "in"]},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"agentCode\": \"AGT-001\",\n  \"amount\": 2000.00,\n  \"pin\": \"{{testPin}}\"\n}"
+						}
+					}
+				},
+				{
+					"name": "Initiate Cash Out",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"url": {"raw": "{{baseUrl}}/cash/out", "host": ["{{baseUrl}}"], "path": ["cash", "out"]},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"agentCode\": \"AGT-001\",\n  \"amount\": 5000.00,\n  \"pin\": \"{{testPin}}\"\n}"
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "09 — Savings Goals",
+			"description": "Create, manage, deposit, and withdraw from savings goals.",
+			"item": [
+				{
+					"name": "List Savings Goals",
+					"request": {
+						"method": "GET",
+						"url": {"raw": "{{baseUrl}}/savings/goals", "host": ["{{baseUrl}}"], "path": ["savings", "goals"]}
+					}
+				},
+				{
+					"name": "Create Savings Goal",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"url": {"raw": "{{baseUrl}}/savings/goals", "host": ["{{baseUrl}}"], "path": ["savings", "goals"]},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Vacation Fund\",\n  \"targetAmount\": 30000.00,\n  \"deadline\": \"2026-12-31\"\n}"
+						}
+					}
+				},
+				{
+					"name": "Deposit into Goal",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"url": {"raw": "{{baseUrl}}/savings/goals/{{goalId}}/deposit", "host": ["{{baseUrl}}"], "path": ["savings", "goals", "{{goalId}}", "deposit"]},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"amount\": 500.00,\n  \"pin\": \"{{testPin}}\"\n}"
+						}
+					}
+				},
+				{
+					"name": "Withdraw from Goal",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"url": {"raw": "{{baseUrl}}/savings/goals/{{goalId}}/withdraw", "host": ["{{baseUrl}}"], "path": ["savings", "goals", "{{goalId}}", "withdraw"]},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"amount\": 1000.00,\n  \"pin\": \"{{testPin}}\"\n}"
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "10 — Micro-Loans",
+			"description": "Loan eligibility, application, and repayment.",
+			"item": [
+				{
+					"name": "Check Loan Eligibility",
+					"request": {
+						"method": "GET",
+						"url": {"raw": "{{baseUrl}}/loans/eligibility", "host": ["{{baseUrl}}"], "path": ["loans", "eligibility"]}
+					},
+					"event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+						"pm.test('Eligibility returned', () => {",
+						"    var json = pm.response.json();",
+						"    pm.expect(json.aiCreditScore).to.be.within(0, 100);",
+						"});"
+					]}}]
+				},
+				{
+					"name": "Get Repayment Plans",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/loans/plans?amount=3000",
+							"host": ["{{baseUrl}}"],
+							"path": ["loans", "plans"],
+							"query": [{"key": "amount", "value": "3000"}]
+						}
+					}
+				},
+				{
+					"name": "Apply for Loan",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"url": {"raw": "{{baseUrl}}/loans/apply", "host": ["{{baseUrl}}"], "path": ["loans", "apply"]},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"amount\": 3000.00,\n  \"termMonths\": 3,\n  \"purpose\": \"Business inventory\",\n  \"pin\": \"{{testPin}}\"\n}"
+						}
+					}
+				},
+				{
+					"name": "Get Active Loans",
+					"request": {
+						"method": "GET",
+						"url": {"raw": "{{baseUrl}}/loans/active", "host": ["{{baseUrl}}"], "path": ["loans", "active"]}
+					}
+				},
+				{
+					"name": "Repay Loan",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"url": {"raw": "{{baseUrl}}/loans/{{loanId}}/repay", "host": ["{{baseUrl}}"], "path": ["loans", "{{loanId}}", "repay"]},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"amount\": 1050.00,\n  \"pin\": \"{{testPin}}\"\n}"
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "11 — Loyalty & Rewards",
+			"description": "Points, tiers, history, and reward redemption.",
+			"item": [
+				{
+					"name": "Get Loyalty Overview",
+					"request": {
+						"method": "GET",
+						"url": {"raw": "{{baseUrl}}/loyalty", "host": ["{{baseUrl}}"], "path": ["loyalty"]}
+					}
+				},
+				{
+					"name": "Get Points History",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/loyalty/history?page=0&size=20",
+							"host": ["{{baseUrl}}"],
+							"path": ["loyalty", "history"],
+							"query": [
+								{"key": "page", "value": "0"},
+								{"key": "size", "value": "20"}
+							]
+						}
+					}
+				},
+				{
+					"name": "List Redemption Catalog",
+					"request": {
+						"method": "GET",
+						"url": {"raw": "{{baseUrl}}/loyalty/redemptions", "host": ["{{baseUrl}}"], "path": ["loyalty", "redemptions"]}
+					}
+				},
+				{
+					"name": "Redeem Reward",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"url": {"raw": "{{baseUrl}}/loyalty/redeem", "host": ["{{baseUrl}}"], "path": ["loyalty", "redeem"]},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"redemptionId\": \"redeem-001\"\n}"
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "12 — Transaction History",
+			"description": "Transaction listing, detail, and export.",
+			"item": [
+				{
+					"name": "List Transactions",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/transactions?type=ALL&page=0&size=20",
+							"host": ["{{baseUrl}}"],
+							"path": ["transactions"],
+							"query": [
+								{"key": "type", "value": "ALL"},
+								{"key": "page", "value": "0"},
+								{"key": "size", "value": "20"}
+							]
+						}
+					}
+				},
+				{
+					"name": "List Transactions (Filtered)",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/transactions?type=SENT&search=tigist&from=2026-01-01&to=2026-03-19&page=0&size=20",
+							"host": ["{{baseUrl}}"],
+							"path": ["transactions"],
+							"query": [
+								{"key": "type", "value": "SENT"},
+								{"key": "search", "value": "tigist"},
+								{"key": "from", "value": "2026-01-01"},
+								{"key": "to", "value": "2026-03-19"},
+								{"key": "page", "value": "0"},
+								{"key": "size", "value": "20"}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Transaction Detail",
+					"request": {
+						"method": "GET",
+						"url": {"raw": "{{baseUrl}}/transactions/{{transactionId}}", "host": ["{{baseUrl}}"], "path": ["transactions", "{{transactionId}}"]}
+					}
+				},
+				{
+					"name": "Export Transactions (PDF)",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/transactions/export?format=PDF&from=2026-01-01&to=2026-03-19",
+							"host": ["{{baseUrl}}"],
+							"path": ["transactions", "export"],
+							"query": [
+								{"key": "format", "value": "PDF"},
+								{"key": "from", "value": "2026-01-01"},
+								{"key": "to", "value": "2026-03-19"}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "13 — Notifications",
+			"description": "User notification inbox.",
+			"item": [
+				{
+					"name": "List Notifications",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/notifications?unreadOnly=true&page=0&size=20",
+							"host": ["{{baseUrl}}"],
+							"path": ["notifications"],
+							"query": [
+								{"key": "unreadOnly", "value": "true"},
+								{"key": "page", "value": "0"},
+								{"key": "size", "value": "20"}
+							]
+						}
+					}
+				},
+				{
+					"name": "Mark Notification as Read",
+					"request": {
+						"method": "PUT",
+						"url": {"raw": "{{baseUrl}}/notifications/{{notificationId}}/read", "host": ["{{baseUrl}}"], "path": ["notifications", "{{notificationId}}", "read"]}
+					}
+				}
+			]
+		},
+		{
+			"name": "14 — Agent Portal",
+			"description": "Agent dashboard, cash operations, float, commission, and customer management.",
+			"item": [
+				{
+					"name": "Agent Dashboard",
+					"request": {
+						"method": "GET",
+						"url": {"raw": "{{baseUrl}}/agent/dashboard", "host": ["{{baseUrl}}"], "path": ["agent", "dashboard"]}
+					}
+				},
+				{
+					"name": "Lookup Customer",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"url": {"raw": "{{baseUrl}}/agent/customers/lookup", "host": ["{{baseUrl}}"], "path": ["agent", "customers", "lookup"]},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"+251911222333\"\n}"
+						}
+					}
+				},
+				{
+					"name": "Process Cash In",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"url": {"raw": "{{baseUrl}}/agent/cashin", "host": ["{{baseUrl}}"], "path": ["agent", "cashin"]},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"customerPhone\": \"+251911222333\",\n  \"amount\": 2000.00,\n  \"otp\": \"482910\",\n  \"agentPin\": \"654321\"\n}"
+						}
+					}
+				},
+				{
+					"name": "Process Cash Out",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"url": {"raw": "{{baseUrl}}/agent/cashout", "host": ["{{baseUrl}}"], "path": ["agent", "cashout"]},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"customerPhone\": \"+251922444555\",\n  \"amount\": 5000.00,\n  \"otp\": \"593021\",\n  \"agentPin\": \"654321\"\n}"
+						}
+					}
+				},
+				{
+					"name": "Get Commission Report",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/agent/commission?period=MONTH",
+							"host": ["{{baseUrl}}"],
+							"path": ["agent", "commission"],
+							"query": [{"key": "period", "value": "MONTH"}]
+						}
+					}
+				},
+				{
+					"name": "Get Float Details",
+					"request": {
+						"method": "GET",
+						"url": {"raw": "{{baseUrl}}/agent/float", "host": ["{{baseUrl}}"], "path": ["agent", "float"]}
+					}
+				},
+				{
+					"name": "Request Float Top-up",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"url": {"raw": "{{baseUrl}}/agent/float/request", "host": ["{{baseUrl}}"], "path": ["agent", "float", "request"]},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"amount\": 10000.00,\n  \"note\": \"Running low — need for evening operations\"\n}"
+						}
+					}
+				},
+				{
+					"name": "List Agent Customers",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/agent/customers?search=tigist&page=0&size=20",
+							"host": ["{{baseUrl}}"],
+							"path": ["agent", "customers"],
+							"query": [
+								{"key": "search", "value": "tigist"},
+								{"key": "page", "value": "0"},
+								{"key": "size", "value": "20"}
+							]
+						}
+					}
+				},
+				{
+					"name": "Register New Customer",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"url": {"raw": "{{baseUrl}}/agent/customers/register", "host": ["{{baseUrl}}"], "path": ["agent", "customers", "register"]},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"firstName\": \"New\",\n  \"lastName\": \"Customer\",\n  \"phone\": \"+251955123456\",\n  \"documentType\": \"FAYDA_ID\",\n  \"documentNumber\": \"FID-12345678\"\n}"
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "15 — Admin Console",
+			"description": "System-wide admin APIs: dashboard, users, transactions, KYC, agents, e-money, reports, analytics.",
+			"item": [
+				{
+					"name": "Admin Dashboard",
+					"request": {
+						"method": "GET",
+						"url": {"raw": "{{baseUrl}}/admin/dashboard", "host": ["{{baseUrl}}"], "path": ["admin", "dashboard"]}
+					}
+				},
+				{
+					"name": "List All Users",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/admin/users?search=abebe&kycLevel=1&status=ACTIVE&page=0&size=20&sort=createdAt,desc",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "users"],
+							"query": [
+								{"key": "search", "value": "abebe"},
+								{"key": "kycLevel", "value": "1"},
+								{"key": "status", "value": "ACTIVE"},
+								{"key": "page", "value": "0"},
+								{"key": "size", "value": "20"},
+								{"key": "sort", "value": "createdAt,desc"}
+							]
+						}
+					}
+				},
+				{
+					"name": "Suspend / Activate User",
+					"request": {
+						"method": "PUT",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"url": {"raw": "{{baseUrl}}/admin/users/{{targetUserId}}/status", "host": ["{{baseUrl}}"], "path": ["admin", "users", "{{targetUserId}}", "status"]},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"SUSPENDED\",\n  \"reason\": \"Suspected fraudulent activity\"\n}"
+						}
+					}
+				},
+				{
+					"name": "List Pending KYC Applications",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/admin/kyc/pending?page=0&size=20",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "kyc", "pending"],
+							"query": [
+								{"key": "page", "value": "0"},
+								{"key": "size", "value": "20"}
+							]
+						}
+					}
+				},
+				{
+					"name": "Review KYC Application",
+					"request": {
+						"method": "PUT",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"url": {"raw": "{{baseUrl}}/admin/kyc/{{applicationId}}/review", "host": ["{{baseUrl}}"], "path": ["admin", "kyc", "{{applicationId}}", "review"]},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"decision\": \"APPROVED\",\n  \"note\": \"Documents verified successfully\"\n}"
+						}
+					}
+				},
+				{
+					"name": "List All Transactions (Admin)",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/admin/transactions?type=ALL&status=ALL&page=0&size=50&from=2026-03-01&to=2026-03-19",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "transactions"],
+							"query": [
+								{"key": "type", "value": "ALL"},
+								{"key": "status", "value": "ALL"},
+								{"key": "page", "value": "0"},
+								{"key": "size", "value": "50"},
+								{"key": "from", "value": "2026-03-01"},
+								{"key": "to", "value": "2026-03-19"}
+							]
+						}
+					}
+				},
+				{
+					"name": "Reverse Transaction",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"url": {"raw": "{{baseUrl}}/admin/transactions/{{transactionId}}/reverse", "host": ["{{baseUrl}}"], "path": ["admin", "transactions", "{{transactionId}}", "reverse"]},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"reason\": \"Customer dispute — double charge\",\n  \"adminPin\": \"admin-pin\"\n}"
+						}
+					}
+				},
+				{
+					"name": "List Agents (Admin)",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/admin/agents?type=AGENT&status=ACTIVE&page=0&size=20",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "agents"],
+							"query": [
+								{"key": "type", "value": "AGENT"},
+								{"key": "status", "value": "ACTIVE"},
+								{"key": "page", "value": "0"},
+								{"key": "size", "value": "20"}
+							]
+						}
+					}
+				},
+				{
+					"name": "Adjust Agent Float Limit",
+					"request": {
+						"method": "PUT",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"url": {"raw": "{{baseUrl}}/admin/agents/{{agentId}}/float-limit", "host": ["{{baseUrl}}"], "path": ["admin", "agents", "{{agentId}}", "float-limit"]},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"newLimit\": 75000.00,\n  \"reason\": \"High-performing agent — volume increase\"\n}"
+						}
+					}
+				},
+				{
+					"name": "E-Money Trust Account",
+					"request": {
+						"method": "GET",
+						"url": {"raw": "{{baseUrl}}/admin/emoney", "host": ["{{baseUrl}}"], "path": ["admin", "emoney"]}
+					}
+				},
+				{
+					"name": "Generate Report",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/admin/reports?type=DAILY_SUMMARY&date=2026-03-19&format=JSON",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "reports"],
+							"query": [
+								{"key": "type", "value": "DAILY_SUMMARY"},
+								{"key": "date", "value": "2026-03-19"},
+								{"key": "format", "value": "JSON"}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Analytics",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/admin/analytics?period=30d",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "analytics"],
+							"query": [{"key": "period", "value": "30d"}]
+						}
+					}
+				}
+			]
+		}
+	]
+}
