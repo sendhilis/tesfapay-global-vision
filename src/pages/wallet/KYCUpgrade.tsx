@@ -8,6 +8,7 @@
  */
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { useKycApplications } from "@/contexts/KycApplicationContext";
 import {
   ChevronLeft, ChevronRight, Camera, CheckCircle2,
   Shield, Zap, AlertTriangle, ScanFace, FileText, Eye, RefreshCw,
@@ -1035,6 +1036,7 @@ const CameraPreCheck = ({ onPass }: { onPass: () => void }) => {
 /* ─── Main Component ────────────────────────────────── */
 const KYCUpgrade = () => {
   const navigate = useNavigate();
+  const { submitApplication } = useKycApplications();
   const [step, setStep] = useState<Step>("intro");
   const [docType, setDocType] = useState("fayda");
   const [applicantName, setApplicantName] = useState("");
@@ -1081,6 +1083,28 @@ const KYCUpgrade = () => {
   };
 
   const startProcessing = () => {
+    // Submit application to shared KYC store
+    const docLabel = DOC_TYPES.find(d => d.id === docType)?.label || "Fayda National ID";
+    const overall = Math.round(Object.values(aiScores).reduce((a, b) => a + b) / 4);
+    submitApplication({
+      user: applicantName,
+      phone: "+251911" + Math.floor(100000 + Math.random() * 900000),
+      type: "Level 1 → Level 2",
+      docType: docLabel,
+      aiScore: overall,
+      aiVerdict: overall >= 85 ? "Approved" : overall >= 60 ? "Review" : "Rejected",
+      risk: overall >= 85 ? "Low" : overall >= 60 ? "Medium" : "High",
+      region: "Addis Ababa",
+      frontImage,
+      backImage,
+      selfieImage,
+      scores: aiScores,
+      extractedData: [
+        ...getMockFrontData(applicantName),
+        ...MOCK_BACK_DATA,
+      ].map(({ label, value }) => ({ label, value })),
+    });
+
     setStep("processing");
     let p = 0;
     const t = setInterval(() => {
@@ -1089,7 +1113,6 @@ const KYCUpgrade = () => {
       if (p >= 100) { clearInterval(t); setTimeout(() => setStep("success"), 500); }
     }, 40);
   };
-
   const docOverlay = (
     <>
       <div className="absolute inset-6 border-2 border-dashed border-primary/50 rounded-xl z-10 pointer-events-none" />
