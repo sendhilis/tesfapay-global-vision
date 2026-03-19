@@ -448,7 +448,6 @@ const LiveCamera = ({
     onCapture(dataUrl);
   };
 
-  const isReady = cameraReady || (useSimulation && cameraReady);
   const showFeed = cameraReady || useSimulation;
 
   return (
