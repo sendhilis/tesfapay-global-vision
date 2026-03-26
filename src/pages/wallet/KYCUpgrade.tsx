@@ -51,6 +51,34 @@ const MOCK_BACK_DATA = [
   { label: "MRZ Code", value: "P<ETH<<GIRMA<<ABEBE<<<<<<<<<<<<", delay: 2600 },
 ];
 
+const hasCameraSupport = () => {
+  if (typeof window === "undefined" || typeof navigator === "undefined") return false;
+  return window.isSecureContext && !!navigator.mediaDevices?.getUserMedia;
+};
+
+const isEmbeddedPreview = () => {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.self !== window.top;
+  } catch {
+    return true;
+  }
+};
+
+const getCameraErrorName = (error: unknown) => (
+  error && typeof error === "object" && "name" in error
+    ? String((error as { name?: string }).name ?? "")
+    : ""
+);
+
+const isCameraPermissionError = (error: unknown) => (
+  ["NotAllowedError", "SecurityError", "PermissionDeniedError"].includes(getCameraErrorName(error))
+);
+
+const isCameraUnavailableError = (error: unknown) => (
+  ["NotFoundError", "DevicesNotFoundError", "NotReadableError", "TrackStartError", "AbortError", "OverconstrainedError"].includes(getCameraErrorName(error))
+);
+
 /* ─── Step Dot ──────────────────────────────────────── */
 const StepDot = ({ active, done }: { active: boolean; done: boolean }) => (
   <div className={`w-2 h-2 rounded-full transition-all duration-300 ${done ? "bg-primary" : active ? "bg-primary/60 scale-125" : "bg-muted"}`} />
