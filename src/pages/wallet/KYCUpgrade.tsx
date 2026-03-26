@@ -396,6 +396,8 @@ const LiveCamera = ({
   }, []);
 
   const startCamera = useCallback(async () => {
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
     try {
       setCameraReady(false);
       setUseSimulation(false);
@@ -404,37 +406,54 @@ const LiveCamera = ({
         streamRef.current = null;
       }
 
-      // Timeout fallback — if getUserMedia hangs (common in iframes), switch to simulation
-      const timeoutId = setTimeout(() => {
-        if (mountedRef.current && !streamRef.current) {
-          console.log("Camera timed out, switching to simulation");
+      if (!hasCameraSupport()) {
+        console.log("Camera API unavailable or insecure context, switching to simulation");
+        if (mountedRef.current) {
           setUseSimulation(true);
           setCameraReady(true);
         }
-      }, 3000);
+        return;
+      }
+
+      if (isEmbeddedPreview()) {
+        timeoutId = setTimeout(() => {
+          if (mountedRef.current && !streamRef.current) {
+            console.log("Camera timed out inside embedded preview, switching to simulation");
+            setUseSimulation(true);
+            setCameraReady(true);
+          }
+        }, 3000);
+      }
 
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
         audio: false,
       });
-      clearTimeout(timeoutId);
+      if (timeoutId) clearTimeout(timeoutId);
       if (!mountedRef.current) {
         stream.getTracks().forEach((t) => t.stop());
         return;
       }
       streamRef.current = stream;
       if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.onloadedmetadata = () => {
-          videoRef.current?.play().then(() => {
-            if (mountedRef.current) setCameraReady(true);
-          }).catch(() => {
-            if (mountedRef.current) setCameraReady(true);
-          });
-        };
+        const video = videoRef.current;
+        const metadataReady = video.readyState >= 1
+          ? Promise.resolve()
+          : new Promise<void>((resolve) => {
+              video.onloadedmetadata = () => {
+                video.onloadedmetadata = null;
+                resolve();
+              };
+            });
+
+        video.srcObject = stream;
+        await metadataReady;
+        await video.play().catch(() => undefined);
+        if (mountedRef.current) setCameraReady(true);
       }
-    } catch {
-      console.log("Camera unavailable, using simulation mode");
+    } catch (error) {
+      if (timeoutId) clearTimeout(timeoutId);
+      console.log("Camera unavailable, using simulation mode", error);
       if (mountedRef.current) {
         setUseSimulation(true);
         setCameraReady(true);
@@ -446,6 +465,9 @@ const LiveCamera = ({
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
     }
   }, []);
 
