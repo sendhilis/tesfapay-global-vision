@@ -375,10 +375,21 @@ const LiveCamera = ({
         streamRef.current.getTracks().forEach((t) => t.stop());
         streamRef.current = null;
       }
+
+      // Timeout fallback — if getUserMedia hangs (common in iframes), switch to simulation
+      const timeoutId = setTimeout(() => {
+        if (mountedRef.current && !streamRef.current) {
+          console.log("Camera timed out, switching to simulation");
+          setUseSimulation(true);
+          setCameraReady(true);
+        }
+      }, 3000);
+
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
         audio: false,
       });
+      clearTimeout(timeoutId);
       if (!mountedRef.current) {
         stream.getTracks().forEach((t) => t.stop());
         return;
@@ -398,6 +409,7 @@ const LiveCamera = ({
       console.log("Camera unavailable, using simulation mode");
       if (mountedRef.current) {
         setUseSimulation(true);
+        setCameraReady(true);
       }
     }
   }, [facingMode]);
@@ -572,29 +584,42 @@ const LivenessCamera = ({ onComplete }: { onComplete: () => void }) => {
   const [biometricScores, setBiometricScores] = useState<{ label: string; value: number }[]>([]);
 
   useEffect(() => {
+    let mounted = true;
     const startCamera = async () => {
+      // Timeout fallback for iframe environments
+      const timeoutId = setTimeout(() => {
+        if (mounted && !streamRef.current) {
+          console.log("Liveness camera timed out, using simulation");
+          setUseSimulation(true);
+          setCameraReady(true);
+        }
+      }, 3000);
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 960 } },
           audio: false,
         });
+        clearTimeout(timeoutId);
+        if (!mounted) { stream.getTracks().forEach((t) => t.stop()); return; }
         streamRef.current = stream;
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
           videoRef.current.onloadedmetadata = () => {
             videoRef.current?.play();
-            setCameraReady(true);
+            if (mounted) setCameraReady(true);
           };
         }
       } catch {
-        // Fallback to simulation
+        clearTimeout(timeoutId);
         console.log("Camera unavailable for liveness, using simulation");
-        setUseSimulation(true);
-        setCameraReady(true);
+        if (mounted) {
+          setUseSimulation(true);
+          setCameraReady(true);
+        }
       }
     };
     startCamera();
-    return () => { streamRef.current?.getTracks().forEach((t) => t.stop()); };
+    return () => { mounted = false; streamRef.current?.getTracks().forEach((t) => t.stop()); };
   }, []);
 
   // Liveness steps sequence
@@ -826,17 +851,27 @@ const CameraPreCheck = ({ onPass }: { onPass: () => void }) => {
 
   const checkCamera = useCallback(async () => {
     setStatus("checking");
+    // Timeout fallback for iframe environments where getUserMedia may hang
+    const timeoutId = setTimeout(() => {
+      console.log("Camera check timed out — proceeding in demo mode");
+      setStatus("granted");
+      setTimeout(onPass, 800);
+    }, 3000);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+      clearTimeout(timeoutId);
       stream.getTracks().forEach((t) => t.stop());
       setStatus("granted");
       setTimeout(onPass, 1200);
     } catch (err: any) {
+      clearTimeout(timeoutId);
       if (err.name === "NotAllowedError") {
         setStatus("denied");
         setShowInstructions(true);
       } else if (err.name === "NotFoundError" || err.name === "NotReadableError") {
-        setStatus("unavailable");
+        // No camera hardware — proceed in demo/simulation mode
+        setStatus("granted");
+        setTimeout(onPass, 1200);
       } else {
         // Likely in iframe without camera — allow demo mode
         setStatus("granted");
