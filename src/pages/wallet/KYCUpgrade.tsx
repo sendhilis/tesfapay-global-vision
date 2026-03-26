@@ -375,10 +375,21 @@ const LiveCamera = ({
         streamRef.current.getTracks().forEach((t) => t.stop());
         streamRef.current = null;
       }
+
+      // Timeout fallback — if getUserMedia hangs (common in iframes), switch to simulation
+      const timeoutId = setTimeout(() => {
+        if (mountedRef.current && !streamRef.current) {
+          console.log("Camera timed out, switching to simulation");
+          setUseSimulation(true);
+          setCameraReady(true);
+        }
+      }, 3000);
+
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
         audio: false,
       });
+      clearTimeout(timeoutId);
       if (!mountedRef.current) {
         stream.getTracks().forEach((t) => t.stop());
         return;
@@ -398,6 +409,7 @@ const LiveCamera = ({
       console.log("Camera unavailable, using simulation mode");
       if (mountedRef.current) {
         setUseSimulation(true);
+        setCameraReady(true);
       }
     }
   }, [facingMode]);
