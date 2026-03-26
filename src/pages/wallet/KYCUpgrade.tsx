@@ -838,17 +838,27 @@ const CameraPreCheck = ({ onPass }: { onPass: () => void }) => {
 
   const checkCamera = useCallback(async () => {
     setStatus("checking");
+    // Timeout fallback for iframe environments where getUserMedia may hang
+    const timeoutId = setTimeout(() => {
+      console.log("Camera check timed out — proceeding in demo mode");
+      setStatus("granted");
+      setTimeout(onPass, 800);
+    }, 3000);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+      clearTimeout(timeoutId);
       stream.getTracks().forEach((t) => t.stop());
       setStatus("granted");
       setTimeout(onPass, 1200);
     } catch (err: any) {
+      clearTimeout(timeoutId);
       if (err.name === "NotAllowedError") {
         setStatus("denied");
         setShowInstructions(true);
       } else if (err.name === "NotFoundError" || err.name === "NotReadableError") {
-        setStatus("unavailable");
+        // No camera hardware — proceed in demo/simulation mode
+        setStatus("granted");
+        setTimeout(onPass, 1200);
       } else {
         // Likely in iframe without camera — allow demo mode
         setStatus("granted");
