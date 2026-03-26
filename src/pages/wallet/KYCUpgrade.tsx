@@ -51,6 +51,34 @@ const MOCK_BACK_DATA = [
   { label: "MRZ Code", value: "P<ETH<<GIRMA<<ABEBE<<<<<<<<<<<<", delay: 2600 },
 ];
 
+const hasCameraSupport = () => {
+  if (typeof window === "undefined" || typeof navigator === "undefined") return false;
+  return window.isSecureContext && !!navigator.mediaDevices?.getUserMedia;
+};
+
+const isEmbeddedPreview = () => {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.self !== window.top;
+  } catch {
+    return true;
+  }
+};
+
+const getCameraErrorName = (error: unknown) => (
+  error && typeof error === "object" && "name" in error
+    ? String((error as { name?: string }).name ?? "")
+    : ""
+);
+
+const isCameraPermissionError = (error: unknown) => (
+  ["NotAllowedError", "SecurityError", "PermissionDeniedError"].includes(getCameraErrorName(error))
+);
+
+const isCameraUnavailableError = (error: unknown) => (
+  ["NotFoundError", "DevicesNotFoundError", "NotReadableError", "TrackStartError", "AbortError", "OverconstrainedError"].includes(getCameraErrorName(error))
+);
+
 /* ─── Step Dot ──────────────────────────────────────── */
 const StepDot = ({ active, done }: { active: boolean; done: boolean }) => (
   <div className={`w-2 h-2 rounded-full transition-all duration-300 ${done ? "bg-primary" : active ? "bg-primary/60 scale-125" : "bg-muted"}`} />
@@ -368,6 +396,8 @@ const LiveCamera = ({
   }, []);
 
   const startCamera = useCallback(async () => {
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
     try {
       setCameraReady(false);
       setUseSimulation(false);
@@ -376,37 +406,54 @@ const LiveCamera = ({
         streamRef.current = null;
       }
 
-      // Timeout fallback — if getUserMedia hangs (common in iframes), switch to simulation
-      const timeoutId = setTimeout(() => {
-        if (mountedRef.current && !streamRef.current) {
-          console.log("Camera timed out, switching to simulation");
+      if (!hasCameraSupport()) {
+        console.log("Camera API unavailable or insecure context, switching to simulation");
+        if (mountedRef.current) {
           setUseSimulation(true);
           setCameraReady(true);
         }
-      }, 3000);
+        return;
+      }
+
+      if (isEmbeddedPreview()) {
+        timeoutId = setTimeout(() => {
+          if (mountedRef.current && !streamRef.current) {
+            console.log("Camera timed out inside embedded preview, switching to simulation");
+            setUseSimulation(true);
+            setCameraReady(true);
+          }
+        }, 3000);
+      }
 
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
         audio: false,
       });
-      clearTimeout(timeoutId);
+      if (timeoutId) clearTimeout(timeoutId);
       if (!mountedRef.current) {
         stream.getTracks().forEach((t) => t.stop());
         return;
       }
       streamRef.current = stream;
       if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.onloadedmetadata = () => {
-          videoRef.current?.play().then(() => {
-            if (mountedRef.current) setCameraReady(true);
-          }).catch(() => {
-            if (mountedRef.current) setCameraReady(true);
-          });
-        };
+        const video = videoRef.current;
+        const metadataReady = video.readyState >= 1
+          ? Promise.resolve()
+          : new Promise<void>((resolve) => {
+              video.onloadedmetadata = () => {
+                video.onloadedmetadata = null;
+                resolve();
+              };
+            });
+
+        video.srcObject = stream;
+        await metadataReady;
+        await video.play().catch(() => undefined);
+        if (mountedRef.current) setCameraReady(true);
       }
-    } catch {
-      console.log("Camera unavailable, using simulation mode");
+    } catch (error) {
+      if (timeoutId) clearTimeout(timeoutId);
+      console.log("Camera unavailable, using simulation mode", error);
       if (mountedRef.current) {
         setUseSimulation(true);
         setCameraReady(true);
@@ -418,6 +465,9 @@ const LiveCamera = ({
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
     }
   }, []);
 
@@ -586,31 +636,47 @@ const LivenessCamera = ({ onComplete }: { onComplete: () => void }) => {
   useEffect(() => {
     let mounted = true;
     const startCamera = async () => {
-      // Timeout fallback for iframe environments
-      const timeoutId = setTimeout(() => {
-        if (mounted && !streamRef.current) {
-          console.log("Liveness camera timed out, using simulation");
+      if (!hasCameraSupport()) {
+        if (mounted) {
           setUseSimulation(true);
           setCameraReady(true);
         }
-      }, 3000);
+        return;
+      }
+
+      const timeoutId = isEmbeddedPreview() ? setTimeout(() => {
+        if (mounted && !streamRef.current) {
+          console.log("Liveness camera timed out inside embedded preview, using simulation");
+          setUseSimulation(true);
+          setCameraReady(true);
+        }
+      }, 3000) : null;
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 960 } },
           audio: false,
         });
-        clearTimeout(timeoutId);
+        if (timeoutId) clearTimeout(timeoutId);
         if (!mounted) { stream.getTracks().forEach((t) => t.stop()); return; }
         streamRef.current = stream;
         if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          videoRef.current.onloadedmetadata = () => {
-            videoRef.current?.play();
-            if (mounted) setCameraReady(true);
-          };
+          const video = videoRef.current;
+          const metadataReady = video.readyState >= 1
+            ? Promise.resolve()
+            : new Promise<void>((resolve) => {
+                video.onloadedmetadata = () => {
+                  video.onloadedmetadata = null;
+                  resolve();
+                };
+              });
+
+          video.srcObject = stream;
+          await metadataReady;
+          await video.play().catch(() => undefined);
+          if (mounted) setCameraReady(true);
         }
       } catch {
-        clearTimeout(timeoutId);
+        if (timeoutId) clearTimeout(timeoutId);
         console.log("Camera unavailable for liveness, using simulation");
         if (mounted) {
           setUseSimulation(true);
@@ -619,7 +685,13 @@ const LivenessCamera = ({ onComplete }: { onComplete: () => void }) => {
       }
     };
     startCamera();
-    return () => { mounted = false; streamRef.current?.getTracks().forEach((t) => t.stop()); };
+    return () => {
+      mounted = false;
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+      if (videoRef.current) {
+        videoRef.current.srcObject = null;
+      }
+    };
   }, []);
 
   // Liveness steps sequence
@@ -848,34 +920,52 @@ const LivenessCamera = ({ onComplete }: { onComplete: () => void }) => {
 const CameraPreCheck = ({ onPass }: { onPass: () => void }) => {
   const [status, setStatus] = useState<"idle" | "checking" | "granted" | "denied" | "unavailable">("idle");
   const [showInstructions, setShowInstructions] = useState(false);
+  const [issueHint, setIssueHint] = useState<string | null>(null);
 
   const checkCamera = useCallback(async () => {
+    setShowInstructions(false);
+    setIssueHint(null);
+
+    if (!hasCameraSupport()) {
+      setStatus("unavailable");
+      setIssueHint(
+        typeof window !== "undefined" && !window.isSecureContext
+          ? "Live camera needs a secure HTTPS page (or localhost)."
+          : "This browser is not exposing a usable camera API to the app."
+      );
+      return;
+    }
+
     setStatus("checking");
-    // Timeout fallback for iframe environments where getUserMedia may hang
-    const timeoutId = setTimeout(() => {
-      console.log("Camera check timed out — proceeding in demo mode");
+    const allowDemoFallback = isEmbeddedPreview();
+    const timeoutId = allowDemoFallback ? setTimeout(() => {
+      console.log("Camera check timed out inside embedded preview — proceeding in demo mode");
       setStatus("granted");
+      setIssueHint("Embedded preview detected — using demo fallback when browser camera blocks iframe access.");
       setTimeout(onPass, 800);
-    }, 3000);
+    }, 3000) : null;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-      clearTimeout(timeoutId);
+      if (timeoutId) clearTimeout(timeoutId);
       stream.getTracks().forEach((t) => t.stop());
       setStatus("granted");
       setTimeout(onPass, 1200);
-    } catch (err: any) {
-      clearTimeout(timeoutId);
-      if (err.name === "NotAllowedError") {
+    } catch (err) {
+      if (timeoutId) clearTimeout(timeoutId);
+      if (isCameraPermissionError(err)) {
         setStatus("denied");
+        setIssueHint("Camera permission was blocked or dismissed. Please allow access in the browser prompt or site settings.");
         setShowInstructions(true);
-      } else if (err.name === "NotFoundError" || err.name === "NotReadableError") {
-        // No camera hardware — proceed in demo/simulation mode
+      } else if (isCameraUnavailableError(err)) {
+        setStatus("unavailable");
+        setIssueHint("No available camera was found, or it is already in use by another app/tab.");
+      } else if (allowDemoFallback) {
         setStatus("granted");
+        setIssueHint("Embedded preview detected — using demo fallback when live camera cannot start.");
         setTimeout(onPass, 1200);
       } else {
-        // Likely in iframe without camera — allow demo mode
-        setStatus("granted");
-        setTimeout(onPass, 1200);
+        setStatus("unavailable");
+        setIssueHint("The browser could not start the live camera. Retry after closing other apps using the camera.");
       }
     }
   }, [onPass]);
@@ -969,6 +1059,7 @@ const CameraPreCheck = ({ onPass }: { onPass: () => void }) => {
           {status === "denied" && "Camera is blocked. Follow the instructions below to enable it."}
           {status === "unavailable" && "Connect a camera or try from a device with a built-in camera."}
         </p>
+        {issueHint && <p className="text-[11px] text-muted-foreground mt-2">{issueHint}</p>}
       </div>
 
       {/* What we'll use the camera for */}
