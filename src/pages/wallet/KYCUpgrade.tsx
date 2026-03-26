@@ -636,31 +636,47 @@ const LivenessCamera = ({ onComplete }: { onComplete: () => void }) => {
   useEffect(() => {
     let mounted = true;
     const startCamera = async () => {
-      // Timeout fallback for iframe environments
-      const timeoutId = setTimeout(() => {
-        if (mounted && !streamRef.current) {
-          console.log("Liveness camera timed out, using simulation");
+      if (!hasCameraSupport()) {
+        if (mounted) {
           setUseSimulation(true);
           setCameraReady(true);
         }
-      }, 3000);
+        return;
+      }
+
+      const timeoutId = isEmbeddedPreview() ? setTimeout(() => {
+        if (mounted && !streamRef.current) {
+          console.log("Liveness camera timed out inside embedded preview, using simulation");
+          setUseSimulation(true);
+          setCameraReady(true);
+        }
+      }, 3000) : null;
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 960 } },
           audio: false,
         });
-        clearTimeout(timeoutId);
+        if (timeoutId) clearTimeout(timeoutId);
         if (!mounted) { stream.getTracks().forEach((t) => t.stop()); return; }
         streamRef.current = stream;
         if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          videoRef.current.onloadedmetadata = () => {
-            videoRef.current?.play();
-            if (mounted) setCameraReady(true);
-          };
+          const video = videoRef.current;
+          const metadataReady = video.readyState >= 1
+            ? Promise.resolve()
+            : new Promise<void>((resolve) => {
+                video.onloadedmetadata = () => {
+                  video.onloadedmetadata = null;
+                  resolve();
+                };
+              });
+
+          video.srcObject = stream;
+          await metadataReady;
+          await video.play().catch(() => undefined);
+          if (mounted) setCameraReady(true);
         }
       } catch {
-        clearTimeout(timeoutId);
+        if (timeoutId) clearTimeout(timeoutId);
         console.log("Camera unavailable for liveness, using simulation");
         if (mounted) {
           setUseSimulation(true);
@@ -669,7 +685,13 @@ const LivenessCamera = ({ onComplete }: { onComplete: () => void }) => {
       }
     };
     startCamera();
-    return () => { mounted = false; streamRef.current?.getTracks().forEach((t) => t.stop()); };
+    return () => {
+      mounted = false;
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+      if (videoRef.current) {
+        videoRef.current.srcObject = null;
+      }
+    };
   }, []);
 
   // Liveness steps sequence
