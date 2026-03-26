@@ -876,34 +876,52 @@ const LivenessCamera = ({ onComplete }: { onComplete: () => void }) => {
 const CameraPreCheck = ({ onPass }: { onPass: () => void }) => {
   const [status, setStatus] = useState<"idle" | "checking" | "granted" | "denied" | "unavailable">("idle");
   const [showInstructions, setShowInstructions] = useState(false);
+  const [issueHint, setIssueHint] = useState<string | null>(null);
 
   const checkCamera = useCallback(async () => {
+    setShowInstructions(false);
+    setIssueHint(null);
+
+    if (!hasCameraSupport()) {
+      setStatus("unavailable");
+      setIssueHint(
+        typeof window !== "undefined" && !window.isSecureContext
+          ? "Live camera needs a secure HTTPS page (or localhost)."
+          : "This browser is not exposing a usable camera API to the app."
+      );
+      return;
+    }
+
     setStatus("checking");
-    // Timeout fallback for iframe environments where getUserMedia may hang
-    const timeoutId = setTimeout(() => {
-      console.log("Camera check timed out — proceeding in demo mode");
+    const allowDemoFallback = isEmbeddedPreview();
+    const timeoutId = allowDemoFallback ? setTimeout(() => {
+      console.log("Camera check timed out inside embedded preview — proceeding in demo mode");
       setStatus("granted");
+      setIssueHint("Embedded preview detected — using demo fallback when browser camera blocks iframe access.");
       setTimeout(onPass, 800);
-    }, 3000);
+    }, 3000) : null;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-      clearTimeout(timeoutId);
+      if (timeoutId) clearTimeout(timeoutId);
       stream.getTracks().forEach((t) => t.stop());
       setStatus("granted");
       setTimeout(onPass, 1200);
-    } catch (err: any) {
-      clearTimeout(timeoutId);
-      if (err.name === "NotAllowedError") {
+    } catch (err) {
+      if (timeoutId) clearTimeout(timeoutId);
+      if (isCameraPermissionError(err)) {
         setStatus("denied");
+        setIssueHint("Camera permission was blocked or dismissed. Please allow access in the browser prompt or site settings.");
         setShowInstructions(true);
-      } else if (err.name === "NotFoundError" || err.name === "NotReadableError") {
-        // No camera hardware — proceed in demo/simulation mode
+      } else if (isCameraUnavailableError(err)) {
+        setStatus("unavailable");
+        setIssueHint("No available camera was found, or it is already in use by another app/tab.");
+      } else if (allowDemoFallback) {
         setStatus("granted");
+        setIssueHint("Embedded preview detected — using demo fallback when live camera cannot start.");
         setTimeout(onPass, 1200);
       } else {
-        // Likely in iframe without camera — allow demo mode
-        setStatus("granted");
-        setTimeout(onPass, 1200);
+        setStatus("unavailable");
+        setIssueHint("The browser could not start the live camera. Retry after closing other apps using the camera.");
       }
     }
   }, [onPass]);
@@ -997,6 +1015,7 @@ const CameraPreCheck = ({ onPass }: { onPass: () => void }) => {
           {status === "denied" && "Camera is blocked. Follow the instructions below to enable it."}
           {status === "unavailable" && "Connect a camera or try from a device with a built-in camera."}
         </p>
+        {issueHint && <p className="text-[11px] text-muted-foreground mt-2">{issueHint}</p>}
       </div>
 
       {/* What we'll use the camera for */}
