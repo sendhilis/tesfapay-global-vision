@@ -1,0 +1,21 @@
+server:
+  port: 8089
+spring:
+  application:
+    name: gp-agent-service
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/agent_db}
+    username: ${SPRING_DATASOURCE_USERNAME:globalpay}
+    password: ${SPRING_DATASOURCE_PASSWORD:devpass}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://localhost:8761/eureka/}
+jwk:
+  secret: SuperSecretKeyForGlobalPayJWT2024!
