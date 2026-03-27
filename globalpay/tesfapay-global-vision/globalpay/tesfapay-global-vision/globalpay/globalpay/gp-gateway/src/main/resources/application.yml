@@ -1,0 +1,173 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: gp-gateway
+
+  data:
+    redis:
+      host: ${SPRING_REDIS_HOST:localhost}
+      port: 6379
+
+  cloud:
+    gateway:
+      # Global filters applied to every route
+      default-filters:
+        - name: RequestRateLimiter
+          args:
+            redis-rate-limiter.replenishRate: 50
+            redis-rate-limiter.burstCapacity: 100
+            key-resolver: "#{@userKeyResolver}"
+
+      routes:
+        # ── Auth Service (PUBLIC — no JWT filter) ──────────────────
+        - id: auth-register
+          uri: lb://gp-auth-service
+          predicates:
+            - Path=/v1/auth/register,/v1/auth/verify-otp,/v1/auth/login,/v1/auth/login/biometric,/v1/auth/refresh
+          filters:
+            - StripPrefix=1
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 10
+                redis-rate-limiter.burstCapacity: 20
+
+        # ── Auth Service (PROTECTED) ───────────────────────────────
+        - id: auth-protected
+          uri: lb://gp-auth-service
+          predicates:
+            - Path=/v1/auth/**
+          filters:
+            - StripPrefix=1
+            - JwtAuthFilter
+
+        # ── User & KYC Service ─────────────────────────────────────
+        - id: user-service
+          uri: lb://gp-user-service
+          predicates:
+            - Path=/v1/users/**,/v1/kyc/**
+          filters:
+            - StripPrefix=1
+            - JwtAuthFilter
+
+        # ── Wallet Service ─────────────────────────────────────────
+        - id: wallet-service
+          uri: lb://gp-wallet-service
+          predicates:
+            - Path=/v1/wallet/**,/v1/transactions/**
+          filters:
+            - StripPrefix=1
+            - JwtAuthFilter
+
+        # ── Transfer Service ───────────────────────────────────────
+        - id: transfer-service
+          uri: lb://gp-transfer-service
+          predicates:
+            - Path=/v1/transfers/**,/v1/contacts/**
+          filters:
+            - StripPrefix=1
+            - JwtAuthFilter
+
+        # ── Payment Service (Bills, Airtime, Merchants) ────────────
+        - id: payment-service
+          uri: lb://gp-payment-service
+          predicates:
+            - Path=/v1/billers/**,/v1/airtime/**,/v1/merchants/**
+          filters:
+            - StripPrefix=1
+            - JwtAuthFilter
+
+        # ── Savings Service ────────────────────────────────────────
+        - id: savings-service
+          uri: lb://gp-savings-service
+          predicates:
+            - Path=/v1/savings/**
+          filters:
+            - StripPrefix=1
+            - JwtAuthFilter
+
+        # ── Loan Service ───────────────────────────────────────────
+        - id: loan-service
+          uri: lb://gp-loan-service
+          predicates:
+            - Path=/v1/loans/**
+          filters:
+            - StripPrefix=1
+            - JwtAuthFilter
+
+        # ── Loyalty Service ────────────────────────────────────────
+        - id: loyalty-service
+          uri: lb://gp-loyalty-service
+          predicates:
+            - Path=/v1/loyalty/**
+          filters:
+            - StripPrefix=1
+            - JwtAuthFilter
+
+        # ── Agent Service ──────────────────────────────────────────
+        - id: agent-public
+          uri: lb://gp-agent-service
+          predicates:
+            - Path=/v1/agents/nearby
+          filters:
+            - StripPrefix=1
+            - JwtAuthFilter
+
+        - id: agent-portal
+          uri: lb://gp-agent-service
+          predicates:
+            - Path=/v1/agent/**,/v1/agents/**
+          filters:
+            - StripPrefix=1
+            - JwtAuthFilter
+            - AgentRoleFilter
+
+        # ── Cash In/Out (initiated by customer, served by agent-service) ─
+        - id: cash-service
+          uri: lb://gp-agent-service
+          predicates:
+            - Path=/v1/cash/**
+          filters:
+            - StripPrefix=1
+            - JwtAuthFilter
+
+        # ── Admin Service ──────────────────────────────────────────
+        - id: admin-service
+          uri: lb://gp-admin-service
+          predicates:
+            - Path=/v1/admin/**
+          filters:
+            - StripPrefix=1
+            - JwtAuthFilter
+            - AdminRoleFilter
+
+        # ── Notification Service ───────────────────────────────────
+        - id: notification-service
+          uri: lb://gp-notification-service
+          predicates:
+            - Path=/v1/notifications/**
+          filters:
+            - StripPrefix=1
+            - JwtAuthFilter
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://localhost:8761/eureka/}
+  instance:
+    prefer-ip-address: true
+
+jwt:
+  secret: ${JWT_SECRET:SuperSecretKeyForGlobalPayJWT2024MustBe256BitsLongEnough!}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+
+logging:
+  level:
+    com.globalpay: DEBUG
+    org.springframework.cloud.gateway: INFO

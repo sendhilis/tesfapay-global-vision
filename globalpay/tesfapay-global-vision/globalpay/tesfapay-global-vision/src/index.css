@@ -1,0 +1,239 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* GlobalPay Design System — Global Bank Ethiopia */
+/* Ethiopian-inspired glassmorphic fintech aesthetic */
+
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Sora:wght@400;600;700;800&display=swap');
+
+@layer base {
+  :root {
+    /* ── GlobalPay Core Palette ── */
+    --tesfa-green:          168 70% 22%;   /* Deep Ethiopian forest green */
+    --tesfa-green-mid:      162 55% 32%;
+    --tesfa-green-light:    158 46% 48%;
+    --tesfa-gold:           42 90% 52%;    /* Ethiopian gold */
+    --tesfa-gold-light:     45 95% 65%;
+    --tesfa-teal:           185 72% 28%;
+    --tesfa-teal-light:     185 60% 45%;
+    --tesfa-dark:           220 35% 8%;
+    --tesfa-dark-mid:       220 30% 12%;
+    --tesfa-dark-card:      220 28% 15%;
+
+    /* ── Semantic tokens ── */
+    --background:           220 35% 8%;
+    --foreground:           210 40% 96%;
+
+    --card:                 220 28% 13%;
+    --card-foreground:      210 40% 96%;
+
+    --popover:              220 28% 13%;
+    --popover-foreground:   210 40% 96%;
+
+    --primary:              42 90% 52%;    /* Gold as primary */
+    --primary-foreground:   220 35% 8%;
+
+    --secondary:            168 70% 22%;   /* Green as secondary */
+    --secondary-foreground: 210 40% 96%;
+
+    --muted:                220 28% 18%;
+    --muted-foreground:     215 20% 60%;
+
+    --accent:               185 72% 28%;
+    --accent-foreground:    210 40% 96%;
+
+    --destructive:          0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border:               220 28% 22%;
+    --input:                220 28% 18%;
+    --ring:                 42 90% 52%;
+
+    --radius:               1rem;
+
+    /* ── Glassmorphism ── */
+    --glass-bg:             rgba(20, 30, 48, 0.55);
+    --glass-border:         rgba(255, 255, 255, 0.08);
+    --glass-blur:           20px;
+    --glass-gold-bg:        rgba(210, 140, 30, 0.10);
+    --glass-green-bg:       rgba(30, 100, 70, 0.22);
+
+    /* ── Gradients ── */
+    --gradient-tesfa:       linear-gradient(135deg, hsl(168 70% 18%) 0%, hsl(185 72% 22%) 50%, hsl(220 35% 8%) 100%);
+    --gradient-gold:        linear-gradient(135deg, hsl(42 90% 52%), hsl(45 95% 65%));
+    --gradient-green:       linear-gradient(135deg, hsl(168 70% 22%), hsl(158 46% 42%));
+    --gradient-card:        linear-gradient(145deg, hsl(220 28% 15%) 0%, hsl(220 28% 11%) 100%);
+    --gradient-hero:        linear-gradient(180deg, hsl(168 70% 10% / 0.8) 0%, hsl(220 35% 8% / 0.95) 100%);
+
+    /* ── Shadows ── */
+    --shadow-gold:          0 8px 32px hsl(42 90% 52% / 0.25);
+    --shadow-green:         0 8px 32px hsl(168 70% 22% / 0.35);
+    --shadow-card:          0 4px 24px hsl(220 35% 4% / 0.5);
+
+    /* ── Sidebar ── */
+    --sidebar-background:   220 35% 8%;
+    --sidebar-foreground:   210 40% 90%;
+    --sidebar-primary:      42 90% 52%;
+    --sidebar-primary-foreground: 220 35% 8%;
+    --sidebar-accent:       220 28% 15%;
+    --sidebar-accent-foreground:  210 40% 90%;
+    --sidebar-border:       220 28% 18%;
+    --sidebar-ring:         42 90% 52%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3 {
+    font-family: 'Sora', system-ui, sans-serif;
+  }
+}
+
+/* ── Glassmorphism Utilities ── */
+@layer utilities {
+  .glass {
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid var(--glass-border);
+  }
+
+  .glass-gold {
+    background: var(--glass-gold-bg);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid hsl(42 90% 52% / 0.2);
+  }
+
+  .glass-green {
+    background: var(--glass-green-bg);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid hsl(168 70% 22% / 0.3);
+  }
+
+  .gradient-tesfa {
+    background: var(--gradient-tesfa);
+  }
+
+  .gradient-gold {
+    background: var(--gradient-gold);
+  }
+
+  .gradient-green {
+    background: var(--gradient-green);
+  }
+
+  .shadow-gold {
+    box-shadow: var(--shadow-gold);
+  }
+
+  .shadow-green {
+    box-shadow: var(--shadow-green);
+  }
+
+  .text-gold {
+    color: hsl(var(--tesfa-gold));
+  }
+
+  .text-tesfa-green {
+    color: hsl(var(--tesfa-green-light));
+  }
+
+  /* Ethiopian pattern border */
+  .eth-border {
+    border-image: linear-gradient(90deg, hsl(42 90% 52%), hsl(168 70% 32%), hsl(42 90% 52%)) 1;
+  }
+
+  .scrollbar-none {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Card animations */
+  .hover-lift {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-gold);
+  }
+
+  /* Pulse animation for notifications */
+  @keyframes tesfa-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.7; transform: scale(1.05); }
+  }
+  .tesfa-pulse {
+    animation: tesfa-pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+
+  @keyframes scan {
+    0%, 100% { transform: translateY(0); opacity: 0.8; }
+    50% { transform: translateY(100%); opacity: 0.4; }
+  }
+
+  .shimmer {
+    background: linear-gradient(90deg, transparent 25%, hsl(42 90% 52% / 0.08) 50%, transparent 75%);
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite;
+  }
+
+  /* Mobile-first safe area support (notch / home indicator) */
+  .pb-safe {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+  .pt-safe {
+    padding-top: max(0.75rem, env(safe-area-inset-top));
+  }
+  .pl-safe {
+    padding-left: max(1rem, env(safe-area-inset-left));
+  }
+  .pr-safe {
+    padding-right: max(1rem, env(safe-area-inset-right));
+  }
+
+  /* dvh for true mobile viewport height (accounts for browser chrome) */
+  .min-h-dvh {
+    min-height: 100dvh;
+  }
+  .h-dvh {
+    height: 100dvh;
+  }
+
+  /* Touch-friendly minimum target sizes */
+  .touch-target {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  /* Prevent text selection on interactive elements */
+  .no-select {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  /* Smooth momentum scroll on iOS */
+  .scroll-ios {
+    -webkit-overflow-scrolling: touch;
+    overflow-y: auto;
+  }
+}

@@ -1,0 +1,16 @@
+# Discovery Service Configuration
+# Maps to: MICROSERVICES_ARCHITECTURE.md §3.13 (Eureka Discovery)
+
+server:
+  port: 8761
+
+spring:
+  application:
+    name: discovery-service
+
+eureka:
+  client:
+    register-with-eureka: false
+    fetch-registry: false
+  server:
+    enable-self-preservation: false

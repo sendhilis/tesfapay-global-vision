@@ -1,0 +1,116 @@
+# API Gateway Configuration
+# Maps to: MICROSERVICES_ARCHITECTURE.md §4 (API Gateway)
+
+server:
+  port: 8080
+
+spring:
+  application:
+    name: gateway-service
+
+  cloud:
+    gateway:
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
+
+      routes:
+        # Auth Service (8081)
+        - id: auth-service
+          uri: lb://auth-service
+          predicates:
+            - Path=/v1/auth/**
+
+        # User Profile & KYC (8081 — same as auth)
+        - id: user-service
+          uri: lb://auth-service
+          predicates:
+            - Path=/v1/users/**
+
+        # Wallet Service (8082)
+        - id: wallet-service
+          uri: lb://wallet-service
+          predicates:
+            - Path=/v1/wallet/**
+
+        # Transfer Service (8083)
+        - id: transfer-service
+          uri: lb://transfer-service
+          predicates:
+            - Path=/v1/transfers/**, /v1/contacts/**, /v1/transactions/**
+
+        # Payment Service (8084)
+        - id: payment-service
+          uri: lb://payment-service
+          predicates:
+            - Path=/v1/billers/**, /v1/airtime/**, /v1/merchants/**
+
+        # Savings Service (8085)
+        - id: savings-service
+          uri: lb://savings-service
+          predicates:
+            - Path=/v1/savings/**
+
+        # Loan Service (8086)
+        - id: loan-service
+          uri: lb://loan-service
+          predicates:
+            - Path=/v1/loans/**
+
+        # Loyalty Service (8087)
+        - id: loyalty-service
+          uri: lb://loyalty-service
+          predicates:
+            - Path=/v1/loyalty/**
+
+        # Agent Service (8088)
+        - id: agent-service
+          uri: lb://agent-service
+          predicates:
+            - Path=/v1/agent/**, /v1/agents/**, /v1/cash/**
+
+        # Notification Service (8089)
+        - id: notification-service
+          uri: lb://notification-service
+          predicates:
+            - Path=/v1/notifications/**
+
+        # Admin Service (8090)
+        - id: admin-service
+          uri: lb://admin-service
+          predicates:
+            - Path=/v1/admin/**
+
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOrigins:
+              - "http://localhost:5173"
+              - "https://tesfapay-global-vision.lovable.app"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+            allowedHeaders: "*"
+            allowCredentials: true
+            maxAge: 3600
+
+# Eureka Service Discovery
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+  instance:
+    prefer-ip-address: true
+
+# Rate Limiting (using Redis)
+# spring:
+#   redis:
+#     host: localhost
+#     port: 6379
+
+# Logging
+logging:
+  level:
+    org.springframework.cloud.gateway: DEBUG

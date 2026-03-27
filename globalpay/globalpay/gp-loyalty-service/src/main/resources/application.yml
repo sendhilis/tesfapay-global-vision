@@ -1,0 +1,42 @@
+server:
+  port: 8088
+spring:
+  application:
+    name: gp-loyalty-service
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/loyalty_db}
+    username: ${SPRING_DATASOURCE_USERNAME:globalpay}
+    password: ${SPRING_DATASOURCE_PASSWORD:devpass}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: loyalty-service
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      auto-offset-reset: earliest
+      properties:
+        spring.json.trusted.packages: "com.globalpay.*"
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://localhost:8761/eureka/}
+  instance:
+    prefer-ip-address: true
+jwt:
+  secret: ${JWT_SECRET:SuperSecretKeyForGlobalPayJWT2024MustBe256BitsLongEnough!}
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
