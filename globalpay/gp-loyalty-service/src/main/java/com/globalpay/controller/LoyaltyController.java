@@ -23,17 +23,22 @@ public class LoyaltyController {
         return ResponseEntity.ok(loyaltyService.getHistory(uid(req), page, size));
     }
 
+    @GetMapping("/loyalty/catalog")
+    public ResponseEntity<?> getCatalog() {
+        return ResponseEntity.ok(loyaltyService.getCatalog());
+    }
+
     @GetMapping("/loyalty/redemptions")
     public ResponseEntity<?> getRedemptions(HttpServletRequest req) {
         return ResponseEntity.ok(loyaltyService.getRedemptions(uid(req)));
     }
 
-    @PostMapping("/loyalty/redeem")
-    public ResponseEntity<?> redeem(@RequestBody Map<String, String> body, HttpServletRequest req) {
-        return ResponseEntity.ok(loyaltyService.redeem(uid(req), UUID.fromString(body.get("redemptionId"))));
+    @PostMapping("/loyalty/redeem/{itemId}")
+    public ResponseEntity<?> redeem(HttpServletRequest req, @PathVariable UUID itemId) {
+        return ResponseEntity.ok(loyaltyService.redeem(uid(req), itemId));
     }
 
     private UUID uid(HttpServletRequest req) {
-        return UUID.fromString(req.getAttribute("userId").toString());
+        return UUID.fromString(req.getHeader("X-User-Id"));
     }
 }
