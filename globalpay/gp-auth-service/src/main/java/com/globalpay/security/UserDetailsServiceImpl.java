@@ -3,27 +3,22 @@ package com.globalpay.security;
 import com.globalpay.model.entity.User;
 import com.globalpay.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.*;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
+import org.springframework.stereotype.Component;
 import java.util.stream.Collectors;
 
-@Service
-@RequiredArgsConstructor
+@Slf4j @Component @RequiredArgsConstructor
 public class UserDetailsServiceImpl implements UserDetailsService {
-
-    private final UserRepository userRepository;
+    private final UserRepository userRepo;
 
     @Override
-    @Transactional(readOnly = true)
     public UserDetails loadUserByUsername(String phone) throws UsernameNotFoundException {
-        User user = userRepository.findByPhone(phone)
+        User user = userRepo.findByPhone(phone)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found: " + phone));
 
-        List<SimpleGrantedAuthority> authorities = user.getRoles().stream()
+        var authorities = user.getRoles().stream()
                 .map(r -> new SimpleGrantedAuthority("ROLE_" + r.getRole().name()))
                 .collect(Collectors.toList());
 
@@ -31,10 +26,7 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                 .withUsername(user.getPhone())
                 .password(user.getPinHash())
                 .authorities(authorities)
-                .accountExpired(false)
-                .credentialsExpired(false)
-                .accountLocked(user.isLocked())
-                .disabled(!"ACTIVE".equals(user.getStatus()) && !"PENDING_KYC".equals(user.getStatus()))
+                .accountLocked(!user.getStatus().equals("ACTIVE") && !user.getStatus().equals("PENDING"))
                 .build();
     }
 }

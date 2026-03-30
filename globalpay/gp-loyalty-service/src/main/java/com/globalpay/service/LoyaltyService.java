@@ -1,172 +1,102 @@
 package com.globalpay.service;
 
 import com.globalpay.model.entity.*;
-import jakarta.persistence.*;
+import com.globalpay.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.*;
-import org.springframework.data.jpa.repository.*;
-import org.springframework.kafka.annotation.KafkaListener;
-import org.springframework.stereotype.*;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.*;
-
-// ── Repositories ────────────────────────────────────────────────
-
-@Repository interface LoyaltyAccountRepository extends JpaRepository<LoyaltyAccount, UUID> {
-    Optional<LoyaltyAccount> findByUserId(UUID userId);
-}
-@Repository interface LoyaltyHistoryRepository extends JpaRepository<LoyaltyHistory, UUID> {
-    Page<LoyaltyHistory> findByUserIdOrderByCreatedAtDesc(UUID userId, Pageable pageable);
-}
-@Repository interface RedemptionCatalogRepository extends JpaRepository<RedemptionCatalog, UUID> {
-    List<RedemptionCatalog> findByActiveTrue();
-}
-@Repository interface RedemptionRepository extends JpaRepository<com.globalpay.model.entity.Redemption, UUID> {}
-
-// ── Service ──────────────────────────────────────────────────────
+import java.util.stream.Collectors;
 
 @Slf4j @Service @RequiredArgsConstructor
 public class LoyaltyService {
-
-    private final LoyaltyAccountRepository accountRepo;
+    private final LoyaltyAccountRepository loyaltyRepo;
     private final LoyaltyHistoryRepository historyRepo;
     private final RedemptionCatalogRepository catalogRepo;
     private final RedemptionRepository redemptionRepo;
 
-    private static final Map<String, int[]> TIER_THRESHOLDS = Map.of(
-            "BRONZE",   new int[]{0,    999},
-            "SILVER",   new int[]{1000, 4999},
-            "GOLD",     new int[]{5000, 19999},
-            "PLATINUM", new int[]{20000, Integer.MAX_VALUE}
-    );
-
-    @Transactional(readOnly = true)
     public Map<String, Object> getLoyalty(UUID userId) {
-        LoyaltyAccount account = getOrCreate(userId);
-        int points = account.getPoints();
-        int toNextTier = toNextTier(points, account.getTier());
-        int pct = progressPct(points, account.getTier());
-
-        return Map.of(
-                "points", points,
-                "pointsValue", BigDecimal.valueOf(points).multiply(new BigDecimal("0.05")),
-                "tier", account.getTier(),
-                "tierThresholds", TIER_THRESHOLDS,
-                "progressToNextTier", pct,
-                "pointsToNextTier", toNextTier
-        );
+        Optional<LoyaltyAccount> account = loyaltyRepo.findByUserId(userId);
+        Map<String, Object> result = new HashMap<>();
+        result.put("userId", userId);
+        result.put("points", account.map(LoyaltyAccount::getPoints).orElse(0));
+        result.put("tier", account.map(LoyaltyAccount::getTier).orElse("BRONZE"));
+        return result;
     }
 
-    @Transactional(readOnly = true)
     public Map<String, Object> getHistory(UUID userId, int page, int size) {
-        Page<LoyaltyHistory> p = historyRepo.findByUserIdOrderByCreatedAtDesc(userId, PageRequest.of(page, size));
-        return Map.of("entries", p.getContent(), "page", page, "totalPages", p.getTotalPages(), "totalEntries", p.getTotalElements());
+        Page<LoyaltyHistory> history = historyRepo.findByUserIdOrderByCreatedAtDesc(
+                userId, PageRequest.of(page, size));
+        Map<String, Object> result = new HashMap<>();
+        result.put("content", history.getContent().stream().map(h -> {
+            Map<String, Object> m = new HashMap<>();
+            m.put("id", h.getId());
+            m.put("points", h.getPoints());
+            m.put("label", h.getLabel());
+            m.put("createdAt", h.getCreatedAt());
+            return m;
+        }).collect(Collectors.toList()));
+        result.put("totalElements", history.getTotalElements());
+        result.put("totalPages", history.getTotalPages());
+        return result;
     }
 
-    @Transactional(readOnly = true)
-    public Map<String, Object> getRedemptions(UUID userId) {
-        LoyaltyAccount account = getOrCreate(userId);
-        List<RedemptionCatalog> catalog = catalogRepo.findByActiveTrue();
-        List<Map<String, Object>> items = catalog.stream().map(c -> {
-            boolean available = c.getMinTier() == null || tierRank(account.getTier()) >= tierRank(c.getMinTier());
-            return Map.of("id", c.getId(), "name", c.getName(), "pointsCost", c.getPointsCost(),
-                    "icon", c.getIcon() != null ? c.getIcon() : "", "available", available);
-        }).toList();
-        return Map.of("redemptions", items);
+    public List<Map<String, Object>> getCatalog() {
+        return catalogRepo.findAll().stream().map(c -> {
+            Map<String, Object> m = new HashMap<>();
+            m.put("id", c.getId());
+            m.put("name", c.getName());
+            m.put("pointsCost", c.getPointsCost());
+            m.put("rewardType", c.getRewardType());
+            m.put("active", c.isActive());
+            return m;
+        }).collect(Collectors.toList());
+    }
+
+    public List<Map<String, Object>> getRedemptions(UUID userId) {
+        return redemptionRepo.findByUserIdOrderByCreatedAtDesc(userId).stream().map(r -> {
+            Map<String, Object> m = new HashMap<>();
+            m.put("id", r.getId());
+            m.put("rewardName", r.getRewardName());
+            m.put("pointsSpent", r.getPointsSpent());
+            m.put("status", r.getStatus());
+            m.put("createdAt", r.getCreatedAt());
+            return m;
+        }).collect(Collectors.toList());
     }
 
     @Transactional
-    public Map<String, Object> redeem(UUID userId, UUID catalogItemId) {
-        LoyaltyAccount account = getOrCreate(userId);
-        RedemptionCatalog item = catalogRepo.findById(catalogItemId)
-                .orElseThrow(() -> new RuntimeException("Redemption item not found"));
-
-        if (account.getPoints() < item.getPointsCost())
-            throw new RuntimeException("Insufficient loyalty points");
-
+    public Map<String, Object> redeem(UUID userId, UUID itemId) {
+        LoyaltyAccount account = loyaltyRepo.findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("Loyalty account not found"));
+        RedemptionCatalog item = catalogRepo.findById(itemId)
+                .orElseThrow(() -> new RuntimeException("Item not found"));
+        if (account.getPoints() < item.getPointsCost()) throw new RuntimeException("Insufficient points");
         account.setPoints(account.getPoints() - item.getPointsCost());
-        updateTier(account);
-        accountRepo.save(account);
-
-        historyRepo.save(LoyaltyHistory.builder().userId(userId)
-                .label("Cashback Redemption – " + item.getName())
-                .points(-item.getPointsCost()).build());
-
-        return Map.of("success", true, "rewardName", item.getName(),
-                "pointsDeducted", item.getPointsCost(), "remainingPoints", account.getPoints(),
-                "cashbackAmount", item.getRewardValue() != null ? item.getRewardValue() : BigDecimal.ZERO);
+        loyaltyRepo.save(account);
+        Redemption r = new Redemption();
+        r.setUserId(userId); r.setCatalogItemId(itemId);
+        r.setPointsSpent(item.getPointsCost()); r.setRewardName(item.getName());
+        r.setStatus("COMPLETED"); r.setCreatedAt(Instant.now());
+        redemptionRepo.save(r);
+        return Map.of("success", true, "pointsRemaining", account.getPoints());
     }
 
-    // ── Kafka: award points when transactions complete ────────────
-
-    @KafkaListener(topics = "transfer.completed", groupId = "loyalty-service")
     @Transactional
-    public void onTransferCompleted(Map<String, Object> event) {
-        try {
-            String senderId = (String) event.get("senderId");
-            if (senderId == null) return;
-            BigDecimal amount = new BigDecimal(event.get("amount").toString());
-            int points = amount.multiply(new BigDecimal("0.1")).intValue();
-            awardPoints(UUID.fromString(senderId), points, "P2P Transfer", null);
-        } catch (Exception e) { log.error("Loyalty event error: {}", e.getMessage()); }
-    }
-
-    @KafkaListener(topics = "payment.completed", groupId = "loyalty-service")
-    @Transactional
-    public void onPaymentCompleted(Map<String, Object> event) {
-        try {
-            String userId = (String) event.get("userId");
-            if (userId == null) return;
-            BigDecimal amount = new BigDecimal(event.get("amount").toString());
-            int points = amount.multiply(new BigDecimal("0.1")).intValue();
-            awardPoints(UUID.fromString(userId), points, "Bill/Airtime Payment", null);
-        } catch (Exception e) { log.error("Loyalty event error: {}", e.getMessage()); }
-    }
-
-    // ── Helpers ──────────────────────────────────────────────────
-
-    public void awardPoints(UUID userId, int points, String label, UUID txnId) {
-        LoyaltyAccount account = getOrCreate(userId);
-        account.setPoints(account.getPoints() + points);
-        updateTier(account);
-        accountRepo.save(account);
-        historyRepo.save(LoyaltyHistory.builder().userId(userId).transactionId(txnId)
-                .label(label).points(points).build());
-    }
-
-    private LoyaltyAccount getOrCreate(UUID userId) {
-        return accountRepo.findByUserId(userId).orElseGet(() ->
-                accountRepo.save(LoyaltyAccount.builder().userId(userId).points(0).tier("BRONZE").build()));
-    }
-
-    private void updateTier(LoyaltyAccount account) {
-        int p = account.getPoints();
-        if      (p >= 20000) account.setTier("PLATINUM");
-        else if (p >= 5000)  account.setTier("GOLD");
-        else if (p >= 1000)  account.setTier("SILVER");
-        else                 account.setTier("BRONZE");
-    }
-
-    private int toNextTier(int points, String tier) {
-        return switch (tier) {
-            case "BRONZE"   -> Math.max(0, 1000 - points);
-            case "SILVER"   -> Math.max(0, 5000 - points);
-            case "GOLD"     -> Math.max(0, 20000 - points);
-            default         -> 0;
-        };
-    }
-
-    private int progressPct(int points, String tier) {
-        int[] range = TIER_THRESHOLDS.getOrDefault(tier, new int[]{0, 1000});
-        if (range[1] == Integer.MAX_VALUE) return 100;
-        int span = range[1] - range[0];
-        return span == 0 ? 100 : Math.min(100, (points - range[0]) * 100 / span);
-    }
-
-    private int tierRank(String tier) {
-        return switch (tier) { case "SILVER" -> 1; case "GOLD" -> 2; case "PLATINUM" -> 3; default -> 0; };
+    public void awardPoints(UUID userId, int points, String label) {
+        LoyaltyAccount a = loyaltyRepo.findByUserId(userId).orElseGet(() -> {
+            LoyaltyAccount x = new LoyaltyAccount();
+            x.setUserId(userId); x.setPoints(0); x.setTier("BRONZE");
+            x.setUpdatedAt(Instant.now()); return x;
+        });
+        a.setPoints(a.getPoints() + points);
+        loyaltyRepo.save(a);
+        LoyaltyHistory h = new LoyaltyHistory();
+        h.setUserId(userId); h.setPoints(points); h.setLabel(label);
+        h.setCreatedAt(Instant.now());
+        historyRepo.save(h);
     }
 }
