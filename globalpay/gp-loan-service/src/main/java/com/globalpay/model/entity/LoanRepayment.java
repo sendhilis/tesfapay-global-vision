@@ -1,35 +1,20 @@
 package com.globalpay.model.entity;
-
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 import java.math.BigDecimal;
-import java.time.*;
-import java.util.List;
-import java.util.Map;
+import java.time.Instant;
+import java.time.LocalDate;
 import java.util.UUID;
-
 @Entity @Table(name = "loan_repayments")
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class LoanRepayment {
     @Id @GeneratedValue(strategy = GenerationType.UUID) private UUID id;
-    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "loan_id") private Loan loan;
+    @Column(name = "loan_id", nullable = false) private UUID loanId;
     @Column(nullable = false, precision = 18, scale = 2) private BigDecimal amount;
-    @Column(name = "installment_num", nullable = false) private Short installmentNum;
-    @Column(name = "balance_after", nullable = false, precision = 18, scale = 2) private BigDecimal balanceAfter;
-    @Column(name = "due_date", nullable = false) private LocalDate dueDate;
+    @Column(name = "principal_portion", precision = 18, scale = 2) private BigDecimal principalPortion;
+    @Column(name = "interest_portion", precision = 18, scale = 2) private BigDecimal interestPortion;
+    @Column(name = "balance_after", precision = 18, scale = 2) private BigDecimal balanceAfter;
+    @Column(name = "wallet_txn_id") private UUID walletTxnId;
+    @Column(name = "due_date") private LocalDate dueDate;
     @Column(name = "paid_at", nullable = false) private Instant paidAt = Instant.now();
-}
-
-@Entity @Table(name = "credit_scores")
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
-class CreditScore {
-    @Id @GeneratedValue(strategy = GenerationType.UUID) private UUID id;
-    @Column(name = "user_id", nullable = false, unique = true) private UUID userId;
-    @Column(nullable = false) private int score;
-    @Column(nullable = false, length = 20) private String label;
-    @Column(name = "max_loan", nullable = false, precision = 18, scale = 2) private BigDecimal maxLoan;
-    @JdbcTypeCode(SqlTypes.JSON) @Column(nullable = false, columnDefinition = "jsonb") private List<Map<String, Object>> factors;
-    @Column(name = "computed_at", updatable = false) private Instant computedAt = Instant.now();
 }
