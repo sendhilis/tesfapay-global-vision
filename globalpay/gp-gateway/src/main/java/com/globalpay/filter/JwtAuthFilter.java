@@ -1,90 +1,67 @@
 package com.globalpay.filter;
-
-import io.jsonwebtoken.*;
-import io.jsonwebtoken.security.Keys;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.cloud.gateway.filter.GatewayFilter;
-import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory;
-import org.springframework.http.*;
+import org.springframework.cloud.gateway.filter.GatewayFilterChain;
+import org.springframework.cloud.gateway.filter.GlobalFilter;
+import org.springframework.core.Ordered;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
-import javax.crypto.SecretKey;
-import java.util.List;
-
-/**
- * Validates the Bearer JWT on each incoming request.
- * On success, injects X-User-Id, X-User-Role, X-Wallet-Id headers
- * so downstream microservices can trust the user identity without re-parsing the JWT.
- */
 @Slf4j
 @Component
-public class JwtAuthFilter extends AbstractGatewayFilterFactory<JwtAuthFilter.Config> {
+public class JwtAuthFilter implements GlobalFilter, Ordered {
 
-    @Value("${jwt.secret}")
+    @Value("${app.jwt.secret}")
     private String jwtSecret;
 
-    public JwtAuthFilter() {
-        super(Config.class);
-    }
+    private static final String[] PUBLIC_PATHS = {
+        "/auth/", "/actuator/", "/discovery/"
+    };
 
     @Override
-    public GatewayFilter apply(Config config) {
-        return (exchange, chain) -> {
-            String token = extractToken(exchange);
+    public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
+        String path = exchange.getRequest().getPath().value();
 
-            if (token == null) {
-                return unauthorized(exchange, "Missing or malformed Authorization header");
-            }
+        for (String pub : PUBLIC_PATHS) {
+            if (path.startsWith(pub)) return chain.filter(exchange);
+        }
 
-            try {
-                Claims claims = parseClaims(token);
+        String authHeader = exchange.getRequest().getHeaders().getFirst("Authorization");
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+            return exchange.getResponse().setComplete();
+        }
 
-                // Forward identity as trusted headers to downstream services
-                ServerWebExchange mutated = exchange.mutate()
-                        .request(r -> r
-                                .header("X-User-Id",    claims.getSubject())
-                                .header("X-User-Role",  getOrEmpty(claims, "role"))
-                                .header("X-Wallet-Id",  getOrEmpty(claims, "walletId"))
-                                .header("X-User-Phone", getOrEmpty(claims, "phone"))
-                                .header("X-Kyc-Level",  String.valueOf(
-                                        claims.get("kycLevel", Integer.class) != null
-                                                ? claims.get("kycLevel", Integer.class) : 1))
-                        ).build();
+        try {
+            String token = authHeader.substring(7);
+            Claims claims = Jwts.parserBuilder()
+                    .setSigningKey(jwtSecret.getBytes())
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody();
 
-                return chain.filter(mutated);
+            Integer kycLevel = claims.get("kycLevel", Integer.class);
+            int kycLevelInt = kycLevel != null ? kycLevel : 1;
 
-            } catch (ExpiredJwtException e) {
-                return unauthorized(exchange, "Token expired");
-            } catch (Exception e) {
-                log.warn("JWT validation failed: {}", e.getMessage());
-                return unauthorized(exchange, "Invalid token");
-            }
-        };
-    }
+            ServerHttpRequest mutated = exchange.getRequest().mutate()
+                    .header("X-User-Id",    claims.getSubject())
+                    .header("X-User-Role",  getOrEmpty(claims, "role"))
+                    .header("X-Wallet-Id",  getOrEmpty(claims, "walletId"))
+                    .header("X-User-Phone", getOrEmpty(claims, "phone"))
+                    .header("X-Kyc-Level",  String.valueOf(kycLevelInt))
+                    .build();
 
-    private Claims parseClaims(String token) {
-        return Jwts.parser()
-                .verifyWith(signingKey())
-                .build()
-                .parseSignedClaims(token)
-                .getPayload();
-    }
-
-    private String extractToken(ServerWebExchange exchange) {
-        List<String> headers = exchange.getRequest().getHeaders().get(HttpHeaders.AUTHORIZATION);
-        if (headers == null || headers.isEmpty()) return null;
-        String header = headers.get(0);
-        return (header != null && header.startsWith("Bearer ")) ? header.substring(7) : null;
-    }
-
-    private SecretKey signingKey() {
-        byte[] key = jwtSecret.getBytes();
-        byte[] k32 = new byte[32];
-        System.arraycopy(key, 0, k32, 0, Math.min(key.length, 32));
-        return Keys.hmacShaKeyFor(k32);
+            return chain.filter(exchange.mutate().request(mutated).build());
+        } catch (Exception e) {
+            log.warn("JWT validation failed: {}", e.getMessage());
+            exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+            return exchange.getResponse().setComplete();
+        }
     }
 
     private String getOrEmpty(Claims claims, String key) {
@@ -92,17 +69,6 @@ public class JwtAuthFilter extends AbstractGatewayFilterFactory<JwtAuthFilter.Co
         return val != null ? val.toString() : "";
     }
 
-    private Mono<Void> unauthorized(ServerWebExchange exchange, String message) {
-        exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
-        exchange.getResponse().getHeaders().setContentType(MediaType.APPLICATION_JSON);
-        String body = String.format(
-                "{\"status\":401,\"error\":\"Unauthorized\",\"code\":\"TOKEN_INVALID\",\"message\":\"%s\"}",
-                message);
-        var buffer = exchange.getResponse().bufferFactory().wrap(body.getBytes());
-        return exchange.getResponse().writeWith(Mono.just(buffer));
-    }
-
-    public static class Config {
-        // No config needed — reads JWT secret from @Value
-    }
+    @Override
+    public int getOrder() { return -1; }
 }

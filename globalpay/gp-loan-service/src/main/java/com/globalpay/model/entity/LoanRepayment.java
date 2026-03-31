@@ -9,12 +9,10 @@ import java.util.UUID;
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class LoanRepayment {
     @Id @GeneratedValue(strategy = GenerationType.UUID) private UUID id;
-    @Column(name = "loan_id", nullable = false) private UUID loanId;
+    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "loan_id") private Loan loan;
     @Column(nullable = false, precision = 18, scale = 2) private BigDecimal amount;
-    @Column(name = "principal_portion", precision = 18, scale = 2) private BigDecimal principalPortion;
-    @Column(name = "interest_portion", precision = 18, scale = 2) private BigDecimal interestPortion;
-    @Column(name = "balance_after", precision = 18, scale = 2) private BigDecimal balanceAfter;
-    @Column(name = "wallet_txn_id") private UUID walletTxnId;
-    @Column(name = "due_date") private LocalDate dueDate;
+    @Column(name = "installment_num", nullable = false) private Short installmentNum;
+    @Column(name = "balance_after", nullable = false, precision = 18, scale = 2) private BigDecimal balanceAfter;
+    @Column(name = "due_date", nullable = false) private LocalDate dueDate;
     @Column(name = "paid_at", nullable = false) private Instant paidAt = Instant.now();
 }
