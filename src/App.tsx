@@ -3,6 +3,8 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { KycApplicationProvider } from "@/contexts/KycApplicationContext";
+import { WizardProvider } from "@/contexts/BankConfigContext";
+import Setup from "./pages/Setup";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
@@ -49,12 +51,14 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <KycApplicationProvider>
+    <WizardProvider>
     <TooltipProvider>
       <Toaster />
       <Sonner />
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
+          <Route path="/setup" element={<Setup />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/onboarding" element={<Onboarding />} />
           <Route path="/install" element={<InstallPage />} />
@@ -106,6 +110,7 @@ const App = () => (
         </Routes>
       </BrowserRouter>
     </TooltipProvider>
+    </WizardProvider>
     </KycApplicationProvider>
   </QueryClientProvider>
 );
