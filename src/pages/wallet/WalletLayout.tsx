@@ -20,6 +20,7 @@ import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import { Home, Send, Receipt, PiggyBank, History, User } from "lucide-react";
 import tesfaLogo from "@/assets/tesfa-logo.png";
 import TesfaAI from "@/components/TesfaAI";
+import { useBankConfig } from "@/contexts/BankConfigContext";
 
 const navItems = [
   { to: "/wallet", icon: Home, label: "Home" },
@@ -32,13 +33,14 @@ const navItems = [
 
 const WalletLayout = () => {
   const navigate = useNavigate();
+  const cfg = useBankConfig();
   return (
     <div className="min-h-screen min-h-dvh bg-background flex flex-col max-w-md mx-auto relative overflow-x-hidden">
       {/* Top status bar */}
       <div className="flex items-center justify-between px-5 py-3 pt-safe glass border-b border-border">
         <div className="flex items-center gap-2" onClick={() => navigate("/")} role="button">
-          <img src={tesfaLogo} alt="GlobalPay" className="w-7 h-7 rounded-lg" />
-          <span className="font-display font-bold text-sm text-gold">GlobalPay</span>
+          <img src={tesfaLogo} alt={cfg.bank.shortName} className="w-7 h-7 rounded-lg" />
+          <span className="font-display font-bold text-sm text-gold">{cfg.bank.shortName}</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
