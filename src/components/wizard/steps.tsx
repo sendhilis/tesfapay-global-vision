@@ -1,6 +1,7 @@
 import { Fragment, useRef, useState, type ReactNode } from "react";
 import { useWizard, type BankConfig } from "@/contexts/BankConfigContext";
 import { Diamond } from "./AbxLogo";
+import { THEME_LIST, ABX_THEMES, type ThemeId } from "@/lib/abx-themes";
 import {
   Check, ChevronRight, AlertCircle, Mic, Fingerprint, WifiOff, Eye,
   Upload, MapPin, Plus, X, Sparkles, ShieldCheck, FileCheck, Languages,
