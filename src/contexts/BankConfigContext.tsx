@@ -300,8 +300,10 @@ function ensureBrandFontStyle() {
   const s = document.createElement("style");
   s.id = "abx-brand-fonts";
   s.textContent = `
-    body:not(.abx-scope) { font-family: var(--brand-font-body, 'Plus Jakarta Sans'), system-ui, sans-serif !important; }
-    body:not(.abx-scope) h1, body:not(.abx-scope) h2, body:not(.abx-scope) h3, body:not(.abx-scope) h4, body:not(.abx-scope) .font-display { font-family: var(--brand-font-heading, 'Sora'), Georgia, serif !important; }
+    body { font-family: var(--brand-font-body, 'Plus Jakarta Sans'), system-ui, sans-serif; }
+    body h1, body h2, body h3, body h4 { font-family: var(--brand-font-heading, 'Sora'), Georgia, serif; }
+    .abx-scope, .abx-scope * { font-family: 'Inter', system-ui, sans-serif; }
+    .abx-scope .font-display { font-family: 'Cormorant Garamond', Georgia, serif; }
   `;
   document.head.appendChild(s);
 }
