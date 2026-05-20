@@ -134,6 +134,8 @@ export type BankConfig = {
 };
 
 export const defaultBankConfig: BankConfig = {
+  themeId: "emerald",
+  accentShift: 0,
   bank: {
     name: "GlobalPay Bank",
     shortName: "GlobalPay",
