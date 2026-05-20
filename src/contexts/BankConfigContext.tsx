@@ -418,6 +418,8 @@ type Ctx = {
   config: BankConfig;
   update: <K extends keyof BankConfig>(k: K, v: Partial<BankConfig[K]>) => void;
   setConfig: (c: BankConfig) => void;
+  applyTheme: (id: ThemeId) => void;
+  setAccentShift: (deg: number) => void;
   stepIdx: number;
   goTo: (i: number) => void;
   next: () => void;
