@@ -1,78 +1,83 @@
-## Goal
+# Wizard Redesign: Theme-First Model
 
-Make the **ABX Setup Wizard** the first thing a bank admin sees when they open GlobalPay. As the bank fills it in, the **GlobalPay wallet** rebrands itself live (colors, fonts, radius, navigation, home layout, KYC method, products, AI tone, Ethiopia features, etc.) so the bank can preview their own branded app while still in the wizard.
+## The Problem
 
-## Tech reality
+Today the wizard exposes ~36 freeform inputs (hex pickers, font dropdowns, layout toggles). A bank admin can produce visually broken combinations, and even when they don't, the **wallet preview never visibly transforms** because the wizard's outputs are too granular and unopinionated to make the wallet *feel* different. The user sees "old wallet UI" because individually swapping `--primary` doesn't restructure layout, type scale, card shape, motion, or imagery — it just retints.
 
-The ABX project runs on **TanStack Start**; GlobalPay runs on **Vite + React Router**. So this is a **port**, not a copy. The wizard logic, state shape, and UI translate cleanly — only the routing layer changes.
+## The Fix: ABX-Curated Themes + Bounded Overrides
 
-## What I'll bring over
+Replace freeform design choices with **4 ABX-designed themes**. Each theme is a complete, opinionated design system (palette + typography + radius + shadow + density + motion + home layout + card style + nav style + imagery). Banks pick one theme, then customize **only inside the safe envelope** of that theme — primary accent shift (within hue family), bank name/logo/tagline, product list, AI tone. No raw hex pickers, no font dropdowns, no layout selector.
 
-1. `WizardContext` (state, persistence, 36-step navigation, `BankConfig` shape) — ported 1:1.
-2. `wizard-config.ts` (10 modules · 36 steps definitions) — copied as-is.
-3. `WizardShell`, `WizardSidebar`, `PreviewPanel`, `AbxLogo` — ported; CSS variables (`--ink`, `--teal`, `--cream`, `--line`, `--background`) added to `index.css` so the wizard keeps ABX's editorial look.
-4. `steps.tsx` (W01–W36, ~1.2k lines) — copied whole.
+### The 4 ABX Themes
 
-## How it lights up GlobalPay
+| Theme | Vibe | Palette | Type | Radius | Density | Home Layout | Nav |
+|-------|------|---------|------|--------|---------|-------------|-----|
+| **Emerald Heritage** | Ethiopian premium banking (current GlobalPay) | Deep green + gold | Sora / Plus Jakarta | 24px | Comfortable | Hero balance + grid | Bottom tabs |
+| **Indigo Modern** | Fintech challenger | Indigo + white | Space Grotesk / Inter | 16px | Compact | Compact cards + list | Bottom tabs |
+| **Onyx Premium** | Private banking | Black + champagne gold | Cormorant / Inter | 8px | Spacious | Minimal hero + list | Floating hub |
+| **Coral Daily** | Mass-market youth | Coral + cream | Outfit / Figtree | 32px | Comfortable | Stories + bento | Bottom tabs |
 
-Add a new `BankConfigContext` that **reads the same `abx.wizard.v1` localStorage key** the wizard writes to. The wallet subscribes to it and:
+Each theme ships its own CSS token block, font pair, motion register, and wallpaper/gradient.
 
-- Pushes `brand.primaryColor / secondaryColor / surfaceColor / background / text*` into CSS vars (`--primary`, `--accent`, `--background`, `--foreground`) as HSL on every change.
-- Swaps `bank.name`, `bank.shortName`, `bank.tagline`, `bank.logoLabel` into `WalletLayout` top bar, `Index`, `LoginPage`, `Onboarding`.
-- Reflects `ux.navigationStyle` (bottom-tabs / side-drawer / floating-hub / ai-first) in `WalletLayout`'s nav.
-- Reflects `ux.homeScreenLayout` (balance-hero / card-grid / feed / agent-chat) in `WalletHome`.
-- Reflects `ux.cardStyle`, `ux.density`, `ux.animationLevel`, `brand.borderRadius`, `brand.shadowStyle` via Tailwind class tokens.
-- Reflects `ux.darkModeSupport`, `ux.rtlSupport`.
-- Wires `onboarding.kycMethod` + `livenessCheckEnabled` + `selfieRequired` into `KYCUpgrade` (so the bank can flip Voice KYC ↔ Video KYC ↔ Fayda and see it in the wallet preview).
-- Replaces `products` array used in `WalletHome` / `MicroLoan` cards.
-- Surfaces `ai.tone` + active `agents` inside `TesfaAI`.
-- Drives Ethiopia features (Fayda, Eth-Switch, calendar, NBE reports) in `AdminReports` / `AdminEMoney` views.
+### What the Wizard Becomes
 
-Same-tab updates are immediate (React state); cross-tab updates use the `storage` event so the preview phone updates as the wizard is filled.
+Drop the 36-step monster down to a focused flow:
 
-## Routes
+1. **W01** Welcome
+2. **W02** Bank identity (name, short name, tagline, logo)
+3. **W03** **Pick your theme** — 4 large visual cards rendering an actual mini-wallet preview for each theme (not swatches — real UI)
+4. **W04** Accent tuning — slider that shifts theme's primary within its hue family (±20°) + light/dark mode toggle. No raw hex.
+5. **W05** Home layout variant — 2-3 theme-approved variants only (e.g. Emerald offers "Hero+Grid" or "Stacked Cards")
+6. **W06** Products (existing card builder — keep)
+7. **W07** AI tone (existing — keep)
+8. **W08** Onboarding / KYC method (existing — keep)
+9. **W09** Compliance (Fayda, NBE — keep)
+10. **W10** Review & Go Live — full-wallet preview, then publish
 
-```text
-/setup            → WizardShell (new first-engagement screen for bank admin)
-/setup/preview    → Mobile preview frame embedding the live wallet
-/                 → Index (existing) — adds a "Bank setup wizard" CTA when no BankConfig is published yet
-/wallet/*         → reads BankConfig and rebrands live
-/admin/*          → unchanged, gains a "Re-open setup wizard" link in AdminLayout
-```
+All the freeform M1/M2 steps (W07 colour picker, W08 7-colour palette, W09 font picker, W10 visual style, W11 nav style, W12 home layout, W13 interaction, W14 UX details) **collapse into W03+W04+W05** above. The persona/branch/process/Ethiopia modules either stay as-is (compliance, branches) or get hidden behind an "Advanced" disclosure.
 
-The wizard's "Complete & Go Live" sets a `published: true` flag in localStorage so subsequent visits land directly on the branded wallet.
+### Why The Preview Will Actually Change Now
 
-## File plan
+Each theme overrides **the full token surface** the wallet reads:
+- All semantic colors (`--primary`, `--background`, `--card`, `--foreground`, `--muted`, `--border`, `--accent`, plus legacy `--tesfa-gold`, `--tesfa-green`, `--gradient-green`, `--gradient-gold`)
+- Font family for body + display
+- `--radius` (drives every rounded-* class)
+- Shadow tokens
+- Density scale (drives padding via a `data-density` attribute on `<html>`)
+- A `data-theme` attribute on `<html>` so theme-specific CSS rules can target structural changes (e.g. `[data-theme="onyx"] .wallet-card { border-radius: 4px; backdrop-filter: blur(20px); }`)
 
-New:
-- `src/contexts/BankConfigContext.tsx` (wizard state + applies CSS vars + persists)
-- `src/lib/wizard-config.ts` (steps + modules)
-- `src/components/wizard/AbxLogo.tsx`
-- `src/components/wizard/WizardShell.tsx`
-- `src/components/wizard/WizardSidebar.tsx`
-- `src/components/wizard/PreviewPanel.tsx` (renders `<WalletHome />` inside an iPhone frame)
-- `src/components/wizard/steps.tsx` (W01–W36, ported)
-- `src/pages/SetupWizard.tsx` (route wrapper)
+The wallet's `WalletHome` reads `data-theme` to pick between 2-3 home-layout variants the chosen theme allows. Same for `WalletLayout` nav style.
 
-Edited:
-- `src/App.tsx` — add `BankConfigProvider`, add `/setup` route, redirect `/` to `/setup` when not yet published.
-- `src/index.css` — add ABX wizard CSS vars + branding CSS-var bridge.
-- `src/pages/wallet/WalletLayout.tsx` — bank name, logo label, nav-style switch.
-- `src/pages/wallet/WalletHome.tsx` — home-screen-layout switch, products from config.
-- `src/pages/wallet/KYCUpgrade.tsx` — kycMethod-driven flow selector.
-- `src/components/TesfaAI.tsx` — tone + active agents from config.
-- `src/pages/admin/AdminLayout.tsx` — "Re-open setup wizard" link.
+## Technical Details
 
-## Non-goals (so I don't over-reach)
+### New files
+- `src/lib/abx-themes.ts` — the 4 theme definitions (tokens, font pair, allowed layout variants, accent hue range)
+- `src/components/wizard/ThemePickerCard.tsx` — renders mini-wallet preview per theme
+- `src/components/wizard/AccentTuner.tsx` — hue-shift slider bounded to theme
+- `src/components/wallet/HomeVariants/` — 2-3 home layout components selectable per theme
 
-- I won't touch the backend templates / Spring Boot folders.
-- I won't restyle every existing wallet page pixel-perfectly to every wizard option — I'll wire the high-impact tokens (colors, fonts, radius, nav, home layout, KYC, products, AI tone). Fine-grained per-screen variants can come after you confirm the architecture works.
-- I won't add a real auth wall on `/setup`; the wizard's W01 "Welcome & Auth" stays a click-through, matching the source project.
+### Edited files
+- `src/lib/wizard-config.ts` — collapse STEPS to ~10 entries
+- `src/contexts/BankConfigContext.tsx` — add `themeId`, `accentShift`, `homeVariant`; `applyBrandTokens` writes full token surface + `data-theme` + `data-density` attrs
+- `src/components/wizard/steps.tsx` — new W03/W04/W05 step components; delete now-obsolete steps
+- `src/index.css` — add theme-scoped rules `[data-theme="emerald"|"indigo"|"onyx"|"coral"] { ... }` for structural differences not expressible via tokens
+- `src/pages/wallet/WalletHome.tsx` — read `themeId` + `homeVariant`, switch between layout components
+- `src/pages/wallet/WalletLayout.tsx` — switch nav style per theme
 
-## Order of execution
+### Migration
+Existing localStorage configs without `themeId` default to `"emerald"` (current look). No breaking change for the demo.
 
-1. Add CSS vars + `BankConfigContext` + route scaffolding (wallet still works, no wizard yet).
-2. Port `wizard-config.ts`, shell, sidebar, preview panel, logo.
-3. Port `steps.tsx` whole.
-4. Wire the live-bridge: CSS-var injection + wallet layout/home/KYC/AI reading from config.
-5. Quick QA pass: open `/setup`, change primary color → wallet repaints; change bank name → top bar updates; change KYC method → KYC page changes; click Go Live → redirect to `/wallet`.
+### Out of scope this round
+- Persona-specific UX overrides (W18)
+- Custom workflow builder (W31)
+- Branch map (W28)
+
+Those stay in their current state; the focus is making theme selection actually transform the wallet.
+
+## Outcome
+
+After the bank admin completes the new wizard:
+- Picks "Onyx Premium" → wallet repaints to black/gold, sharp 4px corners, serif headings, floating nav hub, minimal hero
+- Picks "Coral Daily" → wallet repaints to coral/cream, 32px pillowy cards, stories row at top, bottom tabs
+- Picks "Indigo Modern" → tight 16px cards, list-style home, Inter throughout
+- The preview is dramatically, obviously different per theme — no more "looks the same as before"
