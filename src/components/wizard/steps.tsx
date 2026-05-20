@@ -1,6 +1,7 @@
 import { Fragment, useRef, useState, type ReactNode } from "react";
 import { useWizard, type BankConfig } from "@/contexts/BankConfigContext";
 import { Diamond } from "./AbxLogo";
+import { THEME_LIST, ABX_THEMES, type ThemeId } from "@/lib/abx-themes";
 import {
   Check, ChevronRight, AlertCircle, Mic, Fingerprint, WifiOff, Eye,
   Upload, MapPin, Plus, X, Sparkles, ShieldCheck, FileCheck, Languages,
@@ -876,15 +877,268 @@ export function W36_Review() {
   );
 }
 
+/* ─────────────────────────────────────────────────────────────
+   NEW THEME-FIRST STEPS
+   ───────────────────────────────────────────────────────────── */
+
+export function T_Identity() {
+  const { config, update } = useWizard();
+  return (
+    <StepFrame
+      eyebrow="W02 · Identity"
+      title="Who is the bank?"
+      lede="Just the essentials. Name, tagline, monogram, country. The look comes next."
+    >
+      <div className="grid md:grid-cols-2 gap-4">
+        <Field label="Legal Name">
+          <TextInput value={config.bank.name} onChange={(e) => update("bank", { name: e.target.value })} placeholder="e.g. Awash International Bank S.C." />
+        </Field>
+        <Field label="Short Name" hint={`${config.bank.shortName.length}/20`}>
+          <TextInput maxLength={20} value={config.bank.shortName} onChange={(e) => update("bank", { shortName: e.target.value })} />
+        </Field>
+        <Field label="Tagline" hint={`${config.bank.tagline.length}/60`}>
+          <TextInput maxLength={60} value={config.bank.tagline} onChange={(e) => update("bank", { tagline: e.target.value })} />
+        </Field>
+        <Field label="Monogram (2 chars)">
+          <TextInput maxLength={2} value={config.bank.logoLabel} onChange={(e) => update("bank", { logoLabel: e.target.value.toUpperCase() })} />
+        </Field>
+        <Field label="Country">
+          <Select value={config.bank.country} onChange={(e) => update("bank", { country: e.target.value })}>
+            {["ET — Ethiopia", "NG — Nigeria", "KE — Kenya", "TZ — Tanzania", "GH — Ghana", "ZA — South Africa"].map(o => (
+              <option key={o} value={o.slice(0, 2)}>{o}</option>
+            ))}
+          </Select>
+        </Field>
+        <Field label="Currency">
+          <Select value={config.bank.currency} onChange={(e) => update("bank", { currency: e.target.value })}>
+            {["ETB", "NGN", "KES", "TZS", "GHS", "ZAR", "USD"].map(o => <option key={o}>{o}</option>)}
+          </Select>
+        </Field>
+      </div>
+      <div className="p-6 bg-[var(--ink)] text-[var(--cream)] rounded-xl flex items-center gap-4">
+        <span className="w-12 h-12 rounded-lg bg-[var(--teal)] text-[var(--ink)] font-serif font-bold text-xl grid place-items-center">
+          {config.bank.logoLabel || "AB"}
+        </span>
+        <div>
+          <div className="font-serif text-2xl">{config.bank.shortName || "Bank"}</div>
+          <div className="text-[12px] text-white/60 italic font-serif">{config.bank.tagline || "—"}</div>
+        </div>
+      </div>
+    </StepFrame>
+  );
+}
+
+function ThemeMiniPreview({ themeId }: { themeId: ThemeId }) {
+  const t = ABX_THEMES[themeId];
+  return (
+    <div
+      className="aspect-[9/16] w-full rounded-[18px] overflow-hidden relative"
+      style={{
+        backgroundColor: t.brand.backgroundColor,
+        color: t.brand.textPrimary,
+        fontFamily: t.brand.fontBody,
+      }}
+    >
+      {/* Status bar */}
+      <div className="absolute inset-x-0 top-0 px-3 pt-2 flex items-center justify-between text-[8px]" style={{ color: t.brand.textPrimary }}>
+        <span className="font-semibold">9:41</span>
+        <div className="flex items-center gap-0.5 opacity-70"><span>●</span><span>●</span><span>●</span></div>
+      </div>
+      {/* Header */}
+      <div className="absolute inset-x-0 top-5 px-3 flex items-center justify-between">
+        <div className="flex items-center gap-1.5">
+          <span className="w-5 h-5 grid place-items-center font-bold text-[10px]" style={{ background: t.brand.primaryColor, color: t.brand.backgroundColor, borderRadius: t.tokens.radiusPx / 2 }}>B</span>
+          <span className="font-bold text-[10px]" style={{ fontFamily: t.brand.fontHeading }}>Bank</span>
+        </div>
+      </div>
+      {/* Hero balance */}
+      <div
+        className="absolute inset-x-3 top-12 p-3"
+        style={{
+          background: t.tokens.gradientHero,
+          color: "white",
+          borderRadius: t.tokens.radiusPx,
+          boxShadow: t.tokens.shadowCard,
+        }}
+      >
+        <div className="text-[7px] uppercase tracking-widest opacity-60">Balance</div>
+        <div className="mt-0.5 text-[14px] font-bold" style={{ fontFamily: t.brand.fontHeading }}>248,930</div>
+        <div className="mt-1.5 h-1 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.15)" }}>
+          <div className="h-full w-2/3" style={{ background: t.brand.primaryColor }} />
+        </div>
+      </div>
+      {/* Quick actions */}
+      <div className="absolute inset-x-3 top-32 grid grid-cols-4 gap-1.5">
+        {["S", "P", "L", "+"].map((a) => (
+          <div key={a} className="aspect-square grid place-items-center text-[9px] font-medium"
+            style={{ background: t.brand.surfaceColor, color: t.brand.textPrimary, borderRadius: t.tokens.radiusPx / 1.5, boxShadow: t.tokens.shadowCard }}>
+            {a}
+          </div>
+        ))}
+      </div>
+      {/* Recent list */}
+      <div className="absolute inset-x-3 top-52 space-y-1">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="flex items-center justify-between p-1.5" style={{ background: t.brand.surfaceColor, color: t.brand.textPrimary, borderRadius: t.tokens.radiusPx / 2 }}>
+            <div className="flex items-center gap-1.5">
+              <span className="w-4 h-4 rounded-full" style={{ background: i === 2 ? t.brand.primaryColor : t.brand.secondaryColor }} />
+              <span className="text-[8px]">Tx {i}</span>
+            </div>
+            <span className="text-[7px] font-mono" style={{ color: t.brand.textSecondary }}>−1,200</span>
+          </div>
+        ))}
+      </div>
+      {/* Bottom nav */}
+      <div className="absolute inset-x-3 bottom-2 flex items-center justify-around py-1.5" style={{ background: t.brand.surfaceColor, borderRadius: 999, boxShadow: t.tokens.shadowCard }}>
+        {["H", "P", "AI", "C", "M"].map((n, i) => (
+          <span key={n} className="text-[7px]" style={{ color: i === 0 ? t.brand.primaryColor : t.brand.textSecondary, fontWeight: i === 0 ? 700 : 400 }}>{n}</span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export function T_ThemePicker() {
+  const { config, applyTheme } = useWizard();
+  return (
+    <StepFrame
+      eyebrow="W03 · Theme"
+      title="Pick your design language."
+      lede="Choose from four ABX-curated themes. Each is a complete, opinionated design — palette, typography, motion, surface language — proven for African retail banking. You'll tune the accent next."
+      icon={<Palette className="w-3 h-3" />}
+    >
+      <div className="grid md:grid-cols-2 gap-5">
+        {THEME_LIST.map((t) => {
+          const selected = config.themeId === t.id;
+          return (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => applyTheme(t.id)}
+              className={`group text-left p-4 rounded-2xl border-2 transition-all ${
+                selected ? "border-[var(--ink)] bg-white shadow-soft" : "border-[var(--line)] bg-white/60 hover:border-[var(--ink)]/40"
+              }`}
+            >
+              <div className="flex gap-4">
+                <div className="w-[110px] shrink-0">
+                  <ThemeMiniPreview themeId={t.id} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <div className="font-serif text-xl leading-tight">{t.name}</div>
+                    {selected && (
+                      <span className="w-5 h-5 rounded-full bg-[var(--teal)] grid place-items-center">
+                        <Check className="w-3 h-3" strokeWidth={3} />
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-[12px] text-[var(--ink-soft)] mt-1 leading-snug">{t.tagline}</div>
+                  <div className="mt-3 flex items-center gap-1.5">
+                    {[t.brand.backgroundColor, t.brand.surfaceColor, t.brand.primaryColor, t.brand.secondaryColor].map((c, i) => (
+                      <span key={i} className="w-5 h-5 rounded-full border border-black/10" style={{ backgroundColor: c }} />
+                    ))}
+                  </div>
+                  <div className="mt-3 grid grid-cols-2 gap-y-1 text-[10px] text-[var(--ink-soft)]">
+                    <span>Type · {t.brand.fontHeading.split(" ")[0]}</span>
+                    <span>Nav · {t.ux.navigationStyle.replace("-", " ")}</span>
+                    <span>Corners · {t.tokens.radiusPx}px</span>
+                    <span>Density · {t.ux.density}</span>
+                  </div>
+                </div>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+      <div className="p-4 bg-[var(--ivory)] rounded-lg border border-[var(--line)] text-[12px] text-[var(--ink-soft)] flex items-start gap-3">
+        <Sparkles className="w-4 h-4 text-[var(--teal-deep)] mt-0.5 shrink-0" />
+        <div>
+          Themes are pre-tested for WCAG AA contrast, mobile reachability, and cross-device legibility. You can fine-tune the accent on the next screen, but no theme can be broken.
+        </div>
+      </div>
+    </StepFrame>
+  );
+}
+
+export function T_AccentTuner() {
+  const { config, setAccentShift } = useWizard();
+  const t = ABX_THEMES[config.themeId];
+  return (
+    <StepFrame
+      eyebrow="W04 · Theme"
+      title="Tune the accent."
+      lede="Shift the primary hue within a safe range. Going further would break the theme's harmony."
+      icon={<Palette className="w-3 h-3" />}
+    >
+      <div className="p-6 bg-white border border-[var(--line)] rounded-xl space-y-5">
+        <div className="flex items-center gap-4">
+          <div>
+            <div className="text-[10px] uppercase tracking-widest text-[var(--ink-soft)]">Active theme</div>
+            <div className="font-serif text-2xl">{t.name}</div>
+          </div>
+          <div className="ml-auto flex items-center gap-2">
+            <span className="text-[10px] uppercase tracking-widest text-[var(--ink-soft)]">Live accent</span>
+            <span className="w-10 h-10 rounded-full border border-black/10" style={{ backgroundColor: `hsl(var(--primary))` }} />
+          </div>
+        </div>
+        <div>
+          <div className="flex justify-between text-[11px] uppercase tracking-widest">
+            <span>Hue shift</span>
+            <span className="font-mono">{config.accentShift > 0 ? "+" : ""}{config.accentShift}°</span>
+          </div>
+          <input
+            type="range"
+            min={-30}
+            max={30}
+            step={1}
+            value={config.accentShift}
+            onChange={(e) => setAccentShift(+e.target.value)}
+            className="w-full mt-2 accent-[var(--teal-deep)]"
+          />
+          <div className="flex justify-between text-[10px] text-[var(--ink-soft)] mt-1">
+            <span>−30° cool</span><span>theme default</span><span>+30° warm</span>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => setAccentShift(0)}
+          className="text-[12px] text-[var(--teal-deep)] hover:underline"
+        >
+          Reset to theme default
+        </button>
+      </div>
+
+      {/* Token surface preview */}
+      <div className="grid grid-cols-3 gap-3">
+        {[
+          { label: "Primary", v: "hsl(var(--primary))" },
+          { label: "Background", v: "hsl(var(--background))" },
+          { label: "Card", v: "hsl(var(--card))" },
+        ].map((s) => (
+          <div key={s.label} className="p-3 bg-white border border-[var(--line)] rounded-lg">
+            <div className="h-16 rounded mb-2" style={{ background: s.v }} />
+            <div className="text-[10px] uppercase tracking-widest text-[var(--ink-soft)]">{s.label}</div>
+          </div>
+        ))}
+      </div>
+    </StepFrame>
+  );
+}
+
+export function T_Review() {
+  // Reuse the existing review component (renamed for the new flow)
+  return <W36_Review />;
+}
+
 export const STEP_REGISTRY: Record<string, () => ReactNode> = {
-  W01: W01_Welcome, W02: W02_BankName, W03: W03_Logo, W04: W04_Tagline, W05: W05_Market,
-  W06: W06_Languages, W07: W07_PrimaryColor, W08: W08_FullPalette, W09: W09_Typography, W10: W10_VisualStyle,
-  W11: W11_Navigation, W12: W12_Home, W13: W13_Interaction, W14: W14_UXDetails,
-  W15: W15_Persona1, W16: W16_PersonaMany, W17: W17_PersonaRules, W18: W18_PersonaUX,
-  W19: W19_KYC, W20: W20_AccountOpening, W21: W21_StepSequencer, W22: W22_Welcome,
-  W23: W23_GlobalAI, W24: W24_Agents, W25: W25_AgentDeep,
-  W26: W26_Products, W27: W27_BranchConfig, W28: W28_BranchList,
-  W29: W29_Reconciliation, W30: W30_Compliance, W31: W31_Workflows,
-  W32: W32_Fayda, W33: W33_EthSwitch, W34: W34_Calendar, W35: W35_NBE,
-  W36: W36_Review,
+  W01: W01_Welcome,
+  W02: T_Identity,
+  W03: T_ThemePicker,
+  W04: T_AccentTuner,
+  W05: W26_Products,
+  W06: W23_GlobalAI,
+  W07: W19_KYC,
+  W08: W34_Calendar,
+  W09: T_Review,
 };
+
