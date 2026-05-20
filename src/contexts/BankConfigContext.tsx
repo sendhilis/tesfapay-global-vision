@@ -493,6 +493,8 @@ export function WizardProvider({ children }: { children: ReactNode }) {
       ...c,
       [k]: Array.isArray(v) ? v : { ...(c[k] as object), ...(v as object) },
     } as BankConfig)),
+    applyTheme: (id) => setConfig((c) => ({ ...c, themeId: id, accentShift: 0 })),
+    setAccentShift: (deg) => setConfig((c) => ({ ...c, accentShift: Math.max(-30, Math.min(30, deg)) })),
     stepIdx,
     goTo: (i) => setStep(Math.max(0, Math.min(TOTAL_STEPS - 1, i))),
     next: () => setStep((s) => {
