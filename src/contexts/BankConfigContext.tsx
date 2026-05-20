@@ -317,31 +317,27 @@ function applyBrandTokens(cfg: BankConfig) {
   if (typeof document === "undefined") return;
   const root = document.documentElement;
 
-  // Brand passthrough vars
-  root.style.setProperty("--brand-primary", cfg.brand.primaryColor);
-  root.style.setProperty("--brand-secondary", cfg.brand.secondaryColor);
-  root.style.setProperty("--brand-surface", cfg.brand.surfaceColor);
-  root.style.setProperty("--brand-background", cfg.brand.backgroundColor);
-  root.style.setProperty("--brand-text", cfg.brand.textPrimary);
-  root.style.setProperty("--brand-text-soft", cfg.brand.textSecondary);
-  root.style.setProperty("--brand-success", cfg.brand.successColor);
-  root.style.setProperty("--brand-warning", cfg.brand.warningColor);
-  root.style.setProperty("--brand-error", cfg.brand.errorColor);
-  root.style.setProperty("--brand-font-heading", `'${cfg.brand.fontHeading}'`);
-  root.style.setProperty("--brand-font-body", `'${cfg.brand.fontBody}'`);
-  const radiusMap = { none: "0px", soft: "8px", rounded: "16px", pill: "24px" } as const;
-  root.style.setProperty("--brand-radius", radiusMap[cfg.brand.borderRadius]);
+  // Resolve theme + accent shift
+  const theme: AbxTheme = ABX_THEMES[cfg.themeId] ?? ABX_THEMES.emerald;
+  const shift = cfg.accentShift || 0;
+  // Apply bounded hue shift to primary only — preserves theme integrity
+  const primary    = shift ? shiftHueHex(theme.brand.primaryColor, shift) : theme.brand.primaryColor;
+  const secondary  = theme.brand.secondaryColor;
+  const surface    = theme.brand.surfaceColor;
+  const background = theme.brand.backgroundColor;
+  const textP      = theme.brand.textPrimary;
+  const textS      = theme.brand.textSecondary;
 
-  // ── Override semantic Tailwind tokens (HSL) so wallet repaints live ──
-  const primaryHsl    = hexToHslString(cfg.brand.primaryColor);
-  const secondaryHsl  = hexToHslString(cfg.brand.secondaryColor);
-  const surfaceHsl    = hexToHslString(cfg.brand.surfaceColor);
-  const backgroundHsl = hexToHslString(cfg.brand.backgroundColor);
-  const textHsl       = hexToHslString(cfg.brand.textPrimary);
-  const textSoftHsl   = hexToHslString(cfg.brand.textSecondary);
+  const primaryHsl    = hexToHslString(primary);
+  const secondaryHsl  = hexToHslString(secondary);
+  const surfaceHsl    = hexToHslString(surface);
+  const backgroundHsl = hexToHslString(background);
+  const textHsl       = hexToHslString(textP);
+  const textSoftHsl   = hexToHslString(textS);
 
+  // ── Semantic Tailwind tokens (drives bg-primary, text-foreground, bg-card, …) ──
   root.style.setProperty("--primary", primaryHsl);
-  root.style.setProperty("--primary-foreground", surfaceHsl);
+  root.style.setProperty("--primary-foreground", textHsl);
   root.style.setProperty("--secondary", secondaryHsl);
   root.style.setProperty("--secondary-foreground", surfaceHsl);
   root.style.setProperty("--accent", secondaryHsl);
@@ -352,10 +348,14 @@ function applyBrandTokens(cfg: BankConfig) {
   root.style.setProperty("--card-foreground", textHsl);
   root.style.setProperty("--popover", surfaceHsl);
   root.style.setProperty("--popover-foreground", textHsl);
+  root.style.setProperty("--muted", surfaceHsl);
   root.style.setProperty("--muted-foreground", textSoftHsl);
+  root.style.setProperty("--border", textSoftHsl);
+  root.style.setProperty("--input", surfaceHsl);
   root.style.setProperty("--ring", primaryHsl);
+  root.style.setProperty("--radius", `${theme.tokens.radiusPx}px`);
 
-  // Legacy GlobalPay tokens (drive .text-gold, .gradient-green, .gradient-gold, etc.)
+  // ── Legacy GlobalPay wallet tokens (drive .text-gold, gradient utilities) ──
   root.style.setProperty("--tesfa-gold", primaryHsl);
   root.style.setProperty("--tesfa-gold-light", primaryHsl);
   root.style.setProperty("--tesfa-green", secondaryHsl);
@@ -363,14 +363,54 @@ function applyBrandTokens(cfg: BankConfig) {
   root.style.setProperty("--tesfa-green-light", secondaryHsl);
   root.style.setProperty("--tesfa-teal", secondaryHsl);
   root.style.setProperty("--tesfa-teal-light", secondaryHsl);
-  root.style.setProperty("--tesfa-dark", textHsl);
-  root.style.setProperty("--tesfa-dark-mid", textHsl);
+  root.style.setProperty("--tesfa-dark", backgroundHsl);
+  root.style.setProperty("--tesfa-dark-mid", backgroundHsl);
   root.style.setProperty("--tesfa-dark-card", surfaceHsl);
 
-  // Fonts
-  ensureGoogleFont(cfg.brand.fontHeading);
-  ensureGoogleFont(cfg.brand.fontBody);
+  // ── Gradients (referenced by bg-gradient-* tailwind classes via var()) ──
+  root.style.setProperty("--gradient-tesfa",  theme.tokens.gradientHero);
+  root.style.setProperty("--gradient-green",  theme.tokens.gradientHero);
+  root.style.setProperty("--gradient-gold",   theme.tokens.gradientAccent);
+  root.style.setProperty("--gradient-card",   theme.tokens.gradientCard);
+
+  // ── Glass + shadow ──
+  root.style.setProperty("--glass-bg", theme.tokens.glassBg);
+  root.style.setProperty("--glass-border", theme.tokens.glassBorder);
+  root.style.setProperty("--glass-gold-bg", theme.tokens.glassBg);
+  root.style.setProperty("--glass-green-bg", theme.tokens.glassBg);
+  root.style.setProperty("--shadow-card", theme.tokens.shadowCard);
+
+  // Brand passthrough vars (preview panel reads these)
+  root.style.setProperty("--brand-primary", primary);
+  root.style.setProperty("--brand-secondary", secondary);
+  root.style.setProperty("--brand-surface", surface);
+  root.style.setProperty("--brand-background", background);
+  root.style.setProperty("--brand-text", textP);
+  root.style.setProperty("--brand-text-soft", textS);
+  root.style.setProperty("--brand-font-heading", `'${theme.brand.fontHeading}'`);
+  root.style.setProperty("--brand-font-body", `'${theme.brand.fontBody}'`);
+
+  // data-theme on <html> for any theme-targeted CSS rules
+  root.setAttribute("data-theme", theme.id);
+  root.setAttribute("data-density", theme.ux.density);
+
+  // Fonts on-demand
+  ensureGoogleFont(theme.brand.fontHeading);
+  ensureGoogleFont(theme.brand.fontBody);
   ensureBrandFontStyle();
+
+  // Keep brand.* in sync on cfg for the legacy PreviewPanel that reads cfg.brand.*
+  // (mutation is fine here; React will re-render via the parent setConfig that triggered us)
+  cfg.brand.primaryColor    = primary;
+  cfg.brand.secondaryColor  = secondary;
+  cfg.brand.surfaceColor    = surface;
+  cfg.brand.backgroundColor = background;
+  cfg.brand.textPrimary     = textP;
+  cfg.brand.textSecondary   = textS;
+  cfg.brand.fontHeading     = theme.brand.fontHeading;
+  cfg.brand.fontBody        = theme.brand.fontBody;
+  cfg.brand.borderRadius    = theme.brand.borderRadius;
+  cfg.brand.shadowStyle     = theme.brand.shadowStyle;
 }
 
 /* ---------- Context ---------- */
