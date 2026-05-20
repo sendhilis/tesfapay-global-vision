@@ -1,7 +1,7 @@
 type Props = { className?: string; showMark?: boolean; tone?: "ink" | "cream" };
 
 export function AbxLogo({ className = "", showMark = true, tone = "ink" }: Props) {
-  const fill = tone === "ink" ? "var(--abx-ink)" : "var(--abx-cream)";
+  const fill = tone === "ink" ? "var(--ink)" : "var(--cream)";
   return (
     <div className={`inline-flex items-center gap-3 ${className}`}>
       <span
@@ -20,7 +20,7 @@ export function Diamond({ className = "h-4 w-4" }: { className?: string }) {
     <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
       <path
         d="M12 1 L14.2 9.8 L23 12 L14.2 14.2 L12 23 L9.8 14.2 L1 12 L9.8 9.8 Z"
-        fill="var(--abx-teal)"
+        fill="var(--teal)"
       />
     </svg>
   );
