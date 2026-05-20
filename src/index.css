@@ -237,3 +237,21 @@
     overflow-y: auto;
   }
 }
+
+/* ── ABX Wizard scope (isolated tokens; do not leak to GlobalPay shell) ── */
+.abx-scope {
+  --background: #F7F4ED;
+  --ivory: #FBF8F1;
+  --cream: #F0EAD6;
+  --ink: #0B1538;
+  --ink-soft: #6B7280;
+  --teal: #2DD4BF;
+  --line: #E5E1D8;
+  color: var(--ink);
+  background: var(--background);
+  font-family: 'Inter', system-ui, sans-serif;
+}
+.abx-scope .font-display { font-family: 'Cormorant Garamond', Georgia, serif; }
+.abx-scope .shadow-soft { box-shadow: 0 1px 2px rgba(11,21,56,0.04), 0 8px 24px -12px rgba(11,21,56,0.12); }
+@keyframes abx-diamond-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+.abx-scope .diamond-spin { animation: abx-diamond-spin 12s linear infinite; transform-origin: center; }

@@ -92,12 +92,20 @@ const Index = () => {
               <p className="text-xs text-muted-foreground">Global Bank Ethiopia</p>
             </div>
           </div>
-          <button
-            onClick={() => navigate("/admin")}
-            className="glass text-xs text-muted-foreground px-3 py-1.5 rounded-full hover:text-gold transition-colors"
-          >
-            Admin ↗
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => navigate("/setup")}
+              className="glass text-xs text-gold px-3 py-1.5 rounded-full hover:bg-primary/10 transition-colors"
+            >
+              Bank Setup ⚙
+            </button>
+            <button
+              onClick={() => navigate("/admin")}
+              className="glass text-xs text-muted-foreground px-3 py-1.5 rounded-full hover:text-gold transition-colors"
+            >
+              Admin ↗
+            </button>
+          </div>
         </header>
 
         {/* Hero Content */}
