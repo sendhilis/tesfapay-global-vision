@@ -283,10 +283,36 @@ function hexToHslString(hex: string): string {
   return `${Math.round(hue * 360)} ${Math.round(sat * 100)}% ${Math.round(l * 100)}%`;
 }
 
+function ensureGoogleFont(family: string) {
+  if (typeof document === "undefined" || !family) return;
+  const id = `gf-${family.replace(/\s+/g, "-")}`;
+  if (document.getElementById(id)) return;
+  const link = document.createElement("link");
+  link.id = id;
+  link.rel = "stylesheet";
+  link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(family)}:wght@300;400;500;600;700;800&display=swap`;
+  document.head.appendChild(link);
+}
+
+function ensureBrandFontStyle() {
+  if (typeof document === "undefined") return;
+  if (document.getElementById("abx-brand-fonts")) return;
+  const s = document.createElement("style");
+  s.id = "abx-brand-fonts";
+  s.textContent = `
+    body { font-family: var(--brand-font-body, 'Plus Jakarta Sans'), system-ui, sans-serif; }
+    body h1, body h2, body h3, body h4 { font-family: var(--brand-font-heading, 'Sora'), Georgia, serif; }
+    .abx-scope, .abx-scope * { font-family: 'Inter', system-ui, sans-serif; }
+    .abx-scope .font-display { font-family: 'Cormorant Garamond', Georgia, serif; }
+  `;
+  document.head.appendChild(s);
+}
+
 function applyBrandTokens(cfg: BankConfig) {
   if (typeof document === "undefined") return;
   const root = document.documentElement;
-  // Brand passthrough vars (used by wizard preview + wallet overrides)
+
+  // Brand passthrough vars
   root.style.setProperty("--brand-primary", cfg.brand.primaryColor);
   root.style.setProperty("--brand-secondary", cfg.brand.secondaryColor);
   root.style.setProperty("--brand-surface", cfg.brand.surfaceColor);
@@ -296,10 +322,50 @@ function applyBrandTokens(cfg: BankConfig) {
   root.style.setProperty("--brand-success", cfg.brand.successColor);
   root.style.setProperty("--brand-warning", cfg.brand.warningColor);
   root.style.setProperty("--brand-error", cfg.brand.errorColor);
-  root.style.setProperty("--brand-font-heading", `'${cfg.brand.fontHeading}', Georgia, serif`);
-  root.style.setProperty("--brand-font-body", `'${cfg.brand.fontBody}', system-ui, sans-serif`);
+  root.style.setProperty("--brand-font-heading", `'${cfg.brand.fontHeading}'`);
+  root.style.setProperty("--brand-font-body", `'${cfg.brand.fontBody}'`);
   const radiusMap = { none: "0px", soft: "8px", rounded: "16px", pill: "24px" } as const;
   root.style.setProperty("--brand-radius", radiusMap[cfg.brand.borderRadius]);
+
+  // ── Override semantic Tailwind tokens (HSL) so wallet repaints live ──
+  const primaryHsl    = hexToHslString(cfg.brand.primaryColor);
+  const secondaryHsl  = hexToHslString(cfg.brand.secondaryColor);
+  const surfaceHsl    = hexToHslString(cfg.brand.surfaceColor);
+  const backgroundHsl = hexToHslString(cfg.brand.backgroundColor);
+  const textHsl       = hexToHslString(cfg.brand.textPrimary);
+  const textSoftHsl   = hexToHslString(cfg.brand.textSecondary);
+
+  root.style.setProperty("--primary", primaryHsl);
+  root.style.setProperty("--primary-foreground", surfaceHsl);
+  root.style.setProperty("--secondary", secondaryHsl);
+  root.style.setProperty("--secondary-foreground", surfaceHsl);
+  root.style.setProperty("--accent", secondaryHsl);
+  root.style.setProperty("--accent-foreground", surfaceHsl);
+  root.style.setProperty("--background", backgroundHsl);
+  root.style.setProperty("--foreground", textHsl);
+  root.style.setProperty("--card", surfaceHsl);
+  root.style.setProperty("--card-foreground", textHsl);
+  root.style.setProperty("--popover", surfaceHsl);
+  root.style.setProperty("--popover-foreground", textHsl);
+  root.style.setProperty("--muted-foreground", textSoftHsl);
+  root.style.setProperty("--ring", primaryHsl);
+
+  // Legacy GlobalPay tokens (drive .text-gold, .gradient-green, .gradient-gold, etc.)
+  root.style.setProperty("--tesfa-gold", primaryHsl);
+  root.style.setProperty("--tesfa-gold-light", primaryHsl);
+  root.style.setProperty("--tesfa-green", secondaryHsl);
+  root.style.setProperty("--tesfa-green-mid", secondaryHsl);
+  root.style.setProperty("--tesfa-green-light", secondaryHsl);
+  root.style.setProperty("--tesfa-teal", secondaryHsl);
+  root.style.setProperty("--tesfa-teal-light", secondaryHsl);
+  root.style.setProperty("--tesfa-dark", textHsl);
+  root.style.setProperty("--tesfa-dark-mid", textHsl);
+  root.style.setProperty("--tesfa-dark-card", surfaceHsl);
+
+  // Fonts
+  ensureGoogleFont(cfg.brand.fontHeading);
+  ensureGoogleFont(cfg.brand.fontBody);
+  ensureBrandFontStyle();
 }
 
 /* ---------- Context ---------- */

@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Sparkles, Send, Mic, ChevronDown } from "lucide-react";
+import { useBankConfig } from "@/contexts/BankConfigContext";
 
 const suggestions = [
   "Check my balance",
@@ -33,9 +34,12 @@ interface Message {
 }
 
 const TesfaAI = () => {
+  const cfg = useBankConfig();
+  const aiName = `${cfg.bank.shortName} AI`;
+  const toneLabel = cfg.ai?.tone ? ` · ${cfg.ai.tone} tone` : "";
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
-    { from: "bot", text: "Hi! I'm **Global AI** 🤖 Your intelligent financial assistant for GlobalPay. I speak Amharic and English. How can I help you today?", time: "Now" },
+    { from: "bot", text: `Hi! I'm **${aiName}** 🤖 Your intelligent assistant for ${cfg.bank.name}. How can I help you today?`, time: "Now" },
   ]);
   const [input, setInput] = useState("");
   const [typing, setTyping] = useState(false);
@@ -99,10 +103,10 @@ const TesfaAI = () => {
                 <Sparkles className="w-5 h-5 text-tesfa-dark" />
               </div>
               <div className="flex-1">
-                <p className="text-sm font-bold text-foreground">Global AI</p>
+                <p className="text-sm font-bold text-foreground">{aiName}</p>
                 <div className="flex items-center gap-1">
                   <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-                  <p className="text-[10px] text-muted-foreground">Online · Amharic & English</p>
+                  <p className="text-[10px] text-muted-foreground">Online{toneLabel}</p>
                 </div>
               </div>
               <button

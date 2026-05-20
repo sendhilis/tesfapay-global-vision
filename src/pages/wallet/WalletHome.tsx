@@ -26,6 +26,7 @@
 import { useState } from "react";
 import { Eye, EyeOff, ArrowUpRight, ArrowDownLeft, Zap, MoreHorizontal, Bell, Sparkles } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useBankConfig } from "@/contexts/BankConfigContext";
 
 const quickActions = [
   { label: "Send Money", icon: "💸", color: "bg-tesfa-gold/15 border-tesfa-gold/20", to: "/wallet/send" },
@@ -49,6 +50,7 @@ const recentTxns = [
 
 const WalletHome = () => {
   const navigate = useNavigate();
+  const cfg = useBankConfig();
   const [showBalance, setShowBalance] = useState(true);
 
   return (
@@ -112,16 +114,35 @@ const WalletHome = () => {
         </div>
       </div>
 
-      {/* Global AI Insight */}
+      {/* Bank tagline + AI Insight */}
       <div className="glass-gold rounded-2xl p-3.5 flex gap-3">
         <div className="w-8 h-8 rounded-xl bg-gradient-gold flex items-center justify-center flex-shrink-0">
           <Sparkles className="w-4 h-4 text-tesfa-dark" />
         </div>
         <div>
-          <p className="text-xs font-bold text-gold mb-0.5">Global AI Insight</p>
-          <p className="text-xs text-foreground">You spend 35% less on bills this month. Consider moving ETB 500 to your savings goal. 📈</p>
+          <p className="text-xs font-bold text-gold mb-0.5">{cfg.bank.name} · {cfg.bank.tagline}</p>
+          <p className="text-xs text-foreground">You spend 35% less on bills this month. Consider moving {cfg.bank.currency} 500 to your savings goal. 📈</p>
         </div>
       </div>
+
+      {/* Configured Products */}
+      {cfg.products?.length > 0 && (
+        <div>
+          <p className="text-sm font-bold text-foreground mb-3">Our Products</p>
+          <div className="grid grid-cols-1 gap-2">
+            {cfg.products.map((p) => (
+              <div key={p.id} className="glass rounded-2xl p-3 border border-border">
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-sm font-bold text-foreground">{p.name}</p>
+                  <span className="text-[10px] uppercase tracking-wide text-gold">{p.type}</span>
+                </div>
+                <p className="text-xs text-gold mb-1">{p.tagline}</p>
+                <p className="text-xs text-muted-foreground">{p.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Quick Actions */}
       <div>

@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { KycApplicationProvider } from "@/contexts/KycApplicationContext";
 import { WizardProvider } from "@/contexts/BankConfigContext";
 import Setup from "./pages/Setup";
+import RootGate from "./components/RootGate";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
@@ -57,7 +58,8 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Index />} />
+          <Route path="/" element={<RootGate />} />
+          <Route path="/home" element={<Index />} />
           <Route path="/setup" element={<Setup />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/onboarding" element={<Onboarding />} />
