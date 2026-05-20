@@ -32,6 +32,8 @@ export type Branch = {
 };
 
 export type BankConfig = {
+  themeId: ThemeId;
+  accentShift: number; // -20..+20 deg hue rotation applied to theme primary
   bank: {
     name: string;
     shortName: string;
