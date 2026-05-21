@@ -87,14 +87,11 @@ export function W01_Welcome() {
         <span className="font-mono text-[14px] bg-[var(--ivory)] px-1.5 py-0.5 rounded mx-1">BankConfig</span> file.
       </p>
       <div className="mt-10 grid md:grid-cols-3 gap-4">
-        {[
-          { n: "01", t: "Identity & Brand", d: "Logo, palette, type, market" },
-          { n: "02", t: "CX & Personas", d: "Navigation, layout, audience" },
-          { n: "03", t: "Onboarding & AI", d: "KYC, agents, conversation" },
-          { n: "04", t: "Products & Branch", d: "Catalogue, staff, services" },
-          { n: "05", t: "Process AI", d: "Reconciliation, AML, flows" },
-          { n: "06", t: "Ethiopia Compliance", d: "Fayda, Eth-Switch, NBE" },
-        ].map((m) => (
+        {MODULES.filter((m) => m.id !== "entry" && m.id !== "review").map((mod) => ({
+          n: mod.code,
+          t: mod.name,
+          d: mod.desc,
+        })).map((m) => (
           <div key={m.n} className="p-5 bg-white border border-[var(--line)] rounded-xl hover:shadow-soft transition">
             <span className="font-mono text-[10px] tracking-widest text-[var(--teal-deep)]">{m.n}</span>
             <div className="font-serif text-xl mt-1">{m.t}</div>
