@@ -16,8 +16,16 @@ export default defineConfig(({ mode }) => ({
     mode === "development" && componentTagger(),
     VitePWA({
       registerType: "autoUpdate",
+      injectRegister: "auto",
       includeAssets: ["favicon.ico", "robots.txt", "icon-192.png", "icon-512.png"],
+      devOptions: {
+        enabled: false,
+      },
       workbox: {
+        cleanupOutdatedCaches: true,
+        clientsClaim: true,
+        skipWaiting: true,
+        globPatterns: ["**/*.{js,css,html,ico,png,svg,webmanifest}"],
         navigateFallbackDenylist: [/^\/~oauth/],
       },
       manifest: {
