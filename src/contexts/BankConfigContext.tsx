@@ -1,8 +1,10 @@
-import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { STEPS, TOTAL_STEPS } from "@/lib/wizard-config";
 import { ABX_THEMES, shiftHueHex, type AbxTheme, type ThemeId } from "@/lib/abx-themes";
+import { supabase } from "@/integrations/supabase/client";
 
 const STORAGE_KEY = "abx.wizard.v1";
+const REMOTE_CONFIG_ID = "global";
 
 export type Persona = {
   id: string;
