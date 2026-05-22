@@ -14,6 +14,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useWizard } from "@/contexts/BankConfigContext";
 import type { MeshAgent, MeshAgentId } from "@/contexts/BankConfigContext";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import { Diamond } from "./AbxLogo";
 import {
   Bot, Send, Sparkles, Lock, Play, RotateCcw, MessageSquare,
