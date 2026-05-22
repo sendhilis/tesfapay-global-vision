@@ -746,6 +746,7 @@ export function AIMeshStudio() {
         )}
         {activePane === "sim" && (
           <Simulation
+            bankName={config.bank.name}
             agents={mesh.agents}
             persona={persona}
             setPersona={(p) => setPersona(p)}
