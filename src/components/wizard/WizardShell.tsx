@@ -33,11 +33,24 @@ export function WizardShell() {
           </div>
           <div className="flex items-center gap-4 text-[11px] text-[var(--ink-soft)]">
             <span className="font-mono">{stepIdx + 1} / {TOTAL_STEPS}</span>
+            <span className="hidden sm:inline-flex items-center gap-1.5">
+              <span className={`w-1.5 h-1.5 rounded-full ${
+                syncState === "saving" ? "bg-amber-400 animate-pulse" :
+                syncState === "saved" ? "bg-emerald-400" :
+                syncState === "error" ? "bg-red-400" :
+                syncState === "loading" ? "bg-sky-400 animate-pulse" :
+                "bg-[var(--line)]"
+              }`} />
+              {syncState === "saving" ? "Syncing…" :
+                syncState === "saved" ? `Saved${lastSyncedAt ? " · " + new Date(lastSyncedAt).toLocaleTimeString() : ""}` :
+                syncState === "error" ? "Save failed" :
+                syncState === "loading" ? "Loading…" : "Synced to cloud"}
+            </span>
             <button onClick={() => setPreviewOpen(true)} className="xl:hidden inline-flex items-center gap-1.5 px-3 py-1.5 rounded border border-[var(--line)] hover:border-[var(--ink)]/40">
               <Smartphone className="w-3 h-3" /> Preview
             </button>
             <button onClick={handleSaveDraft} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded border border-[var(--line)] hover:border-[var(--ink)]/40">
-              <Save className="w-3 h-3" /> Save draft
+              <Save className="w-3 h-3" /> Export JSON
             </button>
           </div>
         </header>
