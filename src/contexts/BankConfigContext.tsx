@@ -283,7 +283,7 @@ export function defaultMeshConfig(): MeshConfig {
   };
 }
 
-
+export const defaultBankConfig: BankConfig = {
   themeId: "emerald",
   accentShift: 0,
   bank: {
