@@ -31,6 +31,35 @@ export type Branch = {
   services: string[];
 };
 
+export type MeshAgentId =
+  | "concierge" | "onboarding" | "savingsCoach" | "investmentCoach"
+  | "loanAgent" | "complaintAgent" | "notificationAgent";
+
+export type MeshAgent = {
+  id: MeshAgentId;
+  name: string;
+  emoji: string;
+  tagline: string;
+  color: string;             // hex
+  enabled: boolean;
+  locked?: boolean;          // concierge + onboarding can't be disabled
+  avatarStyle: "abstract" | "illustrated" | "initial";
+  tone: { formal_casual: number; terse_verbose: number; reserved_expressive: number };
+  usesEmoji: boolean;
+  greetingOnHandoff: string;
+  handoffMessage: string;    // what concierge says when routing TO this agent
+  keywords: string[];        // routing triggers (lowercased)
+  systemPrompt: string;
+  sampleReplies: string[];   // canned replies for simulation
+  position: { x: number; y: number }; // canvas position 0..1
+};
+
+export type MeshConfig = {
+  agents: Record<MeshAgentId, MeshAgent>;
+  defaultPersona: "Selam" | "Bekele" | "Tigist" | "Dawit";
+};
+
+
 export type BankConfig = {
   themeId: ThemeId;
   accentShift: number; // -20..+20 deg hue rotation applied to theme primary
@@ -103,6 +132,7 @@ export type BankConfig = {
     proactiveMessagingEnabled: boolean;
     tone: "warm" | "direct" | "joyful" | "formal";
     agents: Record<string, { enabled: boolean; tone: string; systemPrompt: string }>;
+    mesh: MeshConfig;
   };
   products: Product[];
   branch: {
@@ -132,6 +162,126 @@ export type BankConfig = {
     nbeReports: { id: string; name: string; enabled: boolean; schedule: string }[];
   };
 };
+
+export function defaultMeshConfig(): MeshConfig {
+  return {
+    defaultPersona: "Selam",
+    agents: {
+      concierge: {
+        id: "concierge", name: "Amara", emoji: "✦", tagline: "Your brilliant banking companion.",
+        color: "#0B1538", enabled: true, locked: true, avatarStyle: "initial",
+        tone: { formal_casual: 60, terse_verbose: 50, reserved_expressive: 70 },
+        usesEmoji: true,
+        greetingOnHandoff: "Hi {firstName}! I'm Amara. How can I help today?",
+        handoffMessage: "",
+        keywords: [],
+        systemPrompt: "You are Amara, the master banking concierge. Read intent. Hand off when needed. Never lose context.",
+        sampleReplies: [
+          "Hello {firstName}! I'm here. What's on your mind today?",
+          "Of course — I can help with that right away.",
+          "Let me check that for you. One moment.",
+        ],
+        position: { x: 0.5, y: 0.15 },
+      },
+      onboarding: {
+        id: "onboarding", name: "Selam-Bot", emoji: "🎓", tagline: "The welcome guide.",
+        color: "#7C3AED", enabled: true, locked: true, avatarStyle: "illustrated",
+        tone: { formal_casual: 70, terse_verbose: 55, reserved_expressive: 80 },
+        usesEmoji: true,
+        greetingOnHandoff: "Welcome to the family! Let's get you set up in under 3 minutes.",
+        handoffMessage: "Let me hand you to our onboarding specialist — they'll get you started in moments.",
+        keywords: ["sign up", "register", "open account", "new account", "onboard", "kyc"],
+        systemPrompt: "Guide brand-new customers through KYC and account creation. Celebrate every step.",
+        sampleReplies: [
+          "Wonderful! First — what name should we use for you?",
+          "Perfect. Now snap a photo of your Fayda ID. I'll wait.",
+          "🎉 You're in! Your wallet is live. Want me to set your first savings goal?",
+        ],
+        position: { x: 0.2, y: 0.5 },
+      },
+      savingsCoach: {
+        id: "savingsCoach", name: "Nuru", emoji: "💰", tagline: "Your personal savings companion.",
+        color: "#00C9B1", enabled: true, avatarStyle: "illustrated",
+        tone: { formal_casual: 75, terse_verbose: 60, reserved_expressive: 85 },
+        usesEmoji: true,
+        greetingOnHandoff: "Hi {firstName}! I'm Nuru, your savings coach. 🌱 What are we saving for?",
+        handoffMessage: "I'm connecting you to Nuru, your Savings Coach — she's great with goals!",
+        keywords: ["save", "savings", "goal", "saving", "set aside", "emergency fund", "equb"],
+        systemPrompt: "Help customers set and achieve savings goals. Celebrate milestones. Suggest sweeps.",
+        sampleReplies: [
+          "Love that! How much are you aiming for, and by when?",
+          "Great pace 👏 — you're 42% to your goal. Want me to auto-sweep 10% of every salary credit?",
+          "Milestone unlocked! 🎉 You just crossed ETB 5,000. Keep going.",
+        ],
+        position: { x: 0.5, y: 0.5 },
+      },
+      investmentCoach: {
+        id: "investmentCoach", name: "Kea", emoji: "📈", tagline: "Building your financial future.",
+        color: "#FFB830", enabled: true, avatarStyle: "abstract",
+        tone: { formal_casual: 40, terse_verbose: 60, reserved_expressive: 50 },
+        usesEmoji: false,
+        greetingOnHandoff: "Hi {firstName}, I'm Kea. Let's look at what could grow your money.",
+        handoffMessage: "Let me bring in Kea — our investment specialist. She'll explain things in plain language.",
+        keywords: ["invest", "investment", "t-bill", "treasury", "fixed deposit", "bond", "grow money", "returns"],
+        systemPrompt: "Recommend T-Bills, fixed deposits. Explain risk plainly. Always append regulatory disclaimer.",
+        sampleReplies: [
+          "T-Bills are low risk — think of them as very safe savings with better returns. Min ETB 5,000.",
+          "Before I recommend anything: when might you need this money?",
+          "Investment products are subject to market risk. Past performance is not indicative of future returns.",
+        ],
+        position: { x: 0.8, y: 0.5 },
+      },
+      loanAgent: {
+        id: "loanAgent", name: "Dawit-Bot", emoji: "🏦", tagline: "Credit on your side.",
+        color: "#3B82F6", enabled: true, avatarStyle: "initial",
+        tone: { formal_casual: 50, terse_verbose: 45, reserved_expressive: 55 },
+        usesEmoji: false,
+        greetingOnHandoff: "Hi {firstName}. I can check what you qualify for in seconds — ready?",
+        handoffMessage: "Let me connect you with our credit companion — they'll see what you qualify for.",
+        keywords: ["loan", "borrow", "credit", "advance", "micro-loan", "need money", "can't save"],
+        systemPrompt: "Pre-qualify customers, walk through loan applications, manage repayment.",
+        sampleReplies: [
+          "Based on your activity, you qualify for up to ETB 8,000 at 5% — instant approval. Apply?",
+          "Here's what you earned: 14-day micro-loan, ETB 5,000. Repay any time.",
+          "Friendly reminder, {firstName} — your installment of ETB 600 is due in 3 days.",
+        ],
+        position: { x: 0.35, y: 0.82 },
+      },
+      complaintAgent: {
+        id: "complaintAgent", name: "Hana", emoji: "🛡️", tagline: "The resolution specialist.",
+        color: "#EF4444", enabled: true, avatarStyle: "illustrated",
+        tone: { formal_casual: 65, terse_verbose: 50, reserved_expressive: 75 },
+        usesEmoji: false,
+        greetingOnHandoff: "{firstName}, I'm so sorry you're dealing with this. Tell me what happened.",
+        handoffMessage: "I'm escalating this to Hana, our specialist team — she'll take great care of you.",
+        keywords: ["complaint", "angry", "wrong", "terrible", "manager", "human", "fraud", "stolen", "dispute", "not working"],
+        systemPrompt: "Listen first. Resolve fast. Escalate to human at frustration signals.",
+        sampleReplies: [
+          "I've logged this as priority. Ticket #CX-4421. You'll hear back within 2 hours.",
+          "I just reversed that charge — it'll reflect in your wallet within minutes.",
+          "Let me connect you to a specialist right away. Please hold.",
+        ],
+        position: { x: 0.65, y: 0.82 },
+      },
+      notificationAgent: {
+        id: "notificationAgent", name: "Pulse", emoji: "🔔", tagline: "The proactive voice.",
+        color: "#A78BFA", enabled: true, avatarStyle: "abstract",
+        tone: { formal_casual: 55, terse_verbose: 30, reserved_expressive: 60 },
+        usesEmoji: true,
+        greetingOnHandoff: "",
+        handoffMessage: "",
+        keywords: [],
+        systemPrompt: "Outbound only. Salary alerts, low-balance warnings, milestone celebrations.",
+        sampleReplies: [
+          "💰 Salary credited: ETB 18,500. Want to sweep 10% to savings?",
+          "Heads up — your balance is below your usual cushion.",
+          "🎉 You hit your monthly savings goal three days early!",
+        ],
+        position: { x: 0.92, y: 0.15 },
+      },
+    },
+  };
+}
 
 export const defaultBankConfig: BankConfig = {
   themeId: "emerald",
@@ -221,6 +371,7 @@ export const defaultBankConfig: BankConfig = {
       "Branch Assist":{ enabled: true,  tone: "helpful", systemPrompt: "Brief staff. Prefill forms. Suggest next-best action." },
       "Insights":     { enabled: true,  tone: "narrative",systemPrompt: "Weekly Money Story. Personal. Never preachy." },
     },
+    mesh: defaultMeshConfig(),
   },
   products: [
     { id: "pr1", type: "Savings Account", name: "Selam Save",   tagline: "Goals that grow with you.",       description: "Goal-based savings with weekly nudges." },
