@@ -414,13 +414,14 @@ function pickReply(a: MeshAgent, firstName: string): string {
 }
 
 function Simulation({
-  agents, persona, setPersona, onSelectAgent, onHandoffFire,
+  agents, persona, setPersona, onSelectAgent, onHandoffFire, bankName,
 }: {
   agents: Record<MeshAgentId, MeshAgent>;
   persona: string;
   setPersona: (p: string) => void;
   onSelectAgent: (id: MeshAgentId) => void;
   onHandoffFire: (from: MeshAgentId, to: MeshAgentId) => void;
+  bankName: string;
 }) {
   const p = PERSONAS[persona] ?? PERSONAS.Selam;
   const [messages, setMessages] = useState<ChatMsg[]>([
@@ -440,52 +441,83 @@ function Simulation({
     setMessages([{ kind: "agent", agentId: "concierge",
       text: agents.concierge.sampleReplies[0].replace(/{firstName}/g, p.firstName) }]);
     setCurrentAgent("concierge");
-    setTypingFalse();
+    setTyping(null);
     setTourResults([]);
   };
-  const setTypingFalse = () => setTyping(null);
 
-  const submit = (text: string) => {
-    if (!text.trim()) return;
-    setMessages((m) => [...m, { kind: "user", text }]);
-    const target = routeIntent(text, agents);
-    const handingOff = target !== currentAgent && target !== "concierge";
-    setTyping(target);
+  const callMesh = async (history: ChatMsg[], fromAgent: MeshAgentId) => {
+    const payloadMessages = history
+      .filter((m) => m.kind === "user" || m.kind === "agent")
+      .map((m) =>
+        m.kind === "user"
+          ? { role: "user" as const, content: m.text }
+          : { role: "assistant" as const, content: m.text, agentName: agents[m.agentId].name },
+      );
 
-    setTimeout(() => {
+    const { data, error } = await supabase.functions.invoke("mesh-chat", {
+      body: {
+        agents,
+        currentAgentId: fromAgent,
+        persona: { firstName: p.firstName, line: p.line },
+        bankName,
+        messages: payloadMessages,
+      },
+    });
+    if (error) throw error;
+    if (data?.error) throw new Error(data.error);
+    return data as { targetAgentId: MeshAgentId; handoff: { to: MeshAgentId; text: string } | null; reply: string };
+  };
+
+  const submit = async (text: string) => {
+    if (!text.trim() || typing) return;
+    const userMsg: ChatMsg = { kind: "user", text };
+    const next = [...messages, userMsg];
+    setMessages(next);
+
+    // Show typing on best-guess target immediately for snappier UX
+    const guess = routeIntent(text, agents);
+    setTyping(guess);
+
+    try {
+      const res = await callMesh(next, currentAgent);
+      const target = (res.targetAgentId || guess) as MeshAgentId;
+      const handingOff = target !== currentAgent && target !== "concierge";
+
       setMessages((m) => {
         const out = [...m];
-        if (handingOff) {
-          const handoff = agents[target].handoffMessage || agents.concierge.handoffMessage;
-          out.push({ kind: "handoff", from: "concierge", to: target,
-            text: handoff || `Connecting you to ${agents[target].name}…` });
+        if (res.handoff && handingOff) {
+          out.push({ kind: "handoff", from: "concierge", to: target, text: res.handoff.text });
           onHandoffFire("concierge", target);
         } else if (target !== "concierge" && target !== currentAgent) {
           onHandoffFire(currentAgent, target);
         }
-        const greet = handingOff
-          ? agents[target].greetingOnHandoff.replace(/{firstName}/g, p.firstName)
-          : pickReply(agents[target], p.firstName);
-        out.push({ kind: "agent", agentId: target, text: greet });
+        out.push({ kind: "agent", agentId: target, text: res.reply });
         return out;
       });
       setCurrentAgent(target);
       onSelectAgent(target);
-      setTypingFalse();
-    }, 650);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Failed to reach the AI mesh";
+      toast.error(msg);
+      setMessages((m) => [...m, {
+        kind: "agent", agentId: currentAgent,
+        text: `⚠️ Couldn't reach the AI gateway: ${msg}`,
+      }]);
+    } finally {
+      setTyping(null);
+    }
   };
 
   const runTour = async () => {
     setTourRunning(true);
     setTourResults([]);
     reset();
-    await new Promise(r => setTimeout(r, 400));
+    await new Promise(r => setTimeout(r, 300));
     for (const step of SCRIPTED_TOUR) {
-      await new Promise(r => setTimeout(r, 900));
-      submit(step.text);
-      await new Promise(r => setTimeout(r, 900));
+      await submit(step.text);
       const got = routeIntent(step.text, agents);
       setTourResults((rs) => [...rs, { ok: got === step.expect, expected: step.expect, got }]);
+      await new Promise(r => setTimeout(r, 300));
     }
     setTourRunning(false);
   };
