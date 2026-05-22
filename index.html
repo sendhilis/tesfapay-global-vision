@@ -49,6 +49,33 @@
 
   <body>
     <div id="root"></div>
+    <script>
+      // One-time cleanup: unregister stale service workers and clear caches
+      // so users on old PWA builds load the latest bundle (fixes 404 on new routes like /setup).
+      (function () {
+        try {
+          var KEY = "abx-sw-reset-v2";
+          if (!localStorage.getItem(KEY) && "serviceWorker" in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function (regs) {
+              var hadStale = regs.length > 0;
+              Promise.all(regs.map(function (r) { return r.unregister(); })).then(function () {
+                if (window.caches && caches.keys) {
+                  caches.keys().then(function (keys) {
+                    Promise.all(keys.map(function (k) { return caches.delete(k); })).then(function () {
+                      localStorage.setItem(KEY, "1");
+                      if (hadStale) location.reload();
+                    });
+                  });
+                } else {
+                  localStorage.setItem(KEY, "1");
+                  if (hadStale) location.reload();
+                }
+              });
+            }).catch(function () {});
+          }
+        } catch (e) {}
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
