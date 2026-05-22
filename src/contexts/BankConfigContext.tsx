@@ -31,6 +31,35 @@ export type Branch = {
   services: string[];
 };
 
+export type MeshAgentId =
+  | "concierge" | "onboarding" | "savingsCoach" | "investmentCoach"
+  | "loanAgent" | "complaintAgent" | "notificationAgent";
+
+export type MeshAgent = {
+  id: MeshAgentId;
+  name: string;
+  emoji: string;
+  tagline: string;
+  color: string;             // hex
+  enabled: boolean;
+  locked?: boolean;          // concierge + onboarding can't be disabled
+  avatarStyle: "abstract" | "illustrated" | "initial";
+  tone: { formal_casual: number; terse_verbose: number; reserved_expressive: number };
+  usesEmoji: boolean;
+  greetingOnHandoff: string;
+  handoffMessage: string;    // what concierge says when routing TO this agent
+  keywords: string[];        // routing triggers (lowercased)
+  systemPrompt: string;
+  sampleReplies: string[];   // canned replies for simulation
+  position: { x: number; y: number }; // canvas position 0..1
+};
+
+export type MeshConfig = {
+  agents: Record<MeshAgentId, MeshAgent>;
+  defaultPersona: "Selam" | "Bekele" | "Tigist" | "Dawit";
+};
+
+
 export type BankConfig = {
   themeId: ThemeId;
   accentShift: number; // -20..+20 deg hue rotation applied to theme primary
