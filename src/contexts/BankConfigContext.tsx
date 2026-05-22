@@ -103,6 +103,7 @@ export type BankConfig = {
     proactiveMessagingEnabled: boolean;
     tone: "warm" | "direct" | "joyful" | "formal";
     agents: Record<string, { enabled: boolean; tone: string; systemPrompt: string }>;
+    mesh: MeshConfig;
   };
   products: Product[];
   branch: {
