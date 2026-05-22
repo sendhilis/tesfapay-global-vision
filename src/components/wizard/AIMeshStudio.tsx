@@ -625,6 +625,7 @@ export function AIMeshStudio() {
   const [selected, setSelected] = useState<MeshAgentId>("concierge");
   const [persona, setPersona] = useState<string>(mesh.defaultPersona);
   const [activeHandoff, setActiveHandoff] = useState<{ from: MeshAgentId; to: MeshAgentId; at: number } | null>(null);
+  const [activePane, setActivePane] = useState<"canvas" | "config" | "sim">("canvas");
 
   const patchAgent = (id: MeshAgentId, patch: Partial<MeshAgent>) => {
     setConfig({
@@ -649,6 +650,18 @@ export function AIMeshStudio() {
 
   const enabledCount = Object.values(mesh.agents).filter((a) => a.enabled).length;
 
+  const PaneTab = ({ id, label }: { id: "canvas" | "config" | "sim"; label: string }) => (
+    <button
+      onClick={() => setActivePane(id)}
+      className={`flex-1 text-[11px] uppercase tracking-widest px-3 py-2 rounded-lg border transition truncate
+        ${activePane === id
+          ? "bg-[var(--ink)] text-[var(--cream)] border-[var(--ink)]"
+          : "bg-white border-[var(--line)] text-[var(--ink-soft)] hover:border-[var(--ink)]/40"}`}
+    >
+      {label}
+    </button>
+  );
+
   return (
     <div className="-mx-8 md:-mx-14 -my-14 px-4 md:px-6 py-6 min-h-[calc(100vh-140px)] bg-[var(--ivory)]/40">
       {/* Title strip */}
@@ -657,17 +670,16 @@ export function AIMeshStudio() {
           <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-[var(--teal-deep)]">
             <Diamond className="w-3 h-3 diamond-spin" /> WAM · AI Mesh Studio
           </div>
-          <h1 className="mt-1.5 font-serif text-3xl md:text-4xl leading-[1.05] text-balance">
+          <h1 className="mt-1.5 font-serif text-2xl md:text-3xl leading-[1.05] text-balance">
             Configure your agents by <em className="not-italic text-[var(--teal-deep)]">talking to them</em>.
           </h1>
-          <p className="mt-1.5 text-[13px] text-[var(--ink-soft)] max-w-2xl">
-            Pick an agent on the canvas. Tune their voice on the right of it. Send a message on the far right —
-            the live mesh routes you, hands off, and replies exactly as your customers will experience.
+          <p className="mt-1.5 text-[12px] text-[var(--ink-soft)] max-w-2xl">
+            Switch between the mesh canvas, agent config, and live simulation below.
           </p>
         </div>
         <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-mono">
           <span className="px-2.5 py-1 rounded-full bg-[var(--ink)] text-[var(--cream)] inline-flex items-center gap-1">
-            <Bot className="w-3 h-3" /> {enabledCount}/7 agents live
+            <Bot className="w-3 h-3" /> {enabledCount}/7 live
           </span>
           <span className="px-2.5 py-1 rounded-full border border-[var(--line)] bg-white inline-flex items-center gap-1 text-[var(--ink-soft)]">
             <MessageSquare className="w-3 h-3" /> {persona}
@@ -675,40 +687,45 @@ export function AIMeshStudio() {
         </div>
       </div>
 
-      {/* Three-pane grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 lg:h-[640px]">
-        <div className="lg:col-span-5 h-[420px] lg:h-full">
+      {/* Pane switcher */}
+      <div className="flex gap-2 mb-3 sticky top-0 z-20 bg-[var(--ivory)]/80 backdrop-blur-sm py-2 rounded-lg">
+        <PaneTab id="canvas" label="Mesh Canvas" />
+        <PaneTab id="config" label={`Config · ${mesh.agents[selected].name}`} />
+        <PaneTab id="sim" label="Live Sim" />
+      </div>
+
+      {/* Active pane — full width */}
+      <div className="h-[calc(100vh-280px)] min-h-[520px]">
+        {activePane === "canvas" && (
           <MeshCanvas
             agents={mesh.agents}
             selected={selected}
-            onSelect={setSelected}
+            onSelect={(id) => { setSelected(id); setActivePane("config"); }}
             activeHandoff={activeHandoff}
           />
-        </div>
-        <div className="lg:col-span-3 h-[640px] lg:h-full">
+        )}
+        {activePane === "config" && (
           <ConfigPanel
             agent={mesh.agents[selected]}
             onChange={(patch) => patchAgent(selected, patch)}
           />
-        </div>
-        <div className="lg:col-span-4 h-[640px] lg:h-full">
+        )}
+        {activePane === "sim" && (
           <Simulation
             agents={mesh.agents}
             persona={persona}
             setPersona={(p) => setPersona(p)}
             onSelectAgent={setSelected}
-            onHandoffFire={fireHandoff}
+            onHandoffFire={(from, to) => fireHandoff(from, to)}
           />
-        </div>
+        )}
       </div>
 
       {/* Footnote */}
       <div className="mt-4 p-3 rounded-xl bg-white border border-[var(--line)] flex items-start gap-3">
         <Sparkles className="w-4 h-4 text-[var(--teal-deep)] mt-0.5 shrink-0" />
         <div className="text-[12px] text-[var(--ink-soft)] leading-relaxed">
-          <strong className="text-[var(--ink)]">Every change you see here goes live.</strong> The floating
-          Global AI widget on every wallet screen reads from this exact config — agent name, colour, tone,
-          handoff lines. Configure once; rehearse here; ship to production unchanged.
+          <strong className="text-[var(--ink)]">Every change goes live.</strong> The floating Global AI widget reads from this config — agent name, colour, tone, handoff lines. Rehearse here; ship unchanged.
         </div>
       </div>
     </div>
