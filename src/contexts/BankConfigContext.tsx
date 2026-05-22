@@ -673,7 +673,7 @@ export function WizardProvider({ children }: { children: ReactNode }) {
           .from("bank_configs")
           .upsert({
             id: REMOTE_CONFIG_ID,
-            config: config as unknown as Record<string, unknown>,
+            config: JSON.parse(JSON.stringify(config)),
             is_published: published,
             updated_at: new Date().toISOString(),
           });
@@ -733,7 +733,7 @@ export function WizardProvider({ children }: { children: ReactNode }) {
         .from("bank_configs")
         .upsert({
           id: REMOTE_CONFIG_ID,
-          config: config as unknown as Record<string, unknown>,
+          config: JSON.parse(JSON.stringify(config)),
           is_published: published,
           updated_at: new Date().toISOString(),
         });
@@ -754,7 +754,7 @@ export function WizardProvider({ children }: { children: ReactNode }) {
         .from("bank_configs")
         .upsert({
           id: REMOTE_CONFIG_ID,
-          config: config as unknown as Record<string, unknown>,
+          config: JSON.parse(JSON.stringify(config)),
           is_published: true,
           updated_at: new Date().toISOString(),
         });
