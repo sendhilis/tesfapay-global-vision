@@ -1,89 +1,133 @@
-import { useState, useRef, useEffect } from "react";
-import { Sparkles, Send, Mic, ChevronDown } from "lucide-react";
+/**
+ * TesfaAI — The live customer-facing widget.
+ *
+ * Reads agent identity, color, tone and handoff rules straight from
+ * `config.ai.mesh` (configured in the AI Mesh Studio wizard step).
+ * Every change the admin makes in the wizard is reflected here on next render —
+ * no rebuild, no republish needed.
+ */
+import { useState, useRef, useEffect, useMemo } from "react";
+import { Send, Mic, ChevronDown, Sparkles, Zap } from "lucide-react";
 import { useBankConfig } from "@/contexts/BankConfigContext";
+import type { MeshAgent, MeshAgentId } from "@/contexts/BankConfigContext";
 
-const suggestions = [
+function routeIntent(text: string, agents: Record<MeshAgentId, MeshAgent>): MeshAgentId {
+  const t = text.toLowerCase();
+  const candidates: MeshAgentId[] = [
+    "complaintAgent", "loanAgent", "savingsCoach",
+    "investmentCoach", "onboarding",
+  ];
+  for (const id of candidates) {
+    const a = agents[id];
+    if (!a.enabled) continue;
+    if (a.keywords.some((k) => t.includes(k))) return id;
+  }
+  return "concierge";
+}
+
+const FALLBACK_SUGGESTIONS = [
   "Check my balance",
-  "Send money to Tigist",
-  "Pay my electricity bill",
-  "How do I upgrade my KYC?",
-  "What is my loan limit?",
+  "I want to start saving",
+  "Can I get a small loan?",
+  "Tell me about T-Bills",
+  "I have a complaint",
 ];
 
-const botReplies: Record<string, string> = {
-  "check my balance": "Your main wallet balance is **ETB 12,450.00**. Savings wallet: **ETB 5,200**. You also have **1,240 Global Points** 🌟",
-  "send money": "Sure! To send money, tap the **Send Money** quick action on your home screen, or tell me: *who* and *how much* — e.g., 'Send ETB 500 to Tigist'",
-  "pay": "I can help you pay bills! Which service? **Ethio Telecom, Electricity, Water, EthioSat TV, or others?** Say the name and I'll get you there.",
-  "kyc": "To upgrade from **KYC Level 1 to Level 2**, go to **Profile → Upgrade KYC** and have your National ID front/back and a selfie ready. It takes about 5 minutes! ✅",
-  "loan": "Based on your activity, you're eligible for up to **ETB 8,000** through Global Micro-Loan. Your AI credit score is **78/100 (Excellent)**. Go to **Home → Micro-Loan** to apply!",
-  "default": "I'm Global AI, your financial assistant! I can help you **send money**, **pay bills**, **check your balance**, manage **savings goals**, or apply for a **micro-loan**. How can I help? 😊",
-};
-
-const getReply = (msg: string): string => {
-  const lower = msg.toLowerCase();
-  for (const [key, reply] of Object.entries(botReplies)) {
-    if (key !== "default" && lower.includes(key)) return reply;
-  }
-  return botReplies.default;
-};
-
-interface Message {
-  from: "user" | "bot";
-  text: string;
-  time: string;
+function pickReply(a: MeshAgent, firstName: string): string {
+  const raw = a.sampleReplies[Math.floor(Math.random() * a.sampleReplies.length)];
+  return raw.replace(/{firstName}/g, firstName);
 }
+
+type Msg =
+  | { kind: "agent"; agentId: MeshAgentId; text: string }
+  | { kind: "user"; text: string }
+  | { kind: "handoff"; to: MeshAgentId; text: string };
 
 const TesfaAI = () => {
   const cfg = useBankConfig();
-  const aiName = `${cfg.bank.shortName} AI`;
-  const toneLabel = cfg.ai?.tone ? ` · ${cfg.ai.tone} tone` : "";
+  const mesh = cfg.ai.mesh;
+  const concierge = mesh.agents.concierge;
+  const firstName = "Selam";
+
   const [open, setOpen] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([
-    { from: "bot", text: `Hi! I'm **${aiName}** 🤖 Your intelligent assistant for ${cfg.bank.name}. How can I help you today?`, time: "Now" },
-  ]);
+  const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
-  const [typing, setTyping] = useState(false);
+  const [typing, setTyping] = useState<MeshAgentId | null>(null);
+  const [currentAgent, setCurrentAgent] = useState<MeshAgentId>("concierge");
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Seed greeting from the configured concierge
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, open]);
-
-  useEffect(() => {
-    if (open) {
-      setTimeout(() => inputRef.current?.focus(), 100);
+    if (messages.length === 0) {
+      setMessages([{
+        kind: "agent", agentId: "concierge",
+        text: (concierge.sampleReplies[0] || `Hi {firstName}! I'm ${concierge.name}.`).replace(/{firstName}/g, firstName),
+      }]);
     }
-  }, [open]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [concierge.name]);
+
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, open, typing]);
+  useEffect(() => { if (open) setTimeout(() => inputRef.current?.focus(), 100); }, [open]);
 
   const send = (text?: string) => {
-    const msg = text || input.trim();
+    const msg = (text || input).trim();
     if (!msg) return;
     setInput("");
-    setMessages(prev => [...prev, { from: "user", text: msg, time: "Now" }]);
-    setTyping(true);
-    setTimeout(() => {
-      setTyping(false);
-      setMessages(prev => [...prev, { from: "bot", text: getReply(msg), time: "Now" }]);
-    }, 900);
+    setMessages((m) => [...m, { kind: "user", text: msg }]);
+
+    const target = routeIntent(msg, mesh.agents);
+    const handingOff = target !== currentAgent && target !== "concierge";
+    setTyping(target);
+
+    window.setTimeout(() => {
+      setMessages((m) => {
+        const out = [...m];
+        if (handingOff) {
+          out.push({
+            kind: "handoff", to: target,
+            text: (mesh.agents[target].handoffMessage || `Connecting you to ${mesh.agents[target].name}…`),
+          });
+        }
+        const greet = handingOff
+          ? mesh.agents[target].greetingOnHandoff.replace(/{firstName}/g, firstName)
+          : pickReply(mesh.agents[target], firstName);
+        out.push({ kind: "agent", agentId: target, text: greet });
+        return out;
+      });
+      setCurrentAgent(target);
+      setTyping(null);
+    }, 700);
   };
+
+  const active = mesh.agents[currentAgent];
 
   const renderText = (text: string) => {
     const parts = text.split(/\*\*(.*?)\*\*/g);
     return parts.map((part, i) =>
-      i % 2 === 1 ? <strong key={i} className="text-gold">{part}</strong> : part
+      i % 2 === 1 ? <strong key={i} style={{ color: active.color }}>{part}</strong> : part,
     );
   };
 
+  const conciergeBadge = useMemo(() => {
+    if (concierge.avatarStyle === "initial") return concierge.name[0];
+    return concierge.emoji || "✦";
+  }, [concierge.avatarStyle, concierge.name, concierge.emoji]);
+
   return (
     <>
-      {/* Floating button */}
+      {/* Floating button — colour = concierge colour */}
       <button
         onClick={() => setOpen(true)}
-        aria-label="Open Global AI Assistant"
-        className={`fixed bottom-24 right-4 z-40 w-14 h-14 rounded-full bg-gradient-gold shadow-gold flex items-center justify-center transition-transform active:scale-95 hover:scale-110 ${open ? "hidden" : ""}`}
+        aria-label={`Open ${concierge.name}`}
+        className={`fixed bottom-24 right-4 z-40 w-14 h-14 rounded-full flex items-center justify-center transition-transform active:scale-95 hover:scale-110 text-white font-bold text-lg ${open ? "hidden" : ""}`}
+        style={{
+          background: `linear-gradient(135deg, ${concierge.color}, ${active.color})`,
+          boxShadow: `0 8px 24px ${concierge.color}55`,
+        }}
       >
-        <Sparkles className="w-6 h-6 text-tesfa-dark" />
+        {conciergeBadge}
         <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center text-[9px] text-white font-bold">1</span>
       </button>
 
@@ -93,25 +137,25 @@ const TesfaAI = () => {
           className="fixed left-1/2 -translate-x-1/2 w-full max-w-md z-50 animate-slide-up"
           style={{ bottom: "72px" }}
         >
-          <div
-            className="glass border border-border rounded-t-3xl shadow-2xl overflow-hidden flex flex-col"
-            style={{ maxHeight: "70dvh" }}
-          >
-            {/* Header */}
-            <div className="flex items-center gap-3 p-4 border-b border-border bg-secondary/10 flex-shrink-0">
-              <div className="w-9 h-9 rounded-xl bg-gradient-gold flex items-center justify-center">
-                <Sparkles className="w-5 h-5 text-tesfa-dark" />
+          <div className="glass border border-border rounded-t-3xl shadow-2xl overflow-hidden flex flex-col"
+            style={{ maxHeight: "70dvh" }}>
+            {/* Header — shows currently-talking agent */}
+            <div className="flex items-center gap-3 p-4 border-b border-border flex-shrink-0"
+              style={{ background: `${active.color}18`, borderLeft: `3px solid ${active.color}` }}>
+              <div className="w-9 h-9 rounded-xl grid place-items-center font-bold text-white text-sm"
+                style={{ background: active.color }}>
+                {active.avatarStyle === "initial" ? active.name[0] : active.emoji}
               </div>
-              <div className="flex-1">
-                <p className="text-sm font-bold text-foreground">{aiName}</p>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-foreground truncate">{active.name}</p>
                 <div className="flex items-center gap-1">
                   <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-                  <p className="text-[10px] text-muted-foreground">Online{toneLabel}</p>
+                  <p className="text-[10px] text-muted-foreground truncate">{active.tagline}</p>
                 </div>
               </div>
               <button
                 onClick={() => setOpen(false)}
-                aria-label="Close Global AI"
+                aria-label="Close"
                 className="p-2 glass rounded-xl min-w-[36px] min-h-[36px] flex items-center justify-center"
               >
                 <ChevronDown className="w-4 h-4 text-muted-foreground" />
@@ -119,25 +163,49 @@ const TesfaAI = () => {
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-none min-h-0">
-              {messages.map((msg, i) => (
-                <div key={i} className={`flex ${msg.from === "user" ? "justify-end" : "justify-start"}`}>
-                  <div className={`max-w-[80%] rounded-2xl px-3 py-2.5 text-xs leading-relaxed ${
-                    msg.from === "user"
-                      ? "bg-gradient-gold text-tesfa-dark rounded-br-sm"
-                      : "glass text-foreground rounded-bl-sm"
-                  }`}>
-                    {renderText(msg.text)}
+            <div className="flex-1 overflow-y-auto p-4 space-y-2.5 scrollbar-none min-h-0">
+              {messages.map((m, i) => {
+                if (m.kind === "handoff") {
+                  const to = mesh.agents[m.to];
+                  return (
+                    <div key={i} className="my-1.5">
+                      <div className="mx-auto max-w-[88%] px-3 py-2 rounded-xl text-center text-[11px] italic flex items-center justify-center gap-2"
+                        style={{ background: `${to.color}1c`, color: to.color, border: `1px dashed ${to.color}55` }}>
+                        <Zap className="w-3 h-3" />
+                        {m.text}
+                      </div>
+                    </div>
+                  );
+                }
+                if (m.kind === "user") {
+                  return (
+                    <div key={i} className="flex justify-end">
+                      <div className="max-w-[80%] rounded-2xl rounded-br-sm px-3 py-2 text-xs text-white"
+                        style={{ background: concierge.color }}>
+                        {m.text}
+                      </div>
+                    </div>
+                  );
+                }
+                const a = mesh.agents[m.agentId];
+                return (
+                  <div key={i} className="flex justify-start">
+                    <div className="max-w-[80%] rounded-2xl rounded-bl-sm px-3 py-2 text-xs leading-relaxed glass text-foreground border"
+                      style={{ borderLeft: `3px solid ${a.color}` }}>
+                      <div className="text-[9px] uppercase tracking-widest mb-0.5 font-semibold" style={{ color: a.color }}>{a.name}</div>
+                      {renderText(m.text)}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
               {typing && (
                 <div className="flex justify-start">
-                  <div className="glass rounded-2xl rounded-bl-sm px-4 py-3">
+                  <div className="glass rounded-2xl rounded-bl-sm px-4 py-3 border"
+                    style={{ borderLeft: `3px solid ${mesh.agents[typing].color}` }}>
                     <div className="flex gap-1">
-                      <div className="w-1.5 h-1.5 rounded-full bg-gold animate-bounce" style={{ animationDelay: "0ms" }} />
-                      <div className="w-1.5 h-1.5 rounded-full bg-gold animate-bounce" style={{ animationDelay: "150ms" }} />
-                      <div className="w-1.5 h-1.5 rounded-full bg-gold animate-bounce" style={{ animationDelay: "300ms" }} />
+                      <div className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: mesh.agents[typing].color, animationDelay: "0ms" }} />
+                      <div className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: mesh.agents[typing].color, animationDelay: "150ms" }} />
+                      <div className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: mesh.agents[typing].color, animationDelay: "300ms" }} />
                     </div>
                   </div>
                 </div>
@@ -148,12 +216,9 @@ const TesfaAI = () => {
             {/* Suggestions */}
             <div className="px-4 pb-2 flex-shrink-0">
               <div className="flex gap-2 overflow-x-auto scrollbar-none pb-1">
-                {suggestions.map(s => (
-                  <button
-                    key={s}
-                    onClick={() => send(s)}
-                    className="flex-shrink-0 glass text-xs px-3 py-1.5 rounded-xl text-muted-foreground hover:text-gold hover:border-tesfa-gold/30 border border-border transition-colors min-h-[36px]"
-                  >
+                {FALLBACK_SUGGESTIONS.map(s => (
+                  <button key={s} onClick={() => send(s)}
+                    className="flex-shrink-0 glass text-xs px-3 py-1.5 rounded-xl text-muted-foreground hover:text-foreground border border-border transition-colors min-h-[36px]">
                     {s}
                   </button>
                 ))}
@@ -165,23 +230,19 @@ const TesfaAI = () => {
               <input
                 ref={inputRef}
                 className="flex-1 bg-muted rounded-xl px-3 py-2.5 text-sm text-foreground focus:outline-none placeholder:text-muted-foreground min-h-[44px]"
-                placeholder="Ask me anything..."
+                placeholder={`Ask ${concierge.name} anything…`}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && send()}
               />
-              <button
-                aria-label="Voice input"
-                className="p-2.5 glass rounded-xl text-muted-foreground min-w-[44px] min-h-[44px] flex items-center justify-center"
-              >
+              <button aria-label="Voice"
+                className="p-2.5 glass rounded-xl text-muted-foreground min-w-[44px] min-h-[44px] flex items-center justify-center">
                 <Mic className="w-4 h-4" />
               </button>
-              <button
-                onClick={() => send()}
-                aria-label="Send message"
-                className="p-2.5 bg-gradient-gold rounded-xl min-w-[44px] min-h-[44px] flex items-center justify-center"
-              >
-                <Send className="w-4 h-4 text-tesfa-dark" />
+              <button onClick={() => send()} aria-label="Send"
+                className="p-2.5 rounded-xl min-w-[44px] min-h-[44px] flex items-center justify-center text-white"
+                style={{ background: concierge.color }}>
+                <Send className="w-4 h-4" />
               </button>
             </div>
           </div>
