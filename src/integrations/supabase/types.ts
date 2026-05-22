@@ -14,7 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      bank_configs: {
+        Row: {
+          config: Json
+          id: string
+          is_published: boolean
+          updated_at: string
+        }
+        Insert: {
+          config: Json
+          id: string
+          is_published?: boolean
+          updated_at?: string
+        }
+        Update: {
+          config?: Json
+          id?: string
+          is_published?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
