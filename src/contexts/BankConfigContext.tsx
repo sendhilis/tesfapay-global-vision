@@ -579,8 +579,11 @@ type Ctx = {
   markComplete: (i: number) => void;
   progress: number;
   published: boolean;
-  publish: () => void;
+  publish: () => Promise<void>;
+  saveDraft: () => Promise<void>;
   reset: () => void;
+  syncState: "idle" | "loading" | "saving" | "saved" | "error";
+  lastSyncedAt: number | null;
 };
 
 const WizardCtx = createContext<Ctx | null>(null);
