@@ -852,7 +852,7 @@ export function W36_Review() {
           <div className="text-[10px] uppercase tracking-widest text-[var(--teal)]">Completeness</div>
           <div className="mt-3 font-serif text-7xl">{score}<span className="text-2xl text-white/40">%</span></div>
           <div className="mt-4 h-1 bg-white/10 rounded-full overflow-hidden"><div className="h-full bg-[var(--teal)]" style={{ width: `${score}%` }} /></div>
-          <button id="w36-golive" onClick={() => { if (score < 100) { const first = checks.findIndex(c => !c.pass); if (first >= 0) goTo(first * 3); return; } publish(); window.location.href = "/wallet"; }} className={`mt-6 w-full py-3 rounded-lg font-medium text-[14px] transition ${score === 100 ? "bg-[var(--teal)] text-[var(--ink)] hover:opacity-90" : "bg-white/10 text-white/60 hover:text-white cursor-pointer"}`}>
+          <button id="w36-golive" onClick={async () => { if (score < 100) { const first = checks.findIndex(c => !c.pass); if (first >= 0) goTo(first * 3); return; } await publish(); window.location.href = "/wallet"; }} className={`mt-6 w-full py-3 rounded-lg font-medium text-[14px] transition ${score === 100 ? "bg-[var(--teal)] text-[var(--ink)] hover:opacity-90" : "bg-white/10 text-white/60 hover:text-white cursor-pointer"}`}>
             {published ? "✓ Published & Live · Open Wallet" : score === 100 ? "Publish BankConfig & Go Live" : "Jump to first incomplete"}
           </button>
         </div>
