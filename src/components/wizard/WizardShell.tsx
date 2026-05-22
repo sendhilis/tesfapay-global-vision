@@ -7,7 +7,7 @@ import { STEP_REGISTRY } from "./steps";
 import { ChevronLeft, ChevronRight, Save, Smartphone } from "lucide-react";
 
 export function WizardShell() {
-  const { stepIdx, next, prev, config, completed } = useWizard();
+  const { stepIdx, next, prev, config, completed, syncState, lastSyncedAt } = useWizard();
   const step = STEPS[stepIdx];
   const Component = STEP_REGISTRY[step.id];
   const [previewOpen, setPreviewOpen] = useState(false);
