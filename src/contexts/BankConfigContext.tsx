@@ -1,8 +1,10 @@
-import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { STEPS, TOTAL_STEPS } from "@/lib/wizard-config";
 import { ABX_THEMES, shiftHueHex, type AbxTheme, type ThemeId } from "@/lib/abx-themes";
+import { supabase } from "@/integrations/supabase/client";
 
 const STORAGE_KEY = "abx.wizard.v1";
+const REMOTE_CONFIG_ID = "global";
 
 export type Persona = {
   id: string;
@@ -579,8 +581,11 @@ type Ctx = {
   markComplete: (i: number) => void;
   progress: number;
   published: boolean;
-  publish: () => void;
+  publish: () => Promise<void>;
+  saveDraft: () => Promise<void>;
   reset: () => void;
+  syncState: "idle" | "loading" | "saving" | "saved" | "error";
+  lastSyncedAt: number | null;
 };
 
 const WizardCtx = createContext<Ctx | null>(null);
@@ -590,27 +595,64 @@ export function WizardProvider({ children }: { children: ReactNode }) {
   const [stepIdx, setStep] = useState(0);
   const [completed, setCompleted] = useState<Set<number>>(new Set());
   const [published, setPublished] = useState(false);
+  const [syncState, setSyncState] = useState<"idle" | "loading" | "saving" | "saved" | "error">("loading");
+  const [lastSyncedAt, setLastSyncedAt] = useState<number | null>(null);
   const hydrated = useRef(false);
+  const skipRemoteSave = useRef(true); // skip initial hydration write
 
-  // Hydrate
+  // Hydrate: DB first, fall back to localStorage
   useEffect(() => {
-    try {
-      const raw = typeof window !== "undefined" ? window.localStorage.getItem(STORAGE_KEY) : null;
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (parsed.config) setConfig({ ...defaultBankConfig, ...parsed.config });
-        if (typeof parsed.stepIdx === "number") setStep(Math.max(0, Math.min(TOTAL_STEPS - 1, parsed.stepIdx)));
-        if (Array.isArray(parsed.completed)) setCompleted(new Set(parsed.completed));
-        if (parsed.published) setPublished(true);
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data, error } = await supabase
+          .from("bank_configs")
+          .select("config, is_published, updated_at")
+          .eq("id", REMOTE_CONFIG_ID)
+          .maybeSingle();
+        if (cancelled) return;
+        if (!error && data?.config) {
+          setConfig({ ...defaultBankConfig, ...(data.config as Partial<BankConfig>) });
+          setPublished(!!data.is_published);
+          setLastSyncedAt(new Date(data.updated_at).getTime());
+        } else {
+          // Fallback to localStorage if no remote row yet
+          const raw = typeof window !== "undefined" ? window.localStorage.getItem(STORAGE_KEY) : null;
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (parsed.config) setConfig({ ...defaultBankConfig, ...parsed.config });
+            if (typeof parsed.stepIdx === "number") setStep(Math.max(0, Math.min(TOTAL_STEPS - 1, parsed.stepIdx)));
+            if (Array.isArray(parsed.completed)) setCompleted(new Set(parsed.completed));
+            if (parsed.published) setPublished(true);
+          }
+        }
+        // Restore wizard step / completion locally regardless (these are UI-only)
+        try {
+          const raw = typeof window !== "undefined" ? window.localStorage.getItem(STORAGE_KEY) : null;
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (typeof parsed.stepIdx === "number") setStep(Math.max(0, Math.min(TOTAL_STEPS - 1, parsed.stepIdx)));
+            if (Array.isArray(parsed.completed)) setCompleted(new Set(parsed.completed));
+          }
+        } catch { /* ignore */ }
+      } catch (e) {
+        console.warn("[BankConfig] hydrate failed:", e);
+      } finally {
+        if (!cancelled) {
+          hydrated.current = true;
+          setSyncState("idle");
+          // allow remote save after a tick so the hydration-triggered effect doesn't write back
+          setTimeout(() => { skipRemoteSave.current = false; }, 50);
+        }
       }
-    } catch { /* ignore */ }
-    hydrated.current = true;
+    })();
+    return () => { cancelled = true; };
   }, []);
 
   // Apply CSS tokens whenever config changes
   useEffect(() => { applyBrandTokens(config); }, [config]);
 
-  // Persist
+  // Persist locally (instant, offline-safe)
   useEffect(() => {
     if (!hydrated.current) return;
     try {
@@ -621,21 +663,109 @@ export function WizardProvider({ children }: { children: ReactNode }) {
     } catch { /* ignore */ }
   }, [config, stepIdx, completed, published]);
 
-  // Cross-tab sync
+  // Debounced auto-save of config + published flag to DB
+  useEffect(() => {
+    if (!hydrated.current || skipRemoteSave.current) return;
+    setSyncState("saving");
+    const handle = setTimeout(async () => {
+      try {
+        const { error } = await supabase
+          .from("bank_configs")
+          .upsert({
+            id: REMOTE_CONFIG_ID,
+            config: JSON.parse(JSON.stringify(config)),
+            is_published: published,
+            updated_at: new Date().toISOString(),
+          });
+        if (error) throw error;
+        setLastSyncedAt(Date.now());
+        setSyncState("saved");
+      } catch (e) {
+        console.warn("[BankConfig] remote save failed:", e);
+        setSyncState("error");
+      }
+    }, 800);
+    return () => clearTimeout(handle);
+  }, [config, published]);
+
+  // Realtime: pick up changes made from another browser/tab
+  useEffect(() => {
+    const channel = supabase
+      .channel("bank_configs:global")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "bank_configs", filter: `id=eq.${REMOTE_CONFIG_ID}` },
+        (payload) => {
+          const row = (payload.new ?? payload.old) as { config?: Partial<BankConfig>; is_published?: boolean; updated_at?: string } | null;
+          if (!row?.config) return;
+          // Avoid clobbering local edits already in-flight: only apply if newer
+          const remoteTs = row.updated_at ? new Date(row.updated_at).getTime() : Date.now();
+          if (lastSyncedAt && remoteTs <= lastSyncedAt) return;
+          skipRemoteSave.current = true;
+          setConfig({ ...defaultBankConfig, ...row.config });
+          if (typeof row.is_published === "boolean") setPublished(row.is_published);
+          setLastSyncedAt(remoteTs);
+          setTimeout(() => { skipRemoteSave.current = false; }, 50);
+        },
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [lastSyncedAt]);
+
+  // Cross-tab localStorage sync (UI step state)
   useEffect(() => {
     const onStorage = (e: StorageEvent) => {
       if (e.key !== STORAGE_KEY || !e.newValue) return;
       try {
         const parsed = JSON.parse(e.newValue);
-        if (parsed.config) setConfig({ ...defaultBankConfig, ...parsed.config });
         if (typeof parsed.stepIdx === "number") setStep(parsed.stepIdx);
         if (Array.isArray(parsed.completed)) setCompleted(new Set(parsed.completed));
-        if (typeof parsed.published === "boolean") setPublished(parsed.published);
       } catch { /* ignore */ }
     };
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
   }, []);
+
+  const saveDraft = useCallback(async () => {
+    setSyncState("saving");
+    try {
+      const { error } = await supabase
+        .from("bank_configs")
+        .upsert({
+          id: REMOTE_CONFIG_ID,
+          config: JSON.parse(JSON.stringify(config)),
+          is_published: published,
+          updated_at: new Date().toISOString(),
+        });
+      if (error) throw error;
+      setLastSyncedAt(Date.now());
+      setSyncState("saved");
+    } catch (e) {
+      console.warn("[BankConfig] manual save failed:", e);
+      setSyncState("error");
+    }
+  }, [config, published]);
+
+  const publish = useCallback(async () => {
+    setPublished(true);
+    setSyncState("saving");
+    try {
+      const { error } = await supabase
+        .from("bank_configs")
+        .upsert({
+          id: REMOTE_CONFIG_ID,
+          config: JSON.parse(JSON.stringify(config)),
+          is_published: true,
+          updated_at: new Date().toISOString(),
+        });
+      if (error) throw error;
+      setLastSyncedAt(Date.now());
+      setSyncState("saved");
+    } catch (e) {
+      console.warn("[BankConfig] publish failed:", e);
+      setSyncState("error");
+    }
+  }, [config]);
 
   const value: Ctx = useMemo(() => ({
     config,
@@ -657,11 +787,14 @@ export function WizardProvider({ children }: { children: ReactNode }) {
     markComplete: (i) => setCompleted((c) => new Set(c).add(i)),
     progress: Math.round(((stepIdx + 1) / TOTAL_STEPS) * 100),
     published,
-    publish: () => setPublished(true),
+    publish,
+    saveDraft,
     reset: () => {
       setConfig(defaultBankConfig); setStep(0); setCompleted(new Set()); setPublished(false);
     },
-  }), [config, stepIdx, completed, published]);
+    syncState,
+    lastSyncedAt,
+  }), [config, stepIdx, completed, published, syncState, lastSyncedAt, publish, saveDraft]);
 
   return <WizardCtx.Provider value={value}>{children}</WizardCtx.Provider>;
 }
