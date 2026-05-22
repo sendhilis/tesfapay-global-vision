@@ -437,6 +437,16 @@ function Simulation({
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, typing]);
 
+  // Reset greeting when persona changes so the agent addresses the new user by name
+  useEffect(() => {
+    setMessages([{ kind: "agent", agentId: "concierge",
+      text: agents.concierge.sampleReplies[0].replace(/{firstName}/g, p.firstName) }]);
+    setCurrentAgent("concierge");
+    setTyping(null);
+    setTourResults([]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [persona]);
+
   const reset = () => {
     setMessages([{ kind: "agent", agentId: "concierge",
       text: agents.concierge.sampleReplies[0].replace(/{firstName}/g, p.firstName) }]);
