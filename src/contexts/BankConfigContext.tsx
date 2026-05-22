@@ -251,6 +251,7 @@ export const defaultBankConfig: BankConfig = {
       "Branch Assist":{ enabled: true,  tone: "helpful", systemPrompt: "Brief staff. Prefill forms. Suggest next-best action." },
       "Insights":     { enabled: true,  tone: "narrative",systemPrompt: "Weekly Money Story. Personal. Never preachy." },
     },
+    mesh: defaultMeshConfig(),
   },
   products: [
     { id: "pr1", type: "Savings Account", name: "Selam Save",   tagline: "Goals that grow with you.",       description: "Goal-based savings with weekly nudges." },
