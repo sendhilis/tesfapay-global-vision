@@ -1128,6 +1128,8 @@ export function T_Review() {
   return <W36_Review />;
 }
 
+import { AIMeshStudio } from "./AIMeshStudio";
+
 export const STEP_REGISTRY: Record<string, () => ReactNode> = {
   W01: W01_Welcome,
   W02: T_Identity,
@@ -1135,6 +1137,7 @@ export const STEP_REGISTRY: Record<string, () => ReactNode> = {
   W04: T_AccentTuner,
   W05: W26_Products,
   W06: W23_GlobalAI,
+  WAM: AIMeshStudio,
   W07: W19_KYC,
   W08: W34_Calendar,
   W09: T_Review,
