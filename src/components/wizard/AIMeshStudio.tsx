@@ -681,6 +681,7 @@ export function AIMeshStudio() {
   const [persona, setPersona] = useState<string>(mesh.defaultPersona);
   const [activeHandoff, setActiveHandoff] = useState<{ from: MeshAgentId; to: MeshAgentId; at: number } | null>(null);
   const [activePane, setActivePane] = useState<"canvas" | "config" | "sim">("canvas");
+  const [onboardingOpen, setOnboardingOpen] = useState(false);
 
   const patchAgent = (id: MeshAgentId, patch: Partial<MeshAgent>) => {
     setConfig({
