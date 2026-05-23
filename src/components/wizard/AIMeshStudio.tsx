@@ -22,6 +22,13 @@ import {
   CheckCircle2, Zap, User as UserIcon, Rocket
 } from "lucide-react";
 import OnboardingDemo from "./onboarding/OnboardingDemo";
+import EqubDemo from "./equb/EqubDemo";
+
+const EQUB_KEYWORDS = ["equb", "ekub", "iqub", "እቁብ", "ቁጠባ ክበብ", "savings circle", "savings group", "rotating savings"];
+function isEqubIntent(text: string): boolean {
+  const t = text.toLowerCase();
+  return EQUB_KEYWORDS.some((k) => t.includes(k));
+}
 
 /* ------------------------------------------------------------------ */
 /*  Routing simulation (keyword-based for prototype fidelity)         */
