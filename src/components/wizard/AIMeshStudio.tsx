@@ -19,8 +19,9 @@ import { toast } from "sonner";
 import { Diamond } from "./AbxLogo";
 import {
   Bot, Send, Sparkles, Lock, Play, RotateCcw, MessageSquare,
-  CheckCircle2, Zap, User as UserIcon
+  CheckCircle2, Zap, User as UserIcon, Rocket
 } from "lucide-react";
+import OnboardingDemo from "./onboarding/OnboardingDemo";
 
 /* ------------------------------------------------------------------ */
 /*  Routing simulation (keyword-based for prototype fidelity)         */
