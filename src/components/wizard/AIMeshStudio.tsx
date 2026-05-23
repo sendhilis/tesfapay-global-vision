@@ -611,13 +611,22 @@ function Simulation({
             );
           }
           const a = agents[m.agentId];
+          const isOnboarding = m.agentId === "onboarding";
           return (
             <div key={i} className="flex items-end gap-2">
               <AgentChip a={a} size={22} />
-              <div className="max-w-[78%] px-3 py-2 rounded-2xl rounded-bl-sm text-[12.5px] bg-white border"
+              <div className="max-w-[85%] px-3 py-2 rounded-2xl rounded-bl-sm text-[12.5px] bg-white border"
                 style={{ borderLeft: `3px solid ${a.color}` }}>
                 <div className="text-[9px] uppercase tracking-widest mb-0.5" style={{ color: a.color }}>{a.name}</div>
                 {m.text}
+                {isOnboarding && (
+                  <button
+                    onClick={onLaunchOnboarding}
+                    className="mt-2 w-full text-[11px] uppercase tracking-widest px-3 py-2 rounded-xl bg-gradient-to-r from-[#00C9B1] to-[#1DB97D] text-[#0C1318] font-bold inline-flex items-center justify-center gap-1.5 shadow-md hover:shadow-lg transition-shadow"
+                  >
+                    <Rocket className="w-3.5 h-3.5" /> Launch 90-second guided onboarding
+                  </button>
+                )}
               </div>
             </div>
           );
