@@ -563,13 +563,22 @@ function Simulation({
           <div className="text-[12px] font-semibold leading-tight truncate">{active.name}</div>
           <div className="text-[9px] uppercase tracking-widest text-[var(--ink-soft)]">talking now</div>
         </div>
+        {currentAgent === "onboarding" && (
+          <button
+            onClick={onLaunchOnboarding}
+            className="ml-auto text-[10px] uppercase tracking-widest px-2.5 py-1 rounded-full bg-gradient-to-r from-[#00C9B1] to-[#1DB97D] text-[#0C1318] font-bold inline-flex items-center gap-1 shadow-lg animate-pulse"
+            title="Launch the 90-second voice-guided Fayda onboarding"
+          >
+            <Rocket className="w-3 h-3" /> Launch 90s Demo
+          </button>
+        )}
         <button
           onClick={runTour}
           disabled={tourRunning}
-          className="ml-auto text-[10px] uppercase tracking-widest px-2.5 py-1 rounded-full bg-[var(--ink)] text-[var(--cream)] inline-flex items-center gap-1 disabled:opacity-50"
+          className={`${currentAgent === "onboarding" ? "" : "ml-auto"} text-[10px] uppercase tracking-widest px-2.5 py-1 rounded-full bg-[var(--ink)] text-[var(--cream)] inline-flex items-center gap-1 disabled:opacity-50`}
           title="Pre-scripted run-through that hits every handoff path"
         >
-          <Play className="w-2.5 h-2.5" /> {tourRunning ? "Running…" : "Test all handoffs"}
+          <Play className="w-2.5 h-2.5" /> {tourRunning ? "Running…" : "Test handoffs"}
         </button>
         <button onClick={reset} title="Reset chat"
           className="text-[10px] px-2 py-1 rounded-full border border-[var(--line)] hover:border-[var(--ink)]/40">
