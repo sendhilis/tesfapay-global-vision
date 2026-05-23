@@ -95,12 +95,25 @@ function useVoice(enabled: boolean) {
     try {
       let url = cacheRef.current.get(key);
       if (!url) {
-        const { data, error } = await supabase.functions.invoke("elevenlabs-tts", {
-          body: { text, lang },
-        });
-        if (error) throw error;
-        // data is a Blob when content-type is audio/mpeg
-        const blob = data instanceof Blob ? data : new Blob([data as ArrayBuffer], { type: "audio/mpeg" });
+        // Direct fetch — supabase.functions.invoke mishandles binary audio responses.
+        const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+        const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+        const { data: sess } = await supabase.auth.getSession();
+        const token = sess.session?.access_token || anonKey;
+        const res = await fetch(
+          `https://${projectId}.supabase.co/functions/v1/elevenlabs-tts`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${token}`,
+              "apikey": anonKey,
+            },
+            body: JSON.stringify({ text, lang }),
+          },
+        );
+        if (!res.ok) throw new Error(`TTS ${res.status}: ${await res.text()}`);
+        const blob = await res.blob();
         url = URL.createObjectURL(blob);
         cacheRef.current.set(key, url);
       }
