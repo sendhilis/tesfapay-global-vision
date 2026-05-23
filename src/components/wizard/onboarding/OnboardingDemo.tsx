@@ -116,6 +116,7 @@ function useVoice(enabled: boolean) {
   const pendingRef = useRef<{ script: Script; mode: LangMode } | null>(null);
   const playingRef = useRef<boolean>(false);
   const lastKeyRef = useRef<string>("");
+  const stopTokenRef = useRef(0);
   const enabledRef = useRef(enabled);
 
   useEffect(() => { enabledRef.current = enabled; }, [enabled]);
@@ -135,11 +136,13 @@ function useVoice(enabled: boolean) {
   /** Play a single line, awaiting full completion (or load failure). */
   const playOne = useCallback(async (text: string, lang: "en" | "am" | "both") => {
     if (!text) return;
+    const token = stopTokenRef.current;
     const key = `${lang}:${text}`;
     let url = cacheRef.current.get(key);
     if (!url) {
       try {
         url = await fetchTtsBlobUrl(text, lang);
+        if (token !== stopTokenRef.current) return;
         if (!url) return;
         cacheRef.current.set(key, url);
       } catch (e) { console.warn("TTS fetch failed", e); return; }
@@ -155,10 +158,12 @@ function useVoice(enabled: boolean) {
         done = true;
         a.removeEventListener("ended", finish);
         a.removeEventListener("error", finish);
+        a.removeEventListener("pause", finish);
         resolve();
       };
       a.addEventListener("ended", finish, { once: true });
       a.addEventListener("error", finish, { once: true });
+      a.addEventListener("pause", finish, { once: true });
       a.play().catch(() => finish());
     });
   }, []);
@@ -190,7 +195,9 @@ function useVoice(enabled: boolean) {
   }, [pump]);
 
   const stop = useCallback(() => {
+    stopTokenRef.current += 1;
     pendingRef.current = null;
+    playingRef.current = false;
     lastKeyRef.current = "";
     try { audioRef.current?.pause(); } catch {}
   }, []);
