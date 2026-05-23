@@ -422,7 +422,7 @@ function pickReply(a: MeshAgent, firstName: string): string {
 }
 
 function Simulation({
-  agents, persona, setPersona, onSelectAgent, onHandoffFire, bankName, onLaunchOnboarding,
+  agents, persona, setPersona, onSelectAgent, onHandoffFire, bankName, onLaunchOnboarding, onLaunchEqub,
 }: {
   agents: Record<MeshAgentId, MeshAgent>;
   persona: string;
@@ -431,6 +431,7 @@ function Simulation({
   onHandoffFire: (from: MeshAgentId, to: MeshAgentId) => void;
   bankName: string;
   onLaunchOnboarding: () => void;
+  onLaunchEqub: () => void;
 }) {
   const p = PERSONAS[persona] ?? PERSONAS.Selam;
   const [messages, setMessages] = useState<ChatMsg[]>([
