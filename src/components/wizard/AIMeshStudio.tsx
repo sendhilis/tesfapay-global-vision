@@ -19,8 +19,9 @@ import { toast } from "sonner";
 import { Diamond } from "./AbxLogo";
 import {
   Bot, Send, Sparkles, Lock, Play, RotateCcw, MessageSquare,
-  CheckCircle2, Zap, User as UserIcon
+  CheckCircle2, Zap, User as UserIcon, Rocket
 } from "lucide-react";
+import OnboardingDemo from "./onboarding/OnboardingDemo";
 
 /* ------------------------------------------------------------------ */
 /*  Routing simulation (keyword-based for prototype fidelity)         */
@@ -414,7 +415,7 @@ function pickReply(a: MeshAgent, firstName: string): string {
 }
 
 function Simulation({
-  agents, persona, setPersona, onSelectAgent, onHandoffFire, bankName,
+  agents, persona, setPersona, onSelectAgent, onHandoffFire, bankName, onLaunchOnboarding,
 }: {
   agents: Record<MeshAgentId, MeshAgent>;
   persona: string;
@@ -422,6 +423,7 @@ function Simulation({
   onSelectAgent: (id: MeshAgentId) => void;
   onHandoffFire: (from: MeshAgentId, to: MeshAgentId) => void;
   bankName: string;
+  onLaunchOnboarding: () => void;
 }) {
   const p = PERSONAS[persona] ?? PERSONAS.Selam;
   const [messages, setMessages] = useState<ChatMsg[]>([
@@ -561,13 +563,22 @@ function Simulation({
           <div className="text-[12px] font-semibold leading-tight truncate">{active.name}</div>
           <div className="text-[9px] uppercase tracking-widest text-[var(--ink-soft)]">talking now</div>
         </div>
+        {currentAgent === "onboarding" && (
+          <button
+            onClick={onLaunchOnboarding}
+            className="ml-auto text-[10px] uppercase tracking-widest px-2.5 py-1 rounded-full bg-gradient-to-r from-[#00C9B1] to-[#1DB97D] text-[#0C1318] font-bold inline-flex items-center gap-1 shadow-lg animate-pulse"
+            title="Launch the 90-second voice-guided Fayda onboarding"
+          >
+            <Rocket className="w-3 h-3" /> Launch 90s Demo
+          </button>
+        )}
         <button
           onClick={runTour}
           disabled={tourRunning}
-          className="ml-auto text-[10px] uppercase tracking-widest px-2.5 py-1 rounded-full bg-[var(--ink)] text-[var(--cream)] inline-flex items-center gap-1 disabled:opacity-50"
+          className={`${currentAgent === "onboarding" ? "" : "ml-auto"} text-[10px] uppercase tracking-widest px-2.5 py-1 rounded-full bg-[var(--ink)] text-[var(--cream)] inline-flex items-center gap-1 disabled:opacity-50`}
           title="Pre-scripted run-through that hits every handoff path"
         >
-          <Play className="w-2.5 h-2.5" /> {tourRunning ? "Running…" : "Test all handoffs"}
+          <Play className="w-2.5 h-2.5" /> {tourRunning ? "Running…" : "Test handoffs"}
         </button>
         <button onClick={reset} title="Reset chat"
           className="text-[10px] px-2 py-1 rounded-full border border-[var(--line)] hover:border-[var(--ink)]/40">
@@ -670,6 +681,7 @@ export function AIMeshStudio() {
   const [persona, setPersona] = useState<string>(mesh.defaultPersona);
   const [activeHandoff, setActiveHandoff] = useState<{ from: MeshAgentId; to: MeshAgentId; at: number } | null>(null);
   const [activePane, setActivePane] = useState<"canvas" | "config" | "sim">("canvas");
+  const [onboardingOpen, setOnboardingOpen] = useState(false);
 
   const patchAgent = (id: MeshAgentId, patch: Partial<MeshAgent>) => {
     setConfig({
@@ -762,9 +774,12 @@ export function AIMeshStudio() {
             setPersona={(p) => setPersona(p)}
             onSelectAgent={setSelected}
             onHandoffFire={(from, to) => fireHandoff(from, to)}
+            onLaunchOnboarding={() => setOnboardingOpen(true)}
           />
         )}
       </div>
+
+      {onboardingOpen && <OnboardingDemo onClose={() => setOnboardingOpen(false)} />}
 
       {/* Footnote */}
       <div className="mt-4 p-3 rounded-xl bg-white border border-[var(--line)] flex items-start gap-3">
