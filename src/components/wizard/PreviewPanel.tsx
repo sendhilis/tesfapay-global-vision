@@ -89,21 +89,21 @@ export function PreviewPanel({ open, onClose }: { open: boolean; onClose: () => 
 }
 
 function navActiveFor(mod: string) {
-  if (mod === "M6") return "Cards";
-  if (mod === "M5") return "AI";
-  if (mod === "M3" || mod === "M4" || mod === "M8" || mod === "M9") return "Me";
+  if (mod === "M3") return "Cards";                // Products
+  if (mod === "MESH" || mod === "M4") return "AI"; // AI Mesh / AI Concierge
+  if (mod === "M5" || mod === "M6") return "Me";   // Onboarding / Compliance
   return "Home";
 }
 
 function screenLabelFor(mod: string) {
   switch (mod) {
-    case "M3": return "Persona";
-    case "M4": return "Onboarding";
-    case "M5": return "AI Mesh";
-    case "M6": return "Products";
-    case "M7": return "Branch";
-    case "M8": return "Process AI";
-    case "M9": return "Ethiopia";
+    case "M1": return "Identity";
+    case "M2": return "Theme";
+    case "M3": return "Products";
+    case "M4": return "AI Concierge";
+    case "MESH": return "AI Mesh";
+    case "M5": return "Onboarding";
+    case "M6": return "Compliance";
     case "review": return "Go Live";
     default: return "Home";
   }
@@ -114,17 +114,17 @@ type Screen = (p: ScreenProps) => ReactNode;
 
 function pickScreen(mod: string): Screen {
   switch (mod) {
-    case "M3": return PersonaScreen;
-    case "M4": return OnboardingScreen;
-    case "M5": return AiMeshScreen;
-    case "M6": return ProductsScreen;
-    case "M7": return BranchScreen;
-    case "M8": return ProcessScreen;
-    case "M9": return EthiopiaScreen;
+    case "M3": return ProductsScreen;
+    case "M4": return AiConciergeScreen;
+    case "MESH": return AiMeshScreen;
+    case "M5": return OnboardingScreen;
+    case "M6": return EthiopiaScreen;
     case "review": return GoLiveScreen;
     default: return HomeScreen;
   }
 }
+
+const AiConciergeScreen: Screen = AiMeshScreen;
 
 const HomeScreen: Screen = ({ config, radius }) => {
   const { brand, bank, ux } = config;
