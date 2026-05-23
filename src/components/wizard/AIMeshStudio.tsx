@@ -580,6 +580,15 @@ function Simulation({
             <Rocket className="w-3 h-3" /> Launch 90s Demo
           </button>
         )}
+        {currentAgent === "savingsCoach" && (
+          <button
+            onClick={onLaunchEqub}
+            className="ml-auto text-[10px] uppercase tracking-widest px-2.5 py-1 rounded-full bg-gradient-to-r from-[#F4D06F] to-[#00C9B1] text-[#0C1318] font-bold inline-flex items-center gap-1 shadow-lg animate-pulse"
+            title="Launch Nuru's live eQUB savings-circle demo (bilingual)"
+          >
+            <Rocket className="w-3 h-3" /> Launch eQUB Live
+          </button>
+        )}
         <button
           onClick={runTour}
           disabled={tourRunning}
