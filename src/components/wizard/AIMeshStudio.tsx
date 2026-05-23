@@ -774,9 +774,12 @@ export function AIMeshStudio() {
             setPersona={(p) => setPersona(p)}
             onSelectAgent={setSelected}
             onHandoffFire={(from, to) => fireHandoff(from, to)}
+            onLaunchOnboarding={() => setOnboardingOpen(true)}
           />
         )}
       </div>
+
+      {onboardingOpen && <OnboardingDemo onClose={() => setOnboardingOpen(false)} />}
 
       {/* Footnote */}
       <div className="mt-4 p-3 rounded-xl bg-white border border-[var(--line)] flex items-start gap-3">
