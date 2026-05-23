@@ -124,7 +124,7 @@ function pickScreen(mod: string): Screen {
   }
 }
 
-const AiConciergeScreen: Screen = AiMeshScreen;
+const AiConciergeScreen: Screen = (p) => AiMeshScreen(p);
 
 const HomeScreen: Screen = ({ config, radius }) => {
   const { brand, bank, ux } = config;
