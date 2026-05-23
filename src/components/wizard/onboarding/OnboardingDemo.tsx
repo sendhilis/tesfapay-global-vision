@@ -586,7 +586,7 @@ export default function OnboardingDemo({ onClose }: OnboardingDemoProps) {
   const stepMs = step.seconds * 1000;
   const totalDemoMs = STEPS.reduce((a, s) => a + s.seconds * 1000, 0);
 
-  const { speakBoth, stop: stopVoice } = useVoice(voiceOn);
+  const { speakBoth, stop: stopVoice, prefetch } = useVoice(voiceOn);
   const mic = useMicCapture();
 
   /* Auto-advance timer */
