@@ -718,6 +718,7 @@ export function AIMeshStudio() {
   const [activeHandoff, setActiveHandoff] = useState<{ from: MeshAgentId; to: MeshAgentId; at: number } | null>(null);
   const [activePane, setActivePane] = useState<"canvas" | "config" | "sim">("canvas");
   const [onboardingOpen, setOnboardingOpen] = useState(false);
+  const [equbOpen, setEqubOpen] = useState(false);
 
   const patchAgent = (id: MeshAgentId, patch: Partial<MeshAgent>) => {
     setConfig({
@@ -811,11 +812,13 @@ export function AIMeshStudio() {
             onSelectAgent={setSelected}
             onHandoffFire={(from, to) => fireHandoff(from, to)}
             onLaunchOnboarding={() => setOnboardingOpen(true)}
+            onLaunchEqub={() => setEqubOpen(true)}
           />
         )}
       </div>
 
       {onboardingOpen && <OnboardingDemo onClose={() => setOnboardingOpen(false)} />}
+      {equbOpen && <EqubDemo onClose={() => setEqubOpen(false)} />}
 
       {/* Footnote */}
       <div className="mt-4 p-3 rounded-xl bg-white border border-[var(--line)] flex items-start gap-3">
