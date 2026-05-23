@@ -589,6 +589,17 @@ export default function OnboardingDemo({ onClose }: OnboardingDemoProps) {
   const { speakBoth, stop: stopVoice, prefetch } = useVoice(voiceOn);
   const mic = useMicCapture();
 
+  /* Prefetch every TTS clip up-front so playback is instant + perfectly synced. */
+  useEffect(() => {
+    if (!voiceOn) return;
+    const items: Array<{ text: string; lang: "en" | "am" }> = [];
+    Object.values(SCRIPTS).forEach((s) => {
+      items.push({ text: s.am, lang: "am" });
+      items.push({ text: s.en, lang: "en" });
+    });
+    void prefetch(items);
+  }, [voiceOn, prefetch]);
+
   /* Auto-advance timer */
   useEffect(() => {
     if (!autoPlay) return;
