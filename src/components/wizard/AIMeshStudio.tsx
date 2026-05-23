@@ -22,6 +22,13 @@ import {
   CheckCircle2, Zap, User as UserIcon, Rocket
 } from "lucide-react";
 import OnboardingDemo from "./onboarding/OnboardingDemo";
+import EqubDemo from "./equb/EqubDemo";
+
+const EQUB_KEYWORDS = ["equb", "ekub", "iqub", "እቁብ", "ቁጠባ ክበብ", "savings circle", "savings group", "rotating savings"];
+function isEqubIntent(text: string): boolean {
+  const t = text.toLowerCase();
+  return EQUB_KEYWORDS.some((k) => t.includes(k));
+}
 
 /* ------------------------------------------------------------------ */
 /*  Routing simulation (keyword-based for prototype fidelity)         */
@@ -415,7 +422,7 @@ function pickReply(a: MeshAgent, firstName: string): string {
 }
 
 function Simulation({
-  agents, persona, setPersona, onSelectAgent, onHandoffFire, bankName, onLaunchOnboarding,
+  agents, persona, setPersona, onSelectAgent, onHandoffFire, bankName, onLaunchOnboarding, onLaunchEqub,
 }: {
   agents: Record<MeshAgentId, MeshAgent>;
   persona: string;
@@ -424,6 +431,7 @@ function Simulation({
   onHandoffFire: (from: MeshAgentId, to: MeshAgentId) => void;
   bankName: string;
   onLaunchOnboarding: () => void;
+  onLaunchEqub: () => void;
 }) {
   const p = PERSONAS[persona] ?? PERSONAS.Selam;
   const [messages, setMessages] = useState<ChatMsg[]>([
@@ -572,6 +580,15 @@ function Simulation({
             <Rocket className="w-3 h-3" /> Launch 90s Demo
           </button>
         )}
+        {currentAgent === "savingsCoach" && (
+          <button
+            onClick={onLaunchEqub}
+            className="ml-auto text-[10px] uppercase tracking-widest px-2.5 py-1 rounded-full bg-gradient-to-r from-[#F4D06F] to-[#00C9B1] text-[#0C1318] font-bold inline-flex items-center gap-1 shadow-lg animate-pulse"
+            title="Launch Nuru's live eQUB savings-circle demo (bilingual)"
+          >
+            <Rocket className="w-3 h-3" /> Launch eQUB Live
+          </button>
+        )}
         <button
           onClick={runTour}
           disabled={tourRunning}
@@ -612,6 +629,8 @@ function Simulation({
           }
           const a = agents[m.agentId];
           const isOnboarding = m.agentId === "onboarding";
+          const prevUser = messages.slice(0, i).reverse().find((x) => x.kind === "user");
+          const isEqubBubble = m.agentId === "savingsCoach" && prevUser?.kind === "user" && isEqubIntent(prevUser.text);
           return (
             <div key={i} className="flex items-end gap-2">
               <AgentChip a={a} size={22} />
@@ -625,6 +644,14 @@ function Simulation({
                     className="mt-2 w-full text-[11px] uppercase tracking-widest px-3 py-2 rounded-xl bg-gradient-to-r from-[#00C9B1] to-[#1DB97D] text-[#0C1318] font-bold inline-flex items-center justify-center gap-1.5 shadow-md hover:shadow-lg transition-shadow"
                   >
                     <Rocket className="w-3.5 h-3.5" /> Launch 90-second guided onboarding
+                  </button>
+                )}
+                {isEqubBubble && (
+                  <button
+                    onClick={onLaunchEqub}
+                    className="mt-2 w-full text-[11px] uppercase tracking-widest px-3 py-2 rounded-xl bg-gradient-to-r from-[#F4D06F] to-[#00C9B1] text-[#0C1318] font-bold inline-flex items-center justify-center gap-1.5 shadow-md hover:shadow-lg transition-shadow"
+                  >
+                    <Rocket className="w-3.5 h-3.5" /> Launch eQUB Live · የጓደኞች ቤት
                   </button>
                 )}
               </div>
@@ -691,6 +718,7 @@ export function AIMeshStudio() {
   const [activeHandoff, setActiveHandoff] = useState<{ from: MeshAgentId; to: MeshAgentId; at: number } | null>(null);
   const [activePane, setActivePane] = useState<"canvas" | "config" | "sim">("canvas");
   const [onboardingOpen, setOnboardingOpen] = useState(false);
+  const [equbOpen, setEqubOpen] = useState(false);
 
   const patchAgent = (id: MeshAgentId, patch: Partial<MeshAgent>) => {
     setConfig({
@@ -784,11 +812,13 @@ export function AIMeshStudio() {
             onSelectAgent={setSelected}
             onHandoffFire={(from, to) => fireHandoff(from, to)}
             onLaunchOnboarding={() => setOnboardingOpen(true)}
+            onLaunchEqub={() => setEqubOpen(true)}
           />
         )}
       </div>
 
       {onboardingOpen && <OnboardingDemo onClose={() => setOnboardingOpen(false)} />}
+      {equbOpen && <EqubDemo onClose={() => setEqubOpen(false)} />}
 
       {/* Footnote */}
       <div className="mt-4 p-3 rounded-xl bg-white border border-[var(--line)] flex items-start gap-3">
