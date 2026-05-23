@@ -629,6 +629,8 @@ function Simulation({
           }
           const a = agents[m.agentId];
           const isOnboarding = m.agentId === "onboarding";
+          const prevUser = messages.slice(0, i).reverse().find((x) => x.kind === "user");
+          const isEqubBubble = m.agentId === "savingsCoach" && prevUser?.kind === "user" && isEqubIntent(prevUser.text);
           return (
             <div key={i} className="flex items-end gap-2">
               <AgentChip a={a} size={22} />
@@ -642,6 +644,14 @@ function Simulation({
                     className="mt-2 w-full text-[11px] uppercase tracking-widest px-3 py-2 rounded-xl bg-gradient-to-r from-[#00C9B1] to-[#1DB97D] text-[#0C1318] font-bold inline-flex items-center justify-center gap-1.5 shadow-md hover:shadow-lg transition-shadow"
                   >
                     <Rocket className="w-3.5 h-3.5" /> Launch 90-second guided onboarding
+                  </button>
+                )}
+                {isEqubBubble && (
+                  <button
+                    onClick={onLaunchEqub}
+                    className="mt-2 w-full text-[11px] uppercase tracking-widest px-3 py-2 rounded-xl bg-gradient-to-r from-[#F4D06F] to-[#00C9B1] text-[#0C1318] font-bold inline-flex items-center justify-center gap-1.5 shadow-md hover:shadow-lg transition-shadow"
+                  >
+                    <Rocket className="w-3.5 h-3.5" /> Launch eQUB Live · የጓደኞች ቤት
                   </button>
                 )}
               </div>
