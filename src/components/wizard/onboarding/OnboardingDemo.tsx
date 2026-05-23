@@ -78,12 +78,12 @@ const P = {
  * Sync strategy: sub-states change every 1–3s, but a bilingual TTS
  * clip is 6–10s. NEVER interrupt a playing clip (causes AbortErrors
  * and clipped audio). Instead:
- *   1. Pre-fetch every script at mount so playback starts instantly.
+ *   1. Generate clips on demand so ElevenLabs never receives a startup burst.
  *   2. Serialize playback through a queue holding only the *latest*
  *      pending script — intermediate scripts are skipped so audio
  *      stays close to the current screen without ever cutting.
  *   3. Wait for `ended` / `error` before moving on.                 */
-async function fetchTtsBlobUrl(text: string, lang: "en" | "am"): Promise<string> {
+async function fetchTtsBlobUrl(text: string, lang: "en" | "am" | "both"): Promise<string | null> {
   const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
   const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
   const { data: sess } = await supabase.auth.getSession();
@@ -100,7 +100,12 @@ async function fetchTtsBlobUrl(text: string, lang: "en" | "am"): Promise<string>
       body: JSON.stringify({ text, lang }),
     },
   );
-  if (!res.ok) throw new Error(`TTS ${res.status}`);
+  const contentType = res.headers.get("Content-Type") || "";
+  if (!res.ok || !contentType.includes("audio")) {
+    const details = await res.text().catch(() => "");
+    console.warn("TTS unavailable", res.status, details);
+    return null;
+  }
   const blob = await res.blob();
   return URL.createObjectURL(blob);
 }
@@ -111,6 +116,7 @@ function useVoice(enabled: boolean) {
   const pendingRef = useRef<{ script: Script; mode: LangMode } | null>(null);
   const playingRef = useRef<boolean>(false);
   const lastKeyRef = useRef<string>("");
+  const stopTokenRef = useRef(0);
   const enabledRef = useRef(enabled);
 
   useEffect(() => { enabledRef.current = enabled; }, [enabled]);
@@ -128,13 +134,16 @@ function useVoice(enabled: boolean) {
   }, []);
 
   /** Play a single line, awaiting full completion (or load failure). */
-  const playOne = useCallback(async (text: string, lang: "en" | "am") => {
+  const playOne = useCallback(async (text: string, lang: "en" | "am" | "both") => {
     if (!text) return;
+    const token = stopTokenRef.current;
     const key = `${lang}:${text}`;
     let url = cacheRef.current.get(key);
     if (!url) {
       try {
         url = await fetchTtsBlobUrl(text, lang);
+        if (token !== stopTokenRef.current) return;
+        if (!url) return;
         cacheRef.current.set(key, url);
       } catch (e) { console.warn("TTS fetch failed", e); return; }
     }
@@ -149,10 +158,12 @@ function useVoice(enabled: boolean) {
         done = true;
         a.removeEventListener("ended", finish);
         a.removeEventListener("error", finish);
+        a.removeEventListener("pause", finish);
         resolve();
       };
       a.addEventListener("ended", finish, { once: true });
       a.addEventListener("error", finish, { once: true });
+      a.addEventListener("pause", finish, { once: true });
       a.play().catch(() => finish());
     });
   }, []);
@@ -165,10 +176,9 @@ function useVoice(enabled: boolean) {
       while (pendingRef.current && enabledRef.current) {
         const { script, mode } = pendingRef.current;
         pendingRef.current = null;
-        if (mode === "am" || mode === "both") await playOne(script.am, "am");
-        // If a newer script arrived, skip English half to catch up.
-        if (pendingRef.current) continue;
-        if (mode === "en" || mode === "both") await playOne(script.en, "en");
+        if (mode === "both") await playOne(`${script.am} ${script.en}`, "both");
+        else if (mode === "am") await playOne(script.am, "am");
+        else await playOne(script.en, "en");
       }
     } finally {
       playingRef.current = false;
@@ -185,24 +195,14 @@ function useVoice(enabled: boolean) {
   }, [pump]);
 
   const stop = useCallback(() => {
+    stopTokenRef.current += 1;
     pendingRef.current = null;
+    playingRef.current = false;
     lastKeyRef.current = "";
     try { audioRef.current?.pause(); } catch {}
   }, []);
 
-  /** Prefetch (text, lang) pairs in parallel — warms the cache. */
-  const prefetch = useCallback(async (items: Array<{ text: string; lang: "en" | "am" }>) => {
-    await Promise.all(items.map(async ({ text, lang }) => {
-      const key = `${lang}:${text}`;
-      if (cacheRef.current.has(key) || !text) return;
-      try {
-        const url = await fetchTtsBlobUrl(text, lang);
-        cacheRef.current.set(key, url);
-      } catch (e) { /* ignore prefetch errors */ }
-    }));
-  }, []);
-
-  return { speakBoth, stop, prefetch };
+  return { speakBoth, stop };
 }
 
 /* ── MIC CAPTURE ────────────────────────────────────────────────── */
@@ -586,19 +586,8 @@ export default function OnboardingDemo({ onClose }: OnboardingDemoProps) {
   const stepMs = step.seconds * 1000;
   const totalDemoMs = STEPS.reduce((a, s) => a + s.seconds * 1000, 0);
 
-  const { speakBoth, stop: stopVoice, prefetch } = useVoice(voiceOn);
+  const { speakBoth, stop: stopVoice } = useVoice(voiceOn);
   const mic = useMicCapture();
-
-  /* Prefetch every TTS clip up-front so playback is instant + perfectly synced. */
-  useEffect(() => {
-    if (!voiceOn) return;
-    const items: Array<{ text: string; lang: "en" | "am" }> = [];
-    Object.values(SCRIPTS).forEach((s) => {
-      items.push({ text: s.am, lang: "am" });
-      items.push({ text: s.en, lang: "en" });
-    });
-    void prefetch(items);
-  }, [voiceOn, prefetch]);
 
   /* Auto-advance timer */
   useEffect(() => {
