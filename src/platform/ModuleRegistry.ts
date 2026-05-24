@@ -29,6 +29,20 @@ import {
 export type ModuleStatus = "live" | "beta" | "stub" | "planned";
 export type ModuleCategory = "channels" | "operations" | "compliance" | "analytics";
 
+export type ModuleSettingField =
+  | { key: string; label: string; type: "text"; placeholder?: string; help?: string; default?: string }
+  | { key: string; label: string; type: "number"; min?: number; max?: number; step?: number; help?: string; default?: number }
+  | { key: string; label: string; type: "toggle"; help?: string; default?: boolean }
+  | { key: string; label: string; type: "select"; options: { value: string; label: string }[]; help?: string; default?: string }
+  | { key: string; label: string; type: "multiselect"; options: { value: string; label: string }[]; help?: string; default?: string[] };
+
+export type ModuleSettingsSchema = {
+  /** Optional grouping for visual sections inside the settings drawer. */
+  sections?: { title: string; fields: ModuleSettingField[] }[];
+  /** Flat fields if no sections are needed. */
+  fields?: ModuleSettingField[];
+};
+
 export type AbxModule = {
   id: string;
   name: string;
@@ -43,7 +57,39 @@ export type AbxModule = {
   exposedModule?: string;
   /** Internal route segment under /platform/:moduleId */
   route: string;
+  /** Module-specific config form. Stored under BankConfig.moduleSettings[id]. */
+  settings?: ModuleSettingsSchema;
 };
+
+/** Flatten a schema into a flat list of fields (sections + top-level). */
+export function flattenSchema(schema?: ModuleSettingsSchema): ModuleSettingField[] {
+  if (!schema) return [];
+  const out: ModuleSettingField[] = [];
+  if (schema.fields) out.push(...schema.fields);
+  if (schema.sections) for (const s of schema.sections) out.push(...s.fields);
+  return out;
+}
+
+/** Build the default settings object for a module from its schema. */
+export function defaultSettingsFor(mod: AbxModule): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const f of flattenSchema(mod.settings)) {
+    if (f.default !== undefined) out[f.key] = f.default;
+    else if (f.type === "toggle") out[f.key] = false;
+    else if (f.type === "multiselect") out[f.key] = [];
+    else if (f.type === "number") out[f.key] = 0;
+    else out[f.key] = "";
+  }
+  return out;
+}
+
+export function defaultModuleSettingsMap(): Record<string, Record<string, unknown>> {
+  const out: Record<string, Record<string, unknown>> = {};
+  for (const m of ABX_MODULES) {
+    if (m.settings) out[m.id] = defaultSettingsFor(m);
+  }
+  return out;
+}
 
 export const ABX_MODULES: AbxModule[] = [
   {
