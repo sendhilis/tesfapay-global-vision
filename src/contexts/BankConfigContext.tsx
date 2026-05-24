@@ -294,6 +294,7 @@ export const defaultBankConfig: BankConfig = {
   themeId: "emerald",
   accentShift: 0,
   enabledModules: ["wallet", "mobile-banking", "aml-compliance"],
+  moduleSettings: defaultModuleSettingsMap(),
   bank: {
     name: "GlobalPay Bank",
     shortName: "GlobalPay",
