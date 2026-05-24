@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { STEPS, TOTAL_STEPS } from "@/lib/wizard-config";
 import { ABX_THEMES, shiftHueHex, type AbxTheme, type ThemeId } from "@/lib/abx-themes";
+import { defaultModuleSettingsMap } from "@/platform/ModuleRegistry";
 import { supabase } from "@/integrations/supabase/client";
 
 const STORAGE_KEY = "abx.wizard.v1";
@@ -67,6 +68,8 @@ export type BankConfig = {
   accentShift: number; // -20..+20 deg hue rotation applied to theme primary
   /** IDs of Techurate platform modules enabled for this bank. See ModuleRegistry. */
   enabledModules: string[];
+  /** Per-module config (key/value bag), shape defined by each module's settings schema. */
+  moduleSettings: Record<string, Record<string, unknown>>;
   bank: {
     name: string;
     shortName: string;
@@ -291,6 +294,7 @@ export const defaultBankConfig: BankConfig = {
   themeId: "emerald",
   accentShift: 0,
   enabledModules: ["wallet", "mobile-banking", "aml-compliance"],
+  moduleSettings: defaultModuleSettingsMap(),
   bank: {
     name: "GlobalPay Bank",
     shortName: "GlobalPay",

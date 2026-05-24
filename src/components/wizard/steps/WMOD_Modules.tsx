@@ -2,8 +2,8 @@
  * W-MOD · Platform Modules
  * Bank admin picks which Techurate modules form their ABX bundle.
  */
-import { useMemo } from "react";
-import { Check } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Check, Settings2 } from "lucide-react";
 import { useWizard } from "@/contexts/BankConfigContext";
 import {
   ABX_MODULES,
@@ -13,6 +13,7 @@ import {
   type AbxModule,
   type ModuleCategory,
 } from "@/platform/ModuleRegistry";
+import { ModuleSettingsPanel } from "@/components/wizard/modules/ModuleSettingsPanel";
 
 const STATUS_BADGE: Record<AbxModule["status"], { label: string; cls: string }> = {
   live:    { label: "Live",        cls: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300" },
@@ -23,6 +24,7 @@ const STATUS_BADGE: Record<AbxModule["status"], { label: string; cls: string }> 
 
 export function WMOD_PlatformModules() {
   const { config, setConfig } = useWizard();
+  const [settingsOpenFor, setSettingsOpenFor] = useState<string | null>(null);
   const enabled = useMemo(
     () => new Set(config.enabledModules ?? defaultEnabledModuleIds()),
     [config.enabledModules],
@@ -85,55 +87,75 @@ export function WMOD_PlatformModules() {
                 const Icon = m.icon;
                 const isOn = enabled.has(m.id);
                 const isLocked = m.id === "wallet"; // wallet is always on
+                const hasSettings = !!(m.settings?.fields?.length || m.settings?.sections?.length);
                 return (
-                  <button
+                  <div
                     key={m.id}
-                    onClick={() => !isLocked && toggle(m.id)}
-                    disabled={isLocked}
                     className={
-                      "group text-left rounded-xl border p-4 transition-all " +
+                      "group relative rounded-xl border p-4 transition-all " +
                       (isOn
                         ? "border-primary/60 bg-primary/5 shadow-sm"
-                        : "border-border bg-card hover:border-primary/30 hover:bg-card/80") +
-                      (isLocked ? " cursor-default opacity-90" : " cursor-pointer")
+                        : "border-border bg-card hover:border-primary/30 hover:bg-card/80")
                     }
                   >
-                    <div className="flex items-start gap-3">
-                      <div
-                        className={
-                          "shrink-0 rounded-lg p-2 transition " +
-                          (isOn ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground")
-                        }
-                      >
-                        <Icon className="h-5 w-5" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <h3 className="text-sm font-semibold text-foreground truncate">{m.name}</h3>
-                          <span className={"text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded " + STATUS_BADGE[m.status].cls}>
-                            {STATUS_BADGE[m.status].label}
-                          </span>
+                    <button
+                      type="button"
+                      onClick={() => !isLocked && toggle(m.id)}
+                      disabled={isLocked}
+                      className={"w-full text-left " + (isLocked ? "cursor-default" : "cursor-pointer")}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div
+                          className={
+                            "shrink-0 rounded-lg p-2 transition " +
+                            (isOn ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground")
+                          }
+                        >
+                          <Icon className="h-5 w-5" />
                         </div>
-                        <p className="mt-1 text-xs text-muted-foreground leading-snug">{m.description}</p>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-sm font-semibold text-foreground truncate">{m.name}</h3>
+                            <span className={"text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded " + STATUS_BADGE[m.status].cls}>
+                              {STATUS_BADGE[m.status].label}
+                            </span>
+                          </div>
+                          <p className="mt-1 text-xs text-muted-foreground leading-snug">{m.description}</p>
+                        </div>
+                        <div
+                          className={
+                            "ml-2 mt-0.5 h-5 w-5 shrink-0 rounded-full border flex items-center justify-center transition " +
+                            (isOn
+                              ? "bg-primary border-primary text-primary-foreground"
+                              : "border-border")
+                          }
+                        >
+                          {isOn && <Check className="h-3 w-3" strokeWidth={3} />}
+                        </div>
                       </div>
-                      <div
-                        className={
-                          "ml-2 mt-0.5 h-5 w-5 shrink-0 rounded-full border flex items-center justify-center transition " +
-                          (isOn
-                            ? "bg-primary border-primary text-primary-foreground"
-                            : "border-border")
-                        }
+                    </button>
+                    {isOn && hasSettings && (
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); setSettingsOpenFor(m.id); }}
+                        className="mt-3 ml-11 inline-flex items-center gap-1.5 text-[11px] font-medium text-primary hover:underline"
                       >
-                        {isOn && <Check className="h-3 w-3" strokeWidth={3} />}
-                      </div>
-                    </div>
-                  </button>
+                        <Settings2 className="h-3 w-3" /> Configure
+                      </button>
+                    )}
+                  </div>
                 );
               })}
             </div>
           </section>
         ))}
       </div>
+
+      <ModuleSettingsPanel
+        moduleId={settingsOpenFor}
+        open={!!settingsOpenFor}
+        onOpenChange={(o) => !o && setSettingsOpenFor(null)}
+      />
 
       <p className="mt-8 text-xs text-muted-foreground">
         Each enabled module mounts inside the ABX shell via <code className="bg-muted px-1.5 py-0.5 rounded">&lt;ModuleHost/&gt;</code>.
