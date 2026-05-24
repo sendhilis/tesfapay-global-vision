@@ -1129,12 +1129,14 @@ export function T_Review() {
 }
 
 import { AIMeshStudio } from "./AIMeshStudio";
+import { WMOD_PlatformModules } from "./steps/WMOD_Modules";
 
 export const STEP_REGISTRY: Record<string, () => ReactNode> = {
   W01: W01_Welcome,
   W02: T_Identity,
   W03: T_ThemePicker,
   W04: T_AccentTuner,
+  WMOD: WMOD_PlatformModules,
   W05: W26_Products,
   W06: W23_GlobalAI,
   WAM: AIMeshStudio,
