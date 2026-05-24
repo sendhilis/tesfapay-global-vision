@@ -65,6 +65,8 @@ export type MeshConfig = {
 export type BankConfig = {
   themeId: ThemeId;
   accentShift: number; // -20..+20 deg hue rotation applied to theme primary
+  /** IDs of Techurate platform modules enabled for this bank. See ModuleRegistry. */
+  enabledModules: string[];
   bank: {
     name: string;
     shortName: string;
