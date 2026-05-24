@@ -2,8 +2,8 @@
  * W-MOD · Platform Modules
  * Bank admin picks which Techurate modules form their ABX bundle.
  */
-import { useMemo } from "react";
-import { Check } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Check, Settings2 } from "lucide-react";
 import { useWizard } from "@/contexts/BankConfigContext";
 import {
   ABX_MODULES,
@@ -13,6 +13,7 @@ import {
   type AbxModule,
   type ModuleCategory,
 } from "@/platform/ModuleRegistry";
+import { ModuleSettingsPanel } from "@/components/wizard/modules/ModuleSettingsPanel";
 
 const STATUS_BADGE: Record<AbxModule["status"], { label: string; cls: string }> = {
   live:    { label: "Live",        cls: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300" },
