@@ -68,6 +68,8 @@ export type BankConfig = {
   accentShift: number; // -20..+20 deg hue rotation applied to theme primary
   /** IDs of Techurate platform modules enabled for this bank. See ModuleRegistry. */
   enabledModules: string[];
+  /** Per-module config (key/value bag), shape defined by each module's settings schema. */
+  moduleSettings: Record<string, Record<string, unknown>>;
   bank: {
     name: string;
     shortName: string;
