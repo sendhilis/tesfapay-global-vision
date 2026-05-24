@@ -17,18 +17,21 @@ export type Database = {
       bank_configs: {
         Row: {
           config: Json
+          enabled_modules: Json
           id: string
           is_published: boolean
           updated_at: string
         }
         Insert: {
           config: Json
+          enabled_modules?: Json
           id: string
           is_published?: boolean
           updated_at?: string
         }
         Update: {
           config?: Json
+          enabled_modules?: Json
           id?: string
           is_published?: boolean
           updated_at?: string
