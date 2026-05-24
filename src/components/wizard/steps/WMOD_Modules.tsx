@@ -24,6 +24,7 @@ const STATUS_BADGE: Record<AbxModule["status"], { label: string; cls: string }> 
 
 export function WMOD_PlatformModules() {
   const { config, setConfig } = useWizard();
+  const [settingsOpenFor, setSettingsOpenFor] = useState<string | null>(null);
   const enabled = useMemo(
     () => new Set(config.enabledModules ?? defaultEnabledModuleIds()),
     [config.enabledModules],
