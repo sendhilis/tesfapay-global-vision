@@ -53,33 +53,34 @@ export function WMOD_PlatformModules() {
           W-MOD · Platform
         </span>
       </div>
-      <h1 className="text-3xl font-semibold tracking-tight text-foreground">
+      <h1 className="text-3xl font-semibold tracking-tight text-[var(--ink)]">
         Pick the modules that make up your ABX platform.
       </h1>
-      <p className="mt-2 text-sm text-muted-foreground">
+      <p className="mt-2 text-sm text-[var(--ink-soft)]">
         Every module is an existing Techurate product. The ABX shell themes, authenticates and routes them as one
         seamless experience — you are not rebuilding anything.
       </p>
 
-      <div className="mt-4 flex items-center justify-between rounded-lg border border-border bg-card/60 px-4 py-3 text-sm">
+      <div className="mt-4 flex items-center justify-between rounded-lg border border-[var(--line)] bg-white px-4 py-3 text-sm">
         <div>
-          <strong className="text-foreground">{on}</strong>
-          <span className="text-muted-foreground"> of {total} modules enabled</span>
+          <strong className="text-[var(--ink)]">{on}</strong>
+          <span className="text-[var(--ink-soft)]"> of {total} modules enabled</span>
         </div>
         <div className="flex items-center gap-3 text-xs">
-          <button onClick={resetDefaults} className="text-muted-foreground hover:text-foreground transition">
+          <button onClick={resetDefaults} className="text-[var(--ink-soft)] hover:text-[var(--ink)] transition">
             Reset to defaults
           </button>
-          <button onClick={selectAll} className="text-primary hover:underline">
+          <button onClick={selectAll} className="text-[var(--teal-deep)] hover:underline font-medium">
             Enable all
           </button>
         </div>
       </div>
 
+
       <div className="mt-8 space-y-8">
         {(Object.keys(MODULES_BY_CATEGORY) as ModuleCategory[]).map((cat) => (
           <section key={cat}>
-            <h2 className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground mb-3">
+            <h2 className="text-[11px] uppercase tracking-[0.22em] text-[var(--ink-soft)] mb-3">
               {CATEGORY_LABEL[cat]}
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -94,8 +95,8 @@ export function WMOD_PlatformModules() {
                     className={
                       "group relative rounded-xl border p-4 transition-all " +
                       (isOn
-                        ? "border-primary/60 bg-primary/5 shadow-sm"
-                        : "border-border bg-card hover:border-primary/30 hover:bg-card/80")
+                        ? "border-[var(--teal)] bg-[var(--teal)]/5 shadow-sm"
+                        : "border-[var(--line)] bg-white hover:border-[var(--teal)]/40")
                     }
                   >
                     <button
@@ -108,26 +109,26 @@ export function WMOD_PlatformModules() {
                         <div
                           className={
                             "shrink-0 rounded-lg p-2 transition " +
-                            (isOn ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground")
+                            (isOn ? "bg-[var(--teal)] text-[var(--ink)]" : "bg-[var(--ivory)] text-[var(--ink-soft)]")
                           }
                         >
                           <Icon className="h-5 w-5" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
-                            <h3 className="text-sm font-semibold text-foreground truncate">{m.name}</h3>
+                            <h3 className="text-sm font-semibold text-[var(--ink)] truncate">{m.name}</h3>
                             <span className={"text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded " + STATUS_BADGE[m.status].cls}>
                               {STATUS_BADGE[m.status].label}
                             </span>
                           </div>
-                          <p className="mt-1 text-xs text-muted-foreground leading-snug">{m.description}</p>
+                          <p className="mt-1 text-xs text-[var(--ink-soft)] leading-snug">{m.description}</p>
                         </div>
                         <div
                           className={
                             "ml-2 mt-0.5 h-5 w-5 shrink-0 rounded-full border flex items-center justify-center transition " +
                             (isOn
-                              ? "bg-primary border-primary text-primary-foreground"
-                              : "border-border")
+                              ? "bg-[var(--teal)] border-[var(--teal)] text-[var(--ink)]"
+                              : "border-[var(--line)]")
                           }
                         >
                           {isOn && <Check className="h-3 w-3" strokeWidth={3} />}
@@ -138,7 +139,7 @@ export function WMOD_PlatformModules() {
                       <button
                         type="button"
                         onClick={(e) => { e.stopPropagation(); setSettingsOpenFor(m.id); }}
-                        className="mt-3 ml-11 inline-flex items-center gap-1.5 text-[11px] font-medium text-primary hover:underline"
+                        className="mt-3 ml-11 inline-flex items-center gap-1.5 text-[11px] font-medium text-[var(--teal-deep)] hover:underline"
                       >
                         <Settings2 className="h-3 w-3" /> Configure
                       </button>
