@@ -88,7 +88,7 @@ export function WMOD_PlatformModules() {
               {MODULES_BY_CATEGORY[cat].map((m) => {
                 const Icon = m.icon;
                 const isOn = enabled.has(m.id);
-                const isLocked = m.id === "wallet"; // wallet is always on
+                const isLocked = false; // every module is user-toggleable
                 const hasSettings = m.id === "bankgpt" || !!(m.settings?.fields?.length || m.settings?.sections?.length);
                 return (
                   <div
