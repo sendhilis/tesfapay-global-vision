@@ -158,9 +158,9 @@ export function WMOD_PlatformModules() {
         onOpenChange={(o) => !o && setSettingsOpenFor(null)}
       />
 
-      <p className="mt-8 text-xs text-muted-foreground">
-        Each enabled module mounts inside the ABX shell via <code className="bg-muted px-1.5 py-0.5 rounded">&lt;ModuleHost/&gt;</code>.
-        Today they render a placeholder; once Techurate publishes the federation <code className="bg-muted px-1.5 py-0.5 rounded">remoteEntry.js</code> they
+      <p className="mt-8 text-xs text-[var(--ink-soft)]">
+        Each enabled module mounts inside the ABX shell via <code className="bg-[var(--ivory)] px-1.5 py-0.5 rounded text-[var(--ink)]">&lt;ModuleHost/&gt;</code>.
+        Today they render a placeholder; once Techurate publishes the federation <code className="bg-[var(--ivory)] px-1.5 py-0.5 rounded text-[var(--ink)]">remoteEntry.js</code> they
         light up automatically — no rebuild needed.
       </p>
     </div>
