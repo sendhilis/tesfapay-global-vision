@@ -740,6 +740,8 @@ export function WizardProvider({ children }: { children: ReactNode }) {
 
   const saveDraft = useCallback(async () => {
     setSyncState("saving");
+    const stamp = Date.now();
+    localWriteAt.current = stamp;
     try {
       const { error } = await supabase
         .from("bank_configs")
@@ -747,10 +749,10 @@ export function WizardProvider({ children }: { children: ReactNode }) {
           id: REMOTE_CONFIG_ID,
           config: JSON.parse(JSON.stringify(config)),
           is_published: published,
-          updated_at: new Date().toISOString(),
+          updated_at: new Date(stamp).toISOString(),
         });
       if (error) throw error;
-      setLastSyncedAt(Date.now());
+      setLastSyncedAt(stamp);
       setSyncState("saved");
     } catch (e) {
       console.warn("[BankConfig] manual save failed:", e);
@@ -761,6 +763,8 @@ export function WizardProvider({ children }: { children: ReactNode }) {
   const publish = useCallback(async () => {
     setPublished(true);
     setSyncState("saving");
+    const stamp = Date.now();
+    localWriteAt.current = stamp;
     try {
       const { error } = await supabase
         .from("bank_configs")
@@ -768,10 +772,10 @@ export function WizardProvider({ children }: { children: ReactNode }) {
           id: REMOTE_CONFIG_ID,
           config: JSON.parse(JSON.stringify(config)),
           is_published: true,
-          updated_at: new Date().toISOString(),
+          updated_at: new Date(stamp).toISOString(),
         });
       if (error) throw error;
-      setLastSyncedAt(Date.now());
+      setLastSyncedAt(stamp);
       setSyncState("saved");
     } catch (e) {
       console.warn("[BankConfig] publish failed:", e);
