@@ -6,6 +6,7 @@ import { KycApplicationProvider } from "@/contexts/KycApplicationContext";
 import { WizardProvider } from "@/contexts/BankConfigContext";
 import Setup from "./pages/Setup";
 import RootGate from "./components/RootGate";
+import PlatformModule from "./pages/PlatformModule";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
@@ -60,6 +61,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<RootGate />} />
           <Route path="/home" element={<Index />} />
+          <Route path="/platform/:moduleId" element={<PlatformModule />} />
           <Route path="/setup" element={<Setup />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/onboarding" element={<Onboarding />} />
