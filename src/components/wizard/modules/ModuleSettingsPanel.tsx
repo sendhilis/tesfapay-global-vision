@@ -14,6 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { useWizard } from "@/contexts/BankConfigContext";
 import { defaultSettingsFor, flattenSchema, getModule, type ModuleSettingField } from "@/platform/ModuleRegistry";
+import { BankGPTSettings } from "./BankGPTSettings";
 
 type Props = {
   moduleId: string | null;
@@ -67,7 +68,14 @@ export function ModuleSettingsPanel({ moduleId, open, onOpenChange }: Props) {
           <SheetDescription>{mod.description}</SheetDescription>
         </SheetHeader>
 
-        {!hasSchema ? (
+        {mod.id === "bankgpt" ? (
+          <div className="mt-6">
+            <BankGPTSettings />
+            <div className="mt-6 flex justify-end border-t border-border pt-4">
+              <Button size="sm" onClick={() => onOpenChange(false)}>Done</Button>
+            </div>
+          </div>
+        ) : !hasSchema ? (
           <div className="mt-8 rounded-lg border border-dashed border-border bg-muted/30 p-6 text-center text-sm text-muted-foreground">
             This module has no configurable settings yet.
           </div>

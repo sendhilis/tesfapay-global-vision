@@ -23,6 +23,7 @@ import {
   LineChart,
   CreditCard,
   Network,
+  BrainCircuit,
   type LucideIcon,
 } from "lucide-react";
 
@@ -326,6 +327,19 @@ export const ABX_MODULES: AbxModule[] = [
         { key: "embedReports",  label: "Embeddable reports",     type: "toggle", default: false },
       ],
     },
+  },
+  {
+    id: "bankgpt",
+    name: "BankGPT · AI Mesh",
+    category: "analytics",
+    description: "Conversational AI Mesh — bilingual concierge agents grounded in the customer 360 CDP.",
+    icon: BrainCircuit,
+    status: "live",
+    defaultEnabled: true,
+    route: "/platform/bankgpt",
+    // Settings drawer is rendered by a bespoke component (BankGPTSettings) —
+    // it edits config.ai.mesh directly, so no schema is needed here.
+    settings: { fields: [] },
   },
   {
     id: "switch-integration",

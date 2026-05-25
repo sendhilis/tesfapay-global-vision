@@ -22,6 +22,10 @@ type Body = {
   bankName: string;
   messages: { role: "user" | "assistant"; content: string; agentName?: string }[];
   model?: string;
+  /** Snapshot of the customer 360 from the CDP — balances, txns, loans, etc. */
+  customer?: Record<string, unknown>;
+  /** "en" | "am" — agent must reply in this language. */
+  language?: "en" | "am";
 };
 
 function routeIntent(text: string, agents: Record<string, MeshAgent>): string {
@@ -43,17 +47,40 @@ function describeTone(a: MeshAgent): string {
   return `Register: ${reg}. Length: ${len}. Expressiveness: ${exp}. ${emo}`;
 }
 
-function buildSystem(a: MeshAgent, persona: { firstName: string; line: string }, bankName: string) {
+function buildSystem(
+  a: MeshAgent,
+  persona: { firstName: string; line: string },
+  bankName: string,
+  customer: Record<string, unknown> | undefined,
+  language: "en" | "am",
+) {
+  const langLine = language === "am"
+    ? `IMPORTANT: Reply ONLY in Amharic (አማርኛ). Use Ethiopian script. Keep numbers and currency codes (ETB) in Latin characters.`
+    : `Reply in clear, natural English.`;
+
+  const customerBlock = customer
+    ? [
+        `You have live access to this customer's 360° profile from the bank CDP. Use it to give specific, concrete answers — quote real balances, real transactions, real loan terms. Never invent numbers.`,
+        `CUSTOMER_PROFILE_JSON:`,
+        "```json",
+        JSON.stringify(customer, null, 2),
+        "```",
+        `Rules: (1) If the answer requires data not in this profile, say so briefly. (2) Always be proactive — if a relevant nudge fits (low balance, missed installment, eligible loan/T-Bill, near savings goal), surface it. (3) Quote ETB amounts with thousands separators.`,
+      ].join("\n")
+    : "";
+
   return [
-    `You are ${a.name}, an AI agent inside the ${bankName} mobile banking app.`,
+    `You are ${a.name}, an AI agent inside the ${bankName} mobile banking app — part of the BankGPT AI Mesh.`,
     `Role: ${a.tagline}`,
     `You are talking to ${persona.firstName} (${persona.line}).`,
     a.systemPrompt,
     describeTone(a),
+    langLine,
+    customerBlock,
     `Speak in the first person as ${a.name}. Never say you are an AI language model. Never mention OpenAI, Google, or Gemini.`,
     `If the user's request is outside your specialty, briefly help and suggest they ask the Concierge to route them.`,
-    `Keep numeric amounts in ETB. Be concrete, warm, and useful.`,
-  ].join("\n");
+    `Be concrete, warm, and useful.`,
+  ].filter(Boolean).join("\n\n");
 }
 
 Deno.serve(async (req) => {
@@ -80,7 +107,7 @@ Deno.serve(async (req) => {
     const handingOff = targetId !== currentAgentId && targetId !== "concierge";
     const agent = agents[targetId] ?? agents.concierge;
 
-    const system = buildSystem(agent, persona, bankName);
+    const system = buildSystem(agent, persona, bankName, body.customer, body.language ?? "en");
 
     // Build conversation: keep last 8 turns to bound tokens
     const recent = messages.slice(-8).map((m) => ({

@@ -21,6 +21,7 @@ import { useMemo } from "react";
 import { Lock, Sparkles } from "lucide-react";
 import { getModule, type AbxModule } from "./ModuleRegistry";
 import { useBankConfig } from "@/contexts/BankConfigContext";
+import { BankGPTMesh } from "@/components/wizard/modules/BankGPTMesh";
 
 type Props = {
   moduleId: string;
@@ -34,6 +35,9 @@ export function ModuleHost({ moduleId, className }: Props) {
 
   if (!mod) return <UnknownModule id={moduleId} className={className} />;
   if (!enabled) return <DisabledModule mod={mod} className={className} />;
+
+  // Native ABX modules with bespoke runtime UI go here.
+  if (mod.id === "bankgpt") return <div className={className}><BankGPTMesh /></div>;
 
   // TODO: when remoteEntry is set, swap in React.lazy + Module Federation here.
   return <StubModule mod={mod} className={className} />;

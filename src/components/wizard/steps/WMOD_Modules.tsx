@@ -87,7 +87,7 @@ export function WMOD_PlatformModules() {
                 const Icon = m.icon;
                 const isOn = enabled.has(m.id);
                 const isLocked = m.id === "wallet"; // wallet is always on
-                const hasSettings = !!(m.settings?.fields?.length || m.settings?.sections?.length);
+                const hasSettings = m.id === "bankgpt" || !!(m.settings?.fields?.length || m.settings?.sections?.length);
                 return (
                   <div
                     key={m.id}
