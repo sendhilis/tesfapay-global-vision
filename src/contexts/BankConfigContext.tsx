@@ -606,6 +606,9 @@ export function WizardProvider({ children }: { children: ReactNode }) {
   const [lastSyncedAt, setLastSyncedAt] = useState<number | null>(null);
   const hydrated = useRef(false);
   const skipRemoteSave = useRef(true); // skip initial hydration write
+  /** Stamp of our most recent local→remote write. Any realtime event with
+   *  updated_at <= this MUST be ignored — it is our own echo. */
+  const localWriteAt = useRef<number>(0);
 
   // Hydrate: DB first, fall back to localStorage
   useEffect(() => {
@@ -675,6 +678,8 @@ export function WizardProvider({ children }: { children: ReactNode }) {
     if (!hydrated.current || skipRemoteSave.current) return;
     setSyncState("saving");
     const handle = setTimeout(async () => {
+      const stamp = Date.now();
+      localWriteAt.current = stamp;
       try {
         const { error } = await supabase
           .from("bank_configs")
@@ -682,10 +687,10 @@ export function WizardProvider({ children }: { children: ReactNode }) {
             id: REMOTE_CONFIG_ID,
             config: JSON.parse(JSON.stringify(config)),
             is_published: published,
-            updated_at: new Date().toISOString(),
+            updated_at: new Date(stamp).toISOString(),
           });
         if (error) throw error;
-        setLastSyncedAt(Date.now());
+        setLastSyncedAt(stamp);
         setSyncState("saved");
       } catch (e) {
         console.warn("[BankConfig] remote save failed:", e);
@@ -705,9 +710,9 @@ export function WizardProvider({ children }: { children: ReactNode }) {
         (payload) => {
           const row = (payload.new ?? payload.old) as { config?: Partial<BankConfig>; is_published?: boolean; updated_at?: string } | null;
           if (!row?.config) return;
-          // Avoid clobbering local edits already in-flight: only apply if newer
           const remoteTs = row.updated_at ? new Date(row.updated_at).getTime() : Date.now();
-          if (lastSyncedAt && remoteTs <= lastSyncedAt) return;
+          // Ignore echoes of our own writes (clock-skew tolerant: 2s window)
+          if (remoteTs <= localWriteAt.current + 2000) return;
           skipRemoteSave.current = true;
           setConfig({ ...defaultBankConfig, ...row.config });
           if (typeof row.is_published === "boolean") setPublished(row.is_published);
@@ -717,7 +722,7 @@ export function WizardProvider({ children }: { children: ReactNode }) {
       )
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [lastSyncedAt]);
+  }, []);
 
   // Cross-tab localStorage sync (UI step state)
   useEffect(() => {
@@ -735,6 +740,8 @@ export function WizardProvider({ children }: { children: ReactNode }) {
 
   const saveDraft = useCallback(async () => {
     setSyncState("saving");
+    const stamp = Date.now();
+    localWriteAt.current = stamp;
     try {
       const { error } = await supabase
         .from("bank_configs")
@@ -742,10 +749,10 @@ export function WizardProvider({ children }: { children: ReactNode }) {
           id: REMOTE_CONFIG_ID,
           config: JSON.parse(JSON.stringify(config)),
           is_published: published,
-          updated_at: new Date().toISOString(),
+          updated_at: new Date(stamp).toISOString(),
         });
       if (error) throw error;
-      setLastSyncedAt(Date.now());
+      setLastSyncedAt(stamp);
       setSyncState("saved");
     } catch (e) {
       console.warn("[BankConfig] manual save failed:", e);
@@ -756,6 +763,8 @@ export function WizardProvider({ children }: { children: ReactNode }) {
   const publish = useCallback(async () => {
     setPublished(true);
     setSyncState("saving");
+    const stamp = Date.now();
+    localWriteAt.current = stamp;
     try {
       const { error } = await supabase
         .from("bank_configs")
@@ -763,10 +772,10 @@ export function WizardProvider({ children }: { children: ReactNode }) {
           id: REMOTE_CONFIG_ID,
           config: JSON.parse(JSON.stringify(config)),
           is_published: true,
-          updated_at: new Date().toISOString(),
+          updated_at: new Date(stamp).toISOString(),
         });
       if (error) throw error;
-      setLastSyncedAt(Date.now());
+      setLastSyncedAt(stamp);
       setSyncState("saved");
     } catch (e) {
       console.warn("[BankConfig] publish failed:", e);

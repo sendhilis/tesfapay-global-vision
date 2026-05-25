@@ -25,15 +25,16 @@ const STATUS_BADGE: Record<AbxModule["status"], { label: string; cls: string }> 
 export function WMOD_PlatformModules() {
   const { config, setConfig } = useWizard();
   const [settingsOpenFor, setSettingsOpenFor] = useState<string | null>(null);
-  const enabled = useMemo(
-    () => new Set(config.enabledModules ?? defaultEnabledModuleIds()),
-    [config.enabledModules],
-  );
+  const enabledList = config.enabledModules ?? defaultEnabledModuleIds();
+  const enabled = useMemo(() => new Set(enabledList), [enabledList]);
 
   function toggle(id: string) {
-    const next = new Set(enabled);
-    if (next.has(id)) next.delete(id); else next.add(id);
-    setConfig({ ...config, enabledModules: Array.from(next) });
+    setConfig({
+      ...config,
+      enabledModules: enabled.has(id)
+        ? enabledList.filter((m) => m !== id)
+        : [...enabledList, id],
+    });
   }
 
   function selectAll() {
@@ -87,7 +88,7 @@ export function WMOD_PlatformModules() {
               {MODULES_BY_CATEGORY[cat].map((m) => {
                 const Icon = m.icon;
                 const isOn = enabled.has(m.id);
-                const isLocked = m.id === "wallet"; // wallet is always on
+                const isLocked = false; // every module is user-toggleable
                 const hasSettings = m.id === "bankgpt" || !!(m.settings?.fields?.length || m.settings?.sections?.length);
                 return (
                   <div
