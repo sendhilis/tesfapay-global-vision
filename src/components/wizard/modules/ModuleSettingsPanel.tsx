@@ -14,6 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { useWizard } from "@/contexts/BankConfigContext";
 import { defaultSettingsFor, flattenSchema, getModule, type ModuleSettingField } from "@/platform/ModuleRegistry";
+import { BankGPTSettings } from "./BankGPTSettings";
 
 type Props = {
   moduleId: string | null;
