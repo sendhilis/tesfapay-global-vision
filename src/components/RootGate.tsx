@@ -1,13 +1,14 @@
 import { Navigate } from "react-router-dom";
 import { useWizard } from "@/contexts/BankConfigContext";
-import Index from "@/pages/Index";
+import Launchpad from "@/pages/Launchpad";
 
 /**
- * RootGate — Redirects "/" to "/setup" until the bank admin has
- * published their configuration via the ABX wizard.
+ * RootGate — until the bank admin has published their BankConfig
+ * via the wizard, redirect to /setup. Once published, render the
+ * Launchpad which lists ONLY the enabled platform modules.
  */
 export default function RootGate() {
   const { published } = useWizard();
   if (!published) return <Navigate to="/setup" replace />;
-  return <Index />;
+  return <Launchpad />;
 }
