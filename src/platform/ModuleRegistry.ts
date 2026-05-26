@@ -189,6 +189,7 @@ export const ABX_MODULES: AbxModule[] = [
     description: "Agent and merchant POS / cash-in-out platform.",
     icon: Store,
     status: "live",
+    defaultEnabled: true,
     route: "/platform/agency-banking",
     settings: {
       sections: [
