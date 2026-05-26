@@ -210,6 +210,24 @@ export const ABX_MODULES: AbxModule[] = [
     },
   },
   {
+    id: "merchant-portal",
+    name: "Merchant Portal",
+    category: "channels",
+    description: "Merchant acceptance — QR sales, wallet, settlements and vendor payouts.",
+    icon: Store,
+    status: "stub",
+    defaultEnabled: true,
+    route: "/platform/merchant-portal",
+    settings: {
+      fields: [
+        { key: "qrAcceptance",  label: "QR acceptance",            type: "toggle", default: true },
+        { key: "settlementT",   label: "Settlement cycle (days)",  type: "number", default: 1, min: 0, max: 7 },
+        { key: "vendorPayouts", label: "Vendor payouts",           type: "toggle", default: true },
+        { key: "disputeWindowDays", label: "Dispute window (days)",type: "number", default: 30, min: 1, max: 120 },
+      ],
+    },
+  },
+  {
     id: "reconciliation",
     name: "Reconciliation",
     category: "operations",
