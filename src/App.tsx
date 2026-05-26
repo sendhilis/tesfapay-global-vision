@@ -7,6 +7,9 @@ import { WizardProvider } from "@/contexts/BankConfigContext";
 import Setup from "./pages/Setup";
 import RootGate from "./components/RootGate";
 import PlatformModule from "./pages/PlatformModule";
+import Launchpad from "./pages/Launchpad";
+
+const LaunchpadRoute = () => <Launchpad skipAutoRedirect />;
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
