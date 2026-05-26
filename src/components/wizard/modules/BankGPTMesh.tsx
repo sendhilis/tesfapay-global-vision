@@ -260,10 +260,10 @@ export function BankGPTMesh() {
                 return (
                   <div key={i} className="my-1.5">
                     <div
-                      className="mx-auto max-w-[80%] flex items-center justify-center gap-2 rounded-xl px-3 py-1.5 text-center text-[11px] italic"
-                      style={{ background: `${to.color}1c`, color: to.color, border: `1px dashed ${to.color}55` }}
+                      className="mx-auto max-w-[80%] flex items-center justify-center gap-2 rounded-xl px-3 py-1.5 text-center text-[11px] italic text-foreground"
+                      style={{ background: `${to.color}33`, border: `1px dashed ${to.color}` }}
                     >
-                      <Zap className="h-3 w-3" /> {m.text}
+                      <Zap className="h-3 w-3" style={{ color: to.color }} /> {m.text}
                     </div>
                   </div>
                 );
@@ -284,8 +284,11 @@ export function BankGPTMesh() {
                     className="max-w-[80%] rounded-2xl rounded-bl-sm border bg-background px-3 py-2 text-sm text-foreground"
                     style={{ borderLeft: `3px solid ${a.color}` }}
                   >
-                    <div className="mb-0.5 flex items-center justify-between gap-2">
-                      <span className="text-[9px] font-semibold uppercase tracking-widest" style={{ color: a.color }}>
+                    <div className="mb-1 flex items-center justify-between gap-2">
+                      <span
+                        className="rounded-md px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-white"
+                        style={{ background: a.color }}
+                      >
                         {a.name}
                       </span>
                       <button
