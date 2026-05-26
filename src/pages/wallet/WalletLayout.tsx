@@ -37,6 +37,8 @@ const WalletLayout = () => {
   const cfg = useBankConfig();
   return (
     <div className="min-h-screen min-h-dvh bg-background flex flex-col max-w-md mx-auto relative overflow-x-hidden">
+      {/* Admin preview bar — back to modules / wizard */}
+      <AdminBar label={`${cfg.bank.shortName} · Wallet`} />
       {/* Top status bar */}
       <div className="flex items-center justify-between px-5 py-3 pt-safe glass border-b border-border">
         <div className="flex items-center gap-2" onClick={() => navigate("/")} role="button">
