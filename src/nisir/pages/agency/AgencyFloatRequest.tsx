@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { useAuth } from '@/hooks/useAuth';
+import { useLanguage } from '@nisir/contexts/LanguageContext';
+import { useAuth } from '@nisir/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import MobilePortalLayout from '@/components/MobilePortalLayout';
+import MobilePortalLayout from '@nisir/components/MobilePortalLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';

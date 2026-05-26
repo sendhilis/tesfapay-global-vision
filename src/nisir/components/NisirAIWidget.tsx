@@ -1,11 +1,11 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { useAuth } from '@/hooks/useAuth';
-import { useDailyBriefing } from '@/hooks/useDailyBriefing';
-import { getRouteForIntent } from '@/components/copilot/intentRoutes';
-import CopilotBriefing from '@/components/copilot/CopilotBriefing';
-import CopilotNavigationCard from '@/components/copilot/CopilotNavigationCard';
+import { useLanguage } from '@nisir/contexts/LanguageContext';
+import { useAuth } from '@nisir/hooks/useAuth';
+import { useDailyBriefing } from '@nisir/hooks/useDailyBriefing';
+import { getRouteForIntent } from '@nisir/components/copilot/intentRoutes';
+import CopilotBriefing from '@nisir/components/copilot/CopilotBriefing';
+import CopilotNavigationCard from '@nisir/components/copilot/CopilotNavigationCard';
 import ReactMarkdown from 'react-markdown';
 import { useNavigate } from 'react-router-dom';
 import {

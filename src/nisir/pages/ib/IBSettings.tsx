@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { useProfile } from '@/hooks/useProfile';
-import { useAuth } from '@/hooks/useAuth';
-import { useLanguage } from '@/contexts/LanguageContext';
+import { useProfile } from '@nisir/hooks/useProfile';
+import { useAuth } from '@nisir/hooks/useAuth';
+import { useLanguage } from '@nisir/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';

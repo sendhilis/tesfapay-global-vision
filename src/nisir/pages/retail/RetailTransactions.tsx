@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { useTransactions } from '@/hooks/useTransactions';
-import MobilePortalLayout from '@/components/MobilePortalLayout';
-import NisirAIWidget from '@/components/NisirAIWidget';
+import { useLanguage } from '@nisir/contexts/LanguageContext';
+import { useTransactions } from '@nisir/hooks/useTransactions';
+import MobilePortalLayout from '@nisir/components/MobilePortalLayout';
+import NisirAIWidget from '@nisir/components/NisirAIWidget';
 import {
   Home, Wallet, CreditCard, HandCoins, HelpCircle,
   Send, Receipt, Smartphone, FileText, CircleDollarSign,

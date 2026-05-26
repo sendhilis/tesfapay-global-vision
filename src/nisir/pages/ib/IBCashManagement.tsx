@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
-import { useAccounts } from '@/hooks/useAccounts';
-import { useLoans } from '@/hooks/useLoans';
+import { useAuth } from '@nisir/hooks/useAuth';
+import { useAccounts } from '@nisir/hooks/useAccounts';
+import { useLoans } from '@nisir/hooks/useLoans';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';

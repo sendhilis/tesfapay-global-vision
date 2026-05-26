@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@nisir/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import MobilePortalLayout from '@/components/MobilePortalLayout';
+import MobilePortalLayout from '@nisir/components/MobilePortalLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -11,7 +11,7 @@ import {
   HandCoins, Check, Loader2, Shield, Phone, Search
 } from 'lucide-react';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
-import CustomerPicker from '@/components/agency/CustomerPicker';
+import CustomerPicker from '@nisir/components/agency/CustomerPicker';
 
 const navItems = [
   { icon: <Home className="h-5 w-5" />, labelKey: 'common.home', path: '/agency' },

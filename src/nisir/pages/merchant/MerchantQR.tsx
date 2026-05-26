@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { useMerchantWallet } from '@/contexts/MerchantWalletContext';
-import MobilePortalLayout from '@/components/MobilePortalLayout';
+import { useLanguage } from '@nisir/contexts/LanguageContext';
+import { useMerchantWallet } from '@nisir/contexts/MerchantWalletContext';
+import MobilePortalLayout from '@nisir/components/MobilePortalLayout';
 import { QRCodeSVG } from 'qrcode.react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {

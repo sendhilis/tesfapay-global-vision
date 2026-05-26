@@ -1,7 +1,7 @@
-import { useLanguage } from '@/contexts/LanguageContext';
+import { useLanguage } from '@nisir/contexts/LanguageContext';
 import { useNavigate } from 'react-router-dom';
-import { useMerchantWallet } from '@/contexts/MerchantWalletContext';
-import MobilePortalLayout from '@/components/MobilePortalLayout';
+import { useMerchantWallet } from '@nisir/contexts/MerchantWalletContext';
+import MobilePortalLayout from '@nisir/components/MobilePortalLayout';
 import { motion } from 'framer-motion';
 import {
   Home, QrCode, Wallet, Users, Receipt,

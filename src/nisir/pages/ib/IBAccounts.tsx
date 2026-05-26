@@ -1,6 +1,6 @@
-import { useAccounts } from '@/hooks/useAccounts';
-import { useTransactions } from '@/hooks/useTransactions';
-import { useLanguage } from '@/contexts/LanguageContext';
+import { useAccounts } from '@nisir/hooks/useAccounts';
+import { useTransactions } from '@nisir/hooks/useTransactions';
+import { useLanguage } from '@nisir/contexts/LanguageContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Building2, Wallet, TrendingUp, TrendingDown } from 'lucide-react';

@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { useLanguage } from '@/contexts/LanguageContext';
+import { useLanguage } from '@nisir/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
-import { useAccounts } from '@/hooks/useAccounts';
+import { useAuth } from '@nisir/hooks/useAuth';
+import { useAccounts } from '@nisir/hooks/useAccounts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,7 +16,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import { Plus, Send, CheckCircle, XCircle, Clock, Building2, Users } from 'lucide-react';
-import OtpVerificationDialog from '@/components/OtpVerificationDialog';
+import OtpVerificationDialog from '@nisir/components/OtpVerificationDialog';
 
 interface Vendor {
   id: string;

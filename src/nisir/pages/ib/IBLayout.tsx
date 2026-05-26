@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
-import { useProfile } from '@/hooks/useProfile';
-import { useCorporateRole } from '@/hooks/useCorporateRole';
-import { useLanguage } from '@/contexts/LanguageContext';
-import LanguageToggle from '@/components/LanguageToggle';
-import TechurateABXFooter from '@/components/TechurateABXFooter';
+import { useAuth } from '@nisir/hooks/useAuth';
+import { useProfile } from '@nisir/hooks/useProfile';
+import { useCorporateRole } from '@nisir/hooks/useCorporateRole';
+import { useLanguage } from '@nisir/contexts/LanguageContext';
+import LanguageToggle from '@nisir/components/LanguageToggle';
+import TechurateABXFooter from '@nisir/components/TechurateABXFooter';
 import {
   LayoutDashboard, ArrowLeftRight, Receipt, Users, FileText,
   Upload, Settings, LogOut, ChevronLeft, ChevronRight, Bell,

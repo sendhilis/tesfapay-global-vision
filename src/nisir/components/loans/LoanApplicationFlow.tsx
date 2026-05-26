@@ -4,8 +4,8 @@ import { ArrowLeft, Check, Loader2, FileText, User, Target, Shield, ChevronRight
 import { type LoanProduct } from './LoanProductCards';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
-import { useAccounts } from '@/hooks/useAccounts';
+import { useAuth } from '@nisir/hooks/useAuth';
+import { useAccounts } from '@nisir/hooks/useAccounts';
 
 const fmt = (n: number) => n.toLocaleString('en-US', { minimumFractionDigits: 2 });
 

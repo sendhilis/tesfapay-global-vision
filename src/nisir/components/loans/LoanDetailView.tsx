@@ -5,7 +5,7 @@ import {
   ChevronDown, ChevronUp, CheckCircle2, Clock, XCircle, Loader2,
   Receipt, TrendingDown, Banknote
 } from 'lucide-react';
-import { useLoanSchedule, useLoanEvents, useLoanStatements, useLoanPenalties } from '@/hooks/useLoans';
+import { useLoanSchedule, useLoanEvents, useLoanStatements, useLoanPenalties } from '@nisir/hooks/useLoans';
 import type { Tables } from '@/integrations/supabase/types';
 import LoanRepaymentFlow from './LoanRepaymentFlow';
 import EarlyRepaymentCalculator from './EarlyRepaymentCalculator';

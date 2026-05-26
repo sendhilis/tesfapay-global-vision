@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { useLanguage } from '@/contexts/LanguageContext';
+import { useLanguage } from '@nisir/contexts/LanguageContext';
 import { Upload, FileCheck, Calendar } from 'lucide-react';
-import type { KycFormData } from '@/pages/retail/KycWizard';
+import type { KycFormData } from '@nisir/pages/retail/KycWizard';
 import { toast } from 'sonner';
 
 interface Props {

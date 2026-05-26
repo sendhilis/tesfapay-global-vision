@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { useAuth } from '@/hooks/useAuth';
+import { useLanguage } from '@nisir/contexts/LanguageContext';
+import { useAuth } from '@nisir/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import MobilePortalLayout from '@/components/MobilePortalLayout';
+import MobilePortalLayout from '@nisir/components/MobilePortalLayout';
 import { motion } from 'framer-motion';
 import {
   Home, BarChart3, Users, CreditCard, FileText,

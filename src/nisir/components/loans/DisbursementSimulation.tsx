@@ -2,8 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle2, Loader2, Shield, CreditCard, Banknote, ArrowRight, Sparkles, PartyPopper } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
-import { useAccounts } from '@/hooks/useAccounts';
+import { useAuth } from '@nisir/hooks/useAuth';
+import { useAccounts } from '@nisir/hooks/useAccounts';
 import { toast } from 'sonner';
 
 const fmt = (n: number) => n.toLocaleString('en-US', { minimumFractionDigits: 2 });

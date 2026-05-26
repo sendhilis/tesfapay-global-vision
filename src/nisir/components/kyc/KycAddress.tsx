@@ -1,5 +1,5 @@
-import { useLanguage } from '@/contexts/LanguageContext';
-import type { KycFormData } from '@/pages/retail/KycWizard';
+import { useLanguage } from '@nisir/contexts/LanguageContext';
+import type { KycFormData } from '@nisir/pages/retail/KycWizard';
 import { toast } from 'sonner';
 
 interface Props {

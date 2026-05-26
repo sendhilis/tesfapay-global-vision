@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { useAuth } from '@/hooks/useAuth';
-import { useAccounts } from '@/hooks/useAccounts';
+import { useLanguage } from '@nisir/contexts/LanguageContext';
+import { useAuth } from '@nisir/hooks/useAuth';
+import { useAccounts } from '@nisir/hooks/useAccounts';
 import { supabase } from '@/integrations/supabase/client';
-import MobilePortalLayout from '@/components/MobilePortalLayout';
+import MobilePortalLayout from '@nisir/components/MobilePortalLayout';
 import { motion } from 'framer-motion';
 import {
   Home, Wallet, CreditCard, HandCoins, HelpCircle,

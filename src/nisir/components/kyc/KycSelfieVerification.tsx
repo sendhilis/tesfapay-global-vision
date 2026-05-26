@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { useLanguage } from '@/contexts/LanguageContext';
+import { useLanguage } from '@nisir/contexts/LanguageContext';
 import { Camera, ScanFace, CheckCircle2, Loader2, AlertCircle, Video, XCircle } from 'lucide-react';
-import type { KycFormData } from '@/pages/retail/KycWizard';
+import type { KycFormData } from '@nisir/pages/retail/KycWizard';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 

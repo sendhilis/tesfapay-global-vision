@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { useAuth } from '@/hooks/useAuth';
-import { useProfile } from '@/hooks/useProfile';
+import { useLanguage } from '@nisir/contexts/LanguageContext';
+import { useAuth } from '@nisir/hooks/useAuth';
+import { useProfile } from '@nisir/hooks/useProfile';
 import { supabase } from '@/integrations/supabase/client';
-import MobilePortalLayout from '@/components/MobilePortalLayout';
+import MobilePortalLayout from '@nisir/components/MobilePortalLayout';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import {
@@ -12,15 +12,15 @@ import {
   Check, ChevronRight, Shield, ShieldCheck, ShieldAlert,
   Crown, Camera, ScanFace, MapPin, Loader2
 } from 'lucide-react';
-import KycTierSelector from '@/components/kyc/KycTierSelector';
-import KycPersonalDetails from '@/components/kyc/KycPersonalDetails';
-import KycAddress from '@/components/kyc/KycAddress';
-import KycDocumentUpload from '@/components/kyc/KycDocumentUpload';
-import KycSelfieVerification from '@/components/kyc/KycSelfieVerification';
-import KycReview from '@/components/kyc/KycReview';
-import KycOtpVerification from '@/components/kyc/KycOtpVerification';
-import KycFinancialProfile from '@/components/kyc/KycFinancialProfile';
-import KycConsent from '@/components/kyc/KycConsent';
+import KycTierSelector from '@nisir/components/kyc/KycTierSelector';
+import KycPersonalDetails from '@nisir/components/kyc/KycPersonalDetails';
+import KycAddress from '@nisir/components/kyc/KycAddress';
+import KycDocumentUpload from '@nisir/components/kyc/KycDocumentUpload';
+import KycSelfieVerification from '@nisir/components/kyc/KycSelfieVerification';
+import KycReview from '@nisir/components/kyc/KycReview';
+import KycOtpVerification from '@nisir/components/kyc/KycOtpVerification';
+import KycFinancialProfile from '@nisir/components/kyc/KycFinancialProfile';
+import KycConsent from '@nisir/components/kyc/KycConsent';
 
 const navItems = [
   { icon: <Home className="h-5 w-5" />, labelKey: 'common.home', path: '/retail' },

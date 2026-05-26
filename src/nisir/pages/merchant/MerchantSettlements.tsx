@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { useMerchantWallet, Settlement } from '@/contexts/MerchantWalletContext';
-import MobilePortalLayout from '@/components/MobilePortalLayout';
+import { useLanguage } from '@nisir/contexts/LanguageContext';
+import { useMerchantWallet, Settlement } from '@nisir/contexts/MerchantWalletContext';
+import MobilePortalLayout from '@nisir/components/MobilePortalLayout';
 import { motion } from 'framer-motion';
 import {
   Home, QrCode, Wallet, Users, Receipt,

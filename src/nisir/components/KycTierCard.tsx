@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { useLanguage } from '@/contexts/LanguageContext';
+import { useLanguage } from '@nisir/contexts/LanguageContext';
 import { motion } from 'framer-motion';
 import { Shield, ShieldCheck, Crown, ChevronRight, Zap, ArrowUpRight } from 'lucide-react';
 

@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { useAuth } from '@/hooks/useAuth';
-import { useAccounts } from '@/hooks/useAccounts';
+import { useLanguage } from '@nisir/contexts/LanguageContext';
+import { useAuth } from '@nisir/hooks/useAuth';
+import { useAccounts } from '@nisir/hooks/useAccounts';
 import { supabase } from '@/integrations/supabase/client';
-import MobilePortalLayout from '@/components/MobilePortalLayout';
+import MobilePortalLayout from '@nisir/components/MobilePortalLayout';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Home, Wallet, CreditCard, HandCoins, HelpCircle,
@@ -13,12 +13,12 @@ import {
 import type { Tables } from '@/integrations/supabase/types';
 import { differenceInDays, format } from 'date-fns';
 
-import CreditScoreGauge from '@/components/loans/CreditScoreGauge';
-import LoanProductCards, { type LoanProduct } from '@/components/loans/LoanProductCards';
-import LoanCalculator from '@/components/loans/LoanCalculator';
-import LoanApplicationFlow from '@/components/loans/LoanApplicationFlow';
-import DisbursementSimulation from '@/components/loans/DisbursementSimulation';
-import LoanDetailView from '@/components/loans/LoanDetailView';
+import CreditScoreGauge from '@nisir/components/loans/CreditScoreGauge';
+import LoanProductCards, { type LoanProduct } from '@nisir/components/loans/LoanProductCards';
+import LoanCalculator from '@nisir/components/loans/LoanCalculator';
+import LoanApplicationFlow from '@nisir/components/loans/LoanApplicationFlow';
+import DisbursementSimulation from '@nisir/components/loans/DisbursementSimulation';
+import LoanDetailView from '@nisir/components/loans/LoanDetailView';
 
 type Loan = Tables<'loans'>;
 

@@ -1,6 +1,6 @@
-import { useLanguage } from '@/contexts/LanguageContext';
-import { useAccounts } from '@/hooks/useAccounts';
-import MobilePortalLayout from '@/components/MobilePortalLayout';
+import { useLanguage } from '@nisir/contexts/LanguageContext';
+import { useAccounts } from '@nisir/hooks/useAccounts';
+import MobilePortalLayout from '@nisir/components/MobilePortalLayout';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {

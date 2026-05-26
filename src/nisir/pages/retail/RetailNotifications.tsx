@@ -1,6 +1,6 @@
-import { useLanguage } from '@/contexts/LanguageContext';
-import { useNotifications } from '@/hooks/useNotifications';
-import MobilePortalLayout from '@/components/MobilePortalLayout';
+import { useLanguage } from '@nisir/contexts/LanguageContext';
+import { useNotifications } from '@nisir/hooks/useNotifications';
+import MobilePortalLayout from '@nisir/components/MobilePortalLayout';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Home, Wallet, CreditCard, HandCoins, HelpCircle,

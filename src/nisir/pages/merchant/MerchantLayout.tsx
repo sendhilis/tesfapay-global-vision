@@ -1,6 +1,6 @@
 import { Outlet } from 'react-router-dom';
-import { MerchantWalletProvider } from '@/contexts/MerchantWalletContext';
-import NisirAIWidget from '@/components/NisirAIWidget';
+import { MerchantWalletProvider } from '@nisir/contexts/MerchantWalletContext';
+import NisirAIWidget from '@nisir/components/NisirAIWidget';
 
 const MerchantLayout = () => (
   <MerchantWalletProvider>

@@ -1,5 +1,5 @@
 import { Outlet } from 'react-router-dom';
-import NisirAIWidget from '@/components/NisirAIWidget';
+import NisirAIWidget from '@nisir/components/NisirAIWidget';
 
 const AgencyLayout = () => (
   <>

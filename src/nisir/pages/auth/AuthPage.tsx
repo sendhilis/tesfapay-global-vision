@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
-import { useLanguage } from '@/contexts/LanguageContext';
-import LanguageToggle from '@/components/LanguageToggle';
-import TechurateABXFooter from '@/components/TechurateABXFooter';
+import { useAuth } from '@nisir/hooks/useAuth';
+import { useLanguage } from '@nisir/contexts/LanguageContext';
+import LanguageToggle from '@nisir/components/LanguageToggle';
+import TechurateABXFooter from '@nisir/components/TechurateABXFooter';
 import { motion } from 'framer-motion';
 import { Eye, EyeOff, Phone, Mail, Lock, User, ArrowLeft, Shield, Smartphone, Clock } from 'lucide-react';
 import { toast } from 'sonner';

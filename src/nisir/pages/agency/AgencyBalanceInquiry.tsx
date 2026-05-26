@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { useAuth } from '@/hooks/useAuth';
+import { useLanguage } from '@nisir/contexts/LanguageContext';
+import { useAuth } from '@nisir/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import MobilePortalLayout from '@/components/MobilePortalLayout';
+import MobilePortalLayout from '@nisir/components/MobilePortalLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -12,7 +12,7 @@ import {
   Home, CreditCard, Users, BarChart3, FileText,
   Search, Phone, Eye, Loader2, ArrowDownToLine, ArrowUpFromLine, Receipt
 } from 'lucide-react';
-import CustomerPicker from '@/components/agency/CustomerPicker';
+import CustomerPicker from '@nisir/components/agency/CustomerPicker';
 
 const navItems = [
   { icon: <Home className="h-5 w-5" />, labelKey: 'common.home', path: '/agency' },

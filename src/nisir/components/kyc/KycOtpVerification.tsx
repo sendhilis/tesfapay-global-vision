@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useLanguage } from '@/contexts/LanguageContext';
+import { useLanguage } from '@nisir/contexts/LanguageContext';
 import { Shield, Smartphone, Clock, CheckCircle } from 'lucide-react';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { toast } from 'sonner';
-import type { KycFormData } from '@/pages/retail/KycWizard';
+import type { KycFormData } from '@nisir/pages/retail/KycWizard';
 
 interface Props {
   data: KycFormData;

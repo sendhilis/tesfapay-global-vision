@@ -1,9 +1,9 @@
-import { useAccounts } from '@/hooks/useAccounts';
-import { useTransactions } from '@/hooks/useTransactions';
-import { useProfile } from '@/hooks/useProfile';
-import { useLoans } from '@/hooks/useLoans';
-import { useAuth } from '@/hooks/useAuth';
-import { useLanguage } from '@/contexts/LanguageContext';
+import { useAccounts } from '@nisir/hooks/useAccounts';
+import { useTransactions } from '@nisir/hooks/useTransactions';
+import { useProfile } from '@nisir/hooks/useProfile';
+import { useLoans } from '@nisir/hooks/useLoans';
+import { useAuth } from '@nisir/hooks/useAuth';
+import { useLanguage } from '@nisir/contexts/LanguageContext';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';

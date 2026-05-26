@@ -1,4 +1,4 @@
-import { useLanguage } from '@/contexts/LanguageContext';
+import { useLanguage } from '@nisir/contexts/LanguageContext';
 import { motion } from 'framer-motion';
 import {
   ArrowLeftRight, Building2, Smartphone, Receipt,

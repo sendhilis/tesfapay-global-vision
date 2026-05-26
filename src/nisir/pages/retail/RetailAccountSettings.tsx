@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { useAccounts } from '@/hooks/useAccounts';
+import { useLanguage } from '@nisir/contexts/LanguageContext';
+import { useAccounts } from '@nisir/hooks/useAccounts';
 import { supabase } from '@/integrations/supabase/client';
-import MobilePortalLayout from '@/components/MobilePortalLayout';
+import MobilePortalLayout from '@nisir/components/MobilePortalLayout';
 import { motion } from 'framer-motion';
 import {
   Home, Wallet, CreditCard, HandCoins, HelpCircle,

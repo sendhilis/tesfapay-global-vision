@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { useAccounts } from '@/hooks/useAccounts';
-import { useAuth } from '@/hooks/useAuth';
-import { useLanguage } from '@/contexts/LanguageContext';
+import { useAccounts } from '@nisir/hooks/useAccounts';
+import { useAuth } from '@nisir/hooks/useAuth';
+import { useLanguage } from '@nisir/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { Zap, Droplets, Wifi, GraduationCap, Building, Receipt, CheckCircle } from 'lucide-react';
-import OtpVerificationDialog from '@/components/OtpVerificationDialog';
+import OtpVerificationDialog from '@nisir/components/OtpVerificationDialog';
 
 const IBBills = () => {
   const { accounts, refetch } = useAccounts();

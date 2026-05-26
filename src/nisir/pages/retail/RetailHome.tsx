@@ -1,12 +1,12 @@
-import { useLanguage } from '@/contexts/LanguageContext';
-import { useAuth } from '@/hooks/useAuth';
-import { useAccounts } from '@/hooks/useAccounts';
-import { useTransactions } from '@/hooks/useTransactions';
-import { useProfile } from '@/hooks/useProfile';
-import MobilePortalLayout from '@/components/MobilePortalLayout';
-import NisirAIWidget from '@/components/NisirAIWidget';
-import KycTierCard from '@/components/KycTierCard';
-import LoanRepaymentTracker from '@/components/loans/LoanRepaymentTracker';
+import { useLanguage } from '@nisir/contexts/LanguageContext';
+import { useAuth } from '@nisir/hooks/useAuth';
+import { useAccounts } from '@nisir/hooks/useAccounts';
+import { useTransactions } from '@nisir/hooks/useTransactions';
+import { useProfile } from '@nisir/hooks/useProfile';
+import MobilePortalLayout from '@nisir/components/MobilePortalLayout';
+import NisirAIWidget from '@nisir/components/NisirAIWidget';
+import KycTierCard from '@nisir/components/KycTierCard';
+import LoanRepaymentTracker from '@nisir/components/loans/LoanRepaymentTracker';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {

@@ -1,7 +1,7 @@
-import { useLanguage } from '@/contexts/LanguageContext';
+import { useLanguage } from '@nisir/contexts/LanguageContext';
 import { Shield, ShieldCheck, Crown, Check, ChevronRight, Wallet, Send, CreditCard, HandCoins, Building, Globe } from 'lucide-react';
 import { motion } from 'framer-motion';
-import type { KycTier } from '@/pages/retail/KycWizard';
+import type { KycTier } from '@nisir/pages/retail/KycWizard';
 
 interface Props {
   currentTier: string;

@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { useAuth } from '@/hooks/useAuth';
+import { useLanguage } from '@nisir/contexts/LanguageContext';
+import { useAuth } from '@nisir/hooks/useAuth';
 import LanguageToggle from './LanguageToggle';
 import TechurateABXFooter from './TechurateABXFooter';
 import { ArrowLeft, Bell, LogOut } from 'lucide-react';

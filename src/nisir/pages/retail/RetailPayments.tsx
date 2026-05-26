@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { useAuth } from '@/hooks/useAuth';
-import { useAccounts } from '@/hooks/useAccounts';
-import MobilePortalLayout from '@/components/MobilePortalLayout';
+import { useLanguage } from '@nisir/contexts/LanguageContext';
+import { useAuth } from '@nisir/hooks/useAuth';
+import { useAccounts } from '@nisir/hooks/useAccounts';
+import MobilePortalLayout from '@nisir/components/MobilePortalLayout';
 import { supabase } from '@/integrations/supabase/client';
 import { AnimatePresence, motion } from 'framer-motion';
 import { toast } from 'sonner';
@@ -10,10 +10,10 @@ import {
   Home, Wallet, CreditCard, HandCoins, HelpCircle,
   Send, Receipt, Smartphone, ArrowLeft, Check, Loader2
 } from 'lucide-react';
-import PaymentHub from '@/components/payments/PaymentHub';
-import NisirTransferFlow from '@/components/payments/NisirTransferFlow';
-import BankDepositFlow from '@/components/payments/BankDepositFlow';
-import MnoTransferFlow from '@/components/payments/MnoTransferFlow';
+import PaymentHub from '@nisir/components/payments/PaymentHub';
+import NisirTransferFlow from '@nisir/components/payments/NisirTransferFlow';
+import BankDepositFlow from '@nisir/components/payments/BankDepositFlow';
+import MnoTransferFlow from '@nisir/components/payments/MnoTransferFlow';
 
 const navItems = [
   { icon: <Home className="h-5 w-5" />, labelKey: 'common.home', path: '/retail' },

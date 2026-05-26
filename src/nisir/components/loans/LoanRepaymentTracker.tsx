@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@nisir/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { AlertTriangle, Calendar, CreditCard, ChevronRight, Clock, Bell } from 'lucide-react';
 import { differenceInDays, format } from 'date-fns';
