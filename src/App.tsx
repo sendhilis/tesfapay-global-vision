@@ -53,6 +53,7 @@ import ProposalDocument from "./pages/ProposalDocument";
 import ProductShowcase from "./pages/ProductShowcase";
 
 import { NisirPortalMount, type NisirPortal } from "@/platform/NisirPortalMount";
+import ABXPreloader from "@/components/ABXPreloader";
 
 const queryClient = new QueryClient();
 
@@ -85,6 +86,7 @@ const App = () => {
     <KycApplicationProvider>
     <WizardProvider>
     <TooltipProvider>
+      <ABXPreloader />
       <Toaster />
       <Sonner />
       <BrowserRouter>
