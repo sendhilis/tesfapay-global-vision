@@ -8,6 +8,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { ModuleHost } from "@/platform/ModuleHost";
 import { getModule } from "@/platform/ModuleRegistry";
+import AdminBar from "@/components/AdminBar";
 
 export default function PlatformModule() {
   const { moduleId = "" } = useParams();
