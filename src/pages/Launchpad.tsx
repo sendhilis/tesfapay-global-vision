@@ -10,13 +10,14 @@ import { useNavigate } from "react-router-dom";
 import { ArrowRight, Settings2, Sparkles } from "lucide-react";
 import { useBankConfig, useWizard } from "@/contexts/BankConfigContext";
 import { ABX_MODULES, getModule, type AbxModule } from "@/platform/ModuleRegistry";
+import AdminBar from "@/components/AdminBar";
 
 function moduleRoute(m: AbxModule) {
   // Wallet has its own dedicated layout; everything else mounts via ModuleHost.
   return m.id === "wallet" ? "/wallet" : `/platform/${m.id}`;
 }
 
-export default function Launchpad() {
+export default function Launchpad({ skipAutoRedirect = false }: { skipAutoRedirect?: boolean } = {}) {
   const cfg = useBankConfig();
   const { reset } = useWizard();
   const navigate = useNavigate();
@@ -31,13 +32,14 @@ export default function Launchpad() {
 
   // If only one module is enabled, skip the launchpad entirely.
   useEffect(() => {
-    if (enabled.length === 1) {
+    if (!skipAutoRedirect && enabled.length === 1) {
       navigate(moduleRoute(enabled[0]), { replace: true });
     }
-  }, [enabled, navigate]);
+  }, [enabled, navigate, skipAutoRedirect]);
 
   return (
     <div className="min-h-dvh bg-background">
+      <AdminBar label="Modules Launchpad" />
       <header className="border-b border-border">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
           <div>
