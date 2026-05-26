@@ -22,6 +22,14 @@ import { Lock, Sparkles } from "lucide-react";
 import { getModule, type AbxModule } from "./ModuleRegistry";
 import { useBankConfig } from "@/contexts/BankConfigContext";
 import { BankGPTView } from "@/components/wizard/modules/BankGPTView";
+import { NisirPortalMount, type NisirPortal } from "@/platform/NisirPortalMount";
+
+const NISIR_PORTAL_MAP: Record<string, NisirPortal> = {
+  "mobile-banking": "retail",
+  "internet-banking": "ib",
+  "agency-banking": "agency",
+  "merchant-portal": "merchant",
+};
 
 type Props = {
   moduleId: string;
@@ -38,6 +46,10 @@ export function ModuleHost({ moduleId, className }: Props) {
 
   // Native ABX modules with bespoke runtime UI go here.
   if (mod.id === "bankgpt") return <div className={className}><BankGPTView /></div>;
+
+  // Nisir Digital portals (lifted verbatim from Nisir Connect).
+  const nisirPortal = NISIR_PORTAL_MAP[mod.id];
+  if (nisirPortal) return <div className={className}><NisirPortalMount portal={nisirPortal} /></div>;
 
   // TODO: when remoteEntry is set, swap in React.lazy + Module Federation here.
   return <StubModule mod={mod} className={className} />;
