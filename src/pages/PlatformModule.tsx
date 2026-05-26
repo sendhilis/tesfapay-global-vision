@@ -17,6 +17,7 @@ export default function PlatformModule() {
 
   return (
     <div className="min-h-dvh bg-background">
+      <AdminBar label={mod?.name ?? moduleId} />
       <header className="border-b border-border">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           <button
