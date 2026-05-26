@@ -180,20 +180,30 @@ Deno.serve(async (req) => {
     const data = await aiRes.json();
     const raw = data?.choices?.[0]?.message?.content?.trim() || "(no reply)";
 
-    // Extract ```chart``` and ```action``` blocks; return both raw text (for TTS/markdown)
-    // and parsed structured payloads.
+    // Extract any fenced code block and classify as chart or action based on shape.
+    // The model sometimes tags blocks ```json instead of ```chart, so we accept any tag
+    // and strip every fenced block so raw JSON never leaks into the chat UI.
     const charts: unknown[] = [];
     const actions: unknown[] = [];
-    const stripped = raw.replace(/```(chart|action)\s*([\s\S]*?)```/g, (_m: string, kind: string, json: string) => {
+    const ACTION_TYPES = new Set([
+      "savings_deposit", "savings_withdraw", "tbill_purchase", "loan_repay", "transfer",
+    ]);
+    const CHART_TYPES = new Set(["pie", "donut", "bar", "line"]);
+    const stripped = raw.replace(/```[a-zA-Z0-9_-]*\s*([\s\S]*?)```/g, (_m: string, body: string) => {
+      const txt = body.trim();
       try {
-        const parsed = JSON.parse(json.trim());
-        if (kind === "chart") charts.push(parsed);
-        else actions.push(parsed);
+        const parsed = JSON.parse(txt);
+        const t = (parsed && typeof parsed === "object" ? (parsed as { type?: string }).type : "") || "";
+        if (CHART_TYPES.has(t) && Array.isArray((parsed as { data?: unknown }).data)) {
+          charts.push(parsed);
+        } else if (ACTION_TYPES.has(t)) {
+          actions.push(parsed);
+        }
       } catch (e) {
-        console.warn("Failed to parse", kind, "block:", e);
+        console.warn("Unparseable fenced block, dropping:", e);
       }
       return "";
-    }).trim();
+    }).replace(/\n{3,}/g, "\n\n").trim();
 
     return new Response(JSON.stringify({
       targetAgentId: targetId,
