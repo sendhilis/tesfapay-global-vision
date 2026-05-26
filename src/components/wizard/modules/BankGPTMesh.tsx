@@ -360,11 +360,20 @@ export function BankGPTMesh() {
                   </div>
                 );
               }
+              if (m.kind === "receipt") {
+                return (
+                  <div key={i} className="my-1.5">
+                    <div className="mx-auto max-w-[80%] flex items-center justify-center gap-2 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-center text-[11px] text-foreground">
+                      <CheckCircle2 className="h-3 w-3 text-emerald-500" /> {m.text}
+                    </div>
+                  </div>
+                );
+              }
               const a = mesh.agents[m.agentId];
               return (
                 <div key={i} className="flex justify-start">
                   <div
-                    className="max-w-[80%] rounded-2xl rounded-bl-sm border bg-background px-3 py-2 text-sm text-foreground"
+                    className="max-w-[85%] rounded-2xl rounded-bl-sm border bg-background px-3 py-2 text-sm text-foreground"
                     style={{ borderLeft: `3px solid ${a.color}` }}
                   >
                     <div className="mb-1 flex items-center justify-between gap-2">
@@ -382,7 +391,8 @@ export function BankGPTMesh() {
                         <Volume2 className={"h-3 w-3 " + (speakingIdx === i ? "animate-pulse text-primary" : "")} />
                       </button>
                     </div>
-                    <p className="leading-relaxed whitespace-pre-wrap">{m.text}</p>
+                    {m.text && <p className="leading-relaxed whitespace-pre-wrap">{m.text}</p>}
+                    {m.charts?.map((c, ci) => <AgentChart key={ci} spec={c} color={a.color} />)}
                   </div>
                 </div>
               );
