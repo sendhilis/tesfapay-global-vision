@@ -195,15 +195,37 @@ export function BankGPTMesh() {
       });
 
       if (error) throw error;
-      const reply = (data as { reply: string; targetAgentId: MeshAgentId; handoff?: { to: MeshAgentId; text: string } | null });
+      const reply = (data as {
+        reply: string;
+        targetAgentId: MeshAgentId;
+        handoff?: { to: MeshAgentId; text: string } | null;
+        charts?: ChartSpec[];
+        actions?: AgentAction[];
+      });
       const targetId = (reply.targetAgentId ?? "concierge") as MeshAgentId;
+
+      // Apply any balance-mutating actions to the customer profile so the
+      // wallet/savings panel and future agent calls stay in sync.
+      const receipts: string[] = [];
+      if (reply.actions?.length) {
+        setCustomer((prev) => {
+          let next = prev;
+          for (const a of reply.actions!) {
+            const { profile, receipt } = applyAction(next, a);
+            next = profile;
+            receipts.push(receipt);
+          }
+          return next;
+        });
+      }
 
       setMessages((m) => {
         const out: Msg[] = [...m];
         if (reply.handoff) {
           out.push({ kind: "handoff", to: reply.handoff.to as MeshAgentId, text: reply.handoff.text });
         }
-        out.push({ kind: "agent", agentId: targetId, text: reply.reply, lang: detected });
+        out.push({ kind: "agent", agentId: targetId, text: reply.reply, lang: detected, charts: reply.charts });
+        for (const r of receipts) out.push({ kind: "receipt", text: r });
         return out;
       });
       setCurrentAgent(targetId);
