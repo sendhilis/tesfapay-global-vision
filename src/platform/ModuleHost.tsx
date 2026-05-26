@@ -22,7 +22,7 @@ import { Lock, Sparkles } from "lucide-react";
 import { getModule, type AbxModule } from "./ModuleRegistry";
 import { useBankConfig } from "@/contexts/BankConfigContext";
 import { BankGPTView } from "@/components/wizard/modules/BankGPTView";
-import { NisirPortalMount, type NisirPortal } from "@/platform/NisirPortalMount";
+import type { NisirPortal } from "@/platform/NisirPortalMount";
 
 const NISIR_PORTAL_MAP: Record<string, NisirPortal> = {
   "mobile-banking": "retail",
@@ -47,9 +47,21 @@ export function ModuleHost({ moduleId, className }: Props) {
   // Native ABX modules with bespoke runtime UI go here.
   if (mod.id === "bankgpt") return <div className={className}><BankGPTView /></div>;
 
-  // Nisir Digital portals (lifted verbatim from Nisir Connect).
+  // Nisir Digital portals — sandboxed in an iframe so their MemoryRouter
+  // doesn't nest inside the ABX BrowserRouter (forbidden in React Router v6).
   const nisirPortal = NISIR_PORTAL_MAP[mod.id];
-  if (nisirPortal) return <div className={className}><NisirPortalMount portal={nisirPortal} /></div>;
+  if (nisirPortal) {
+    return (
+      <iframe
+        title={mod.name}
+        src={`/_nisir/${nisirPortal}`}
+        className={
+          "w-full rounded-2xl border border-border bg-card " + (className ?? "")
+        }
+        style={{ height: "calc(100vh - 180px)", minHeight: 640 }}
+      />
+    );
+  }
 
   // TODO: when remoteEntry is set, swap in React.lazy + Module Federation here.
   return <StubModule mod={mod} className={className} />;
