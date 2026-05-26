@@ -46,6 +46,15 @@ export default {
           "dark-mid": "hsl(220 30% 12%)",
           "dark-card": "hsl(220 28% 15%)",
         },
+        success: { DEFAULT: "hsl(var(--success))", foreground: "hsl(var(--primary-foreground))" },
+        warning: { DEFAULT: "hsl(var(--warning))", foreground: "hsl(var(--foreground))" },
+        info: { DEFAULT: "hsl(var(--info))", foreground: "hsl(var(--primary-foreground))" },
+        portal: {
+          retail: "hsl(var(--portal-retail))",
+          agency: "hsl(var(--portal-agency))",
+          merchant: "hsl(var(--portal-merchant))",
+          admin: "hsl(var(--portal-admin))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
