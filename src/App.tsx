@@ -52,9 +52,35 @@ import InstallPage from "./pages/InstallPage";
 import ProposalDocument from "./pages/ProposalDocument";
 import ProductShowcase from "./pages/ProductShowcase";
 
+import { NisirPortalMount, type NisirPortal } from "@/platform/NisirPortalMount";
+
 const queryClient = new QueryClient();
 
-const App = () => (
+/**
+ * If the page is loaded inside the Nisir portal iframe (path
+ * `/_nisir/<portal>`), render ONLY the Nisir portal tree. This
+ * keeps the portal's MemoryRouter from nesting inside the ABX
+ * BrowserRouter (which React Router v6 forbids).
+ */
+const nisirPortalMatch = (() => {
+  if (typeof window === "undefined") return null;
+  const m = window.location.pathname.match(/^\/_nisir\/(retail|ib|agency|merchant)\/?$/);
+  return m ? (m[1] as NisirPortal) : null;
+})();
+
+const App = () => {
+  if (nisirPortalMatch) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <NisirPortalMount portal={nisirPortalMatch} />
+        </TooltipProvider>
+      </QueryClientProvider>
+    );
+  }
+  return (
   <QueryClientProvider client={queryClient}>
     <KycApplicationProvider>
     <WizardProvider>
