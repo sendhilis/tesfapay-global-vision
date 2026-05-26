@@ -3676,6 +3676,27 @@ export type Database = {
           },
         ]
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_savings_goals: {
         Row: {
           category: string | null
@@ -3799,6 +3820,14 @@ export type Database = {
           monthly_limit: number
         }[]
       }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_staff: { Args: { _user_id: string }; Returns: boolean }
       process_airtime_purchase: {
         Args: {
           p_account_id: string
@@ -3850,6 +3879,7 @@ export type Database = {
       account_type: "savings" | "wallet" | "current"
       agent_category: "super_agent" | "agent" | "sub_agent"
       agent_status: "pending" | "active" | "suspended" | "terminated"
+      app_role: "admin" | "staff" | "compliance" | "support" | "analyst"
       consent_type:
         | "digital_statements"
         | "marketing"
@@ -4033,6 +4063,7 @@ export const Constants = {
       account_type: ["savings", "wallet", "current"],
       agent_category: ["super_agent", "agent", "sub_agent"],
       agent_status: ["pending", "active", "suspended", "terminated"],
+      app_role: ["admin", "staff", "compliance", "support", "analyst"],
       consent_type: [
         "digital_statements",
         "marketing",
