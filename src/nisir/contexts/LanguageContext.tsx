@@ -402,6 +402,8 @@ const translations: Record<string, Record<Language, string>> = {
   'agent.enterOtp': { en: 'Please enter the full OTP', am: 'እባክዎ ሙሉ OTP ያስገቡ' },
   'agent.invalidOtp': { en: 'Invalid OTP. Try again.', am: 'ልክ ያልሆነ OTP። እንደገና ይሞክሩ።' },
   'agent.otpHint': { en: 'For demo: enter any 6 digits', am: 'ለማሳያ: ማንኛውንም 6 አሃዞች ያስገቡ' },
+  'agent.cashIn': { en: 'Cash In', am: 'ገንዘብ ማስገባት' },
+  'agent.cashOut': { en: 'Cash Out', am: 'ገንዘብ ማውጣት' },
   'agent.cashInSuccess': { en: 'Cash-In Successful!', am: 'ገንዘብ ማስገባት ተሳክቷል!' },
   'agent.depositedToAccount': { en: 'deposited to your account', am: 'ወደ ሂሳብዎ ገብቷል' },
   'agent.reference': { en: 'Reference', am: 'ማጣቀሻ' },
