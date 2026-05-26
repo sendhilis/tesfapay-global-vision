@@ -5,18 +5,21 @@
  */
 import { useCallback, useEffect, useState } from "react";
 
-const KEY = "abx.bankgpt.agentbuilder.v1";
+const KEY = "abx.bankgpt.agentbuilder.v2";
 
 export type KbDoc = {
   id: string;
-  name: string;
+  name: string;          // filename or URL
   type: "pdf" | "docx" | "txt" | "url";
-  size: string;          // human readable
-  status: "pending" | "indexing" | "indexed" | "error";
+  size: string;
+  status: "pending" | "checking" | "indexing" | "indexed" | "error";
   chunks?: number;
   tokens?: number;
   indexedAt?: string;
   enabled: boolean;
+  source?: string;       // original URL or file source label
+  checksum?: string;     // simulated content hash
+  error?: string;        // error reason if status==="error"
 };
 
 export type ToolId =
@@ -37,6 +40,47 @@ export type TestRun = {
   actual: string;
   passed: boolean | null;
   timestamp: string;
+  latencyMs?: number;
+  tokensIn?: number;
+  tokensOut?: number;
+  groundedCitations?: number;
+  blockedBy?: string;
+};
+
+export type Guardrails = {
+  piiRedaction: boolean;
+  profanityFilter: boolean;
+  jailbreakDetection: boolean;
+  requireGroundedAnswers: boolean;
+  blockedTopics: string[];
+  allowedLanguages: string[];
+  refusalMessage: string;
+  maxTokensPerReply: number;
+  maxTurnsPerSession: number;
+  rateLimitPerMinute: number;
+  minGroundingSimilarity: number;
+  humanHandoffOnLowConfidence: boolean;
+};
+
+export type Observability = {
+  metricsEnabled: boolean;
+  traceSampleRate: number;        // 0..1
+  redactPiiInLogs: boolean;
+  alerts: {
+    latencyP95Ms: number;
+    errorRatePct: number;
+    costPerSessionEtb: number;
+  };
+  retentionDays: number;
+};
+
+export type AuditEntry = {
+  id: string;
+  timestamp: string;
+  actor: string;          // bank admin email/role (mocked)
+  action: string;         // e.g. "kb.doc.added"
+  target?: string;        // entity id / name
+  details?: Record<string, unknown>;
 };
 
 export type AgentBuilderConfig = {
@@ -56,10 +100,12 @@ export type AgentBuilderConfig = {
     lastIndexedAt?: string;
   };
   tools: Record<ToolId, ToolPolicy>;
+  guardrails: Guardrails;
+  observability: Observability;
   sandbox: { runs: TestRun[] };
   widget: {
-    surfaces: string[];  // "home" | "wallet" | "loans" | "cards" | "investments"
-    triggers: string[];  // "idle" | "low_balance" | "post_txn" | "salary_credit" | "manual"
+    surfaces: string[];
+    triggers: string[];
     style: "bubble" | "inline" | "fullscreen";
     enabled: boolean;
   };
@@ -68,8 +114,10 @@ export type AgentBuilderConfig = {
     kbIndexed: boolean;
     sandboxPassed: boolean;
     widgetPlaced: boolean;
+    guardrailsReviewed: boolean;
     activated: boolean;
   };
+  audit: AuditEntry[];
 };
 
 export function defaultBuilderConfig(): AgentBuilderConfig {
@@ -87,9 +135,31 @@ export function defaultBuilderConfig(): AgentBuilderConfig {
       send_notification:  { enabled: true,  approval: "auto" },
       generate_chart:     { enabled: true,  approval: "auto" },
     },
+    guardrails: {
+      piiRedaction: true,
+      profanityFilter: true,
+      jailbreakDetection: true,
+      requireGroundedAnswers: true,
+      blockedTopics: ["political opinions", "competitor advice", "legal counsel"],
+      allowedLanguages: ["en", "am"],
+      refusalMessage: "I can't help with that here — let me hand you to a human agent.",
+      maxTokensPerReply: 600,
+      maxTurnsPerSession: 25,
+      rateLimitPerMinute: 20,
+      minGroundingSimilarity: 0.7,
+      humanHandoffOnLowConfidence: true,
+    },
+    observability: {
+      metricsEnabled: true,
+      traceSampleRate: 1.0,
+      redactPiiInLogs: true,
+      alerts: { latencyP95Ms: 1500, errorRatePct: 2, costPerSessionEtb: 1.5 },
+      retentionDays: 90,
+    },
     sandbox: { runs: [] },
     widget: { surfaces: ["home"], triggers: ["manual"], style: "bubble", enabled: false },
-    goLive: { personaComplete: false, kbIndexed: false, sandboxPassed: false, widgetPlaced: false, activated: false },
+    goLive: { personaComplete: false, kbIndexed: false, sandboxPassed: false, widgetPlaced: false, guardrailsReviewed: false, activated: false },
+    audit: [],
   };
 }
 
@@ -111,22 +181,56 @@ function write(s: Store) {
   try { localStorage.setItem(KEY, JSON.stringify(s)); } catch {}
 }
 
+/** Merge persisted config with defaults so newly added fields aren't undefined. */
+function hydrate(c: Partial<AgentBuilderConfig> | undefined): AgentBuilderConfig {
+  const d = defaultBuilderConfig();
+  if (!c) return d;
+  return {
+    ...d,
+    ...c,
+    intents:       { ...d.intents,       ...(c.intents       ?? {}) },
+    kb:            { ...d.kb,            ...(c.kb            ?? {}) },
+    tools:         { ...d.tools,         ...(c.tools         ?? {}) },
+    guardrails:    { ...d.guardrails,    ...(c.guardrails    ?? {}) },
+    observability: { ...d.observability, ...(c.observability ?? {}),
+      alerts: { ...d.observability.alerts, ...((c.observability?.alerts) ?? {}) } },
+    sandbox:       { ...d.sandbox,       ...(c.sandbox       ?? {}) },
+    widget:        { ...d.widget,        ...(c.widget        ?? {}) },
+    goLive:        { ...d.goLive,        ...(c.goLive        ?? {}) },
+    audit:         Array.isArray(c.audit) ? c.audit : [],
+  };
+}
+
 export function useAgentBuilder(agentId: string) {
   const [store, setStore] = useState<Store>(() => read());
 
   useEffect(() => { write(store); }, [store]);
 
-  const config = store.configs[agentId] ?? defaultBuilderConfig();
+  const config = hydrate(store.configs[agentId]);
 
   const update = useCallback((patch: Partial<AgentBuilderConfig> | ((c: AgentBuilderConfig) => AgentBuilderConfig)) => {
     setStore((s) => {
-      const current = s.configs[agentId] ?? defaultBuilderConfig();
+      const current = hydrate(s.configs[agentId]);
       const next = typeof patch === "function" ? patch(current) : { ...current, ...patch };
       return { ...s, configs: { ...s.configs, [agentId]: next } };
     });
   }, [agentId]);
 
-  return { config, update };
+  const logAudit = useCallback((action: string, target?: string, details?: Record<string, unknown>) => {
+    setStore((s) => {
+      const current = hydrate(s.configs[agentId]);
+      const entry: AuditEntry = {
+        id: `aud-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        timestamp: new Date().toISOString(),
+        actor: "bank.admin@globalbank.et",
+        action, target, details,
+      };
+      const next: AgentBuilderConfig = { ...current, audit: [entry, ...current.audit].slice(0, 200) };
+      return { ...s, configs: { ...s.configs, [agentId]: next } };
+    });
+  }, [agentId]);
+
+  return { config, update, logAudit };
 }
 
 export function useCustomAgents() {
