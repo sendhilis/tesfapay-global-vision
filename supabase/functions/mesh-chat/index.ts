@@ -46,39 +46,43 @@ function describeTone(a: MeshAgent): string {
 }
 
 const VIZ_PROTOCOL = `
-ANALYTICAL OUTPUT PROTOCOL
-You are a highly analytical agent. When numbers, trends, breakdowns,
-allocations, comparisons or scores are relevant to the user's question,
-ALWAYS attach one or more visualisations after your text reply using
-fenced code blocks tagged exactly \`\`\`chart and \`\`\`action.
+ANALYTICAL OUTPUT PROTOCOL — STRICT
+This is a polished conversational UI. NEVER show JSON, code, schemas, field
+names, or the word "json" in your prose. The user must only see clean text
+plus rendered charts.
 
-Chart block schema (JSON):
+When numbers, trends, breakdowns, allocations, comparisons or scores are
+relevant, attach visualisations using fenced blocks tagged exactly
+\`\`\`chart (for charts) or \`\`\`action (for money movements). The host app
+parses and renders these blocks — they are invisible to the user.
+
+Chart block schema:
 {
   "type": "pie" | "donut" | "bar" | "line",
   "title": "Short chart title",
   "currency": "ETB" | null,
-  "data": [ { "name": "Label", "value": 123 }, ... ]   // for line: name = x-axis label
+  "data": [ { "name": "Label", "value": 123 }, ... ]
 }
-- Use "pie" or "donut" for category breakdowns (spend categories, wealth allocation, credit factor weights).
-- Use "bar" for comparisons (goal progress, monthly outflow vs inflow snapshot).
-- Use "line" for trends over time (use monthlyTrend; you may put multiple series by including {name, inflow, outflow, savings} objects).
-- Pull data ONLY from the CUSTOMER_PROFILE_JSON. Never invent numbers.
-- Emit at most 2 chart blocks per reply.
+- pie/donut for category breakdowns; bar for comparisons; line for trends.
+- Pull data ONLY from CUSTOMER_PROFILE_JSON. Never invent numbers.
+- Max 2 chart blocks per reply.
 
-Action block schema — emit ONLY when the user clearly asks to MOVE money
-(deposit, withdraw, buy T-Bill, repay loan, send). Schema:
+Action block — ONLY when the user asks to move money:
 {
   "type": "savings_deposit" | "savings_withdraw" | "tbill_purchase" | "loan_repay" | "transfer",
   "amount": 1000,
-  "goalId": "SG-1",        // for savings_*
-  "loanId": "LN-44210",    // for loan_repay
-  "tenor": "91d"|"182d"|"364d", // for tbill_purchase
-  "to": "Mother"           // for transfer
+  "goalId": "SG-1",
+  "loanId": "LN-44210",
+  "tenor": "91d"|"182d"|"364d",
+  "to": "Mother"
 }
-The host app will execute the action and update wallet/savings balances.
-Confirm the action in your text reply (e.g. "Moving ETB 1,000 from your wallet…").
+Confirm the action in plain prose (e.g. "Moving ETB 1,000 to your goal…").
 
-Keep your prose tight; let the charts do the heavy lifting.
+PROSE RULES:
+- Keep text tight: 1-3 short sentences before/after the chart.
+- Refer to the chart naturally ("as you can see below") — do NOT describe
+  every data point in words; the chart shows them.
+- Never write \`\`\`json or paste raw data into your reply.
 `;
 
 function buildSystem(
@@ -180,20 +184,30 @@ Deno.serve(async (req) => {
     const data = await aiRes.json();
     const raw = data?.choices?.[0]?.message?.content?.trim() || "(no reply)";
 
-    // Extract ```chart``` and ```action``` blocks; return both raw text (for TTS/markdown)
-    // and parsed structured payloads.
+    // Extract any fenced code block and classify as chart or action based on shape.
+    // The model sometimes tags blocks ```json instead of ```chart, so we accept any tag
+    // and strip every fenced block so raw JSON never leaks into the chat UI.
     const charts: unknown[] = [];
     const actions: unknown[] = [];
-    const stripped = raw.replace(/```(chart|action)\s*([\s\S]*?)```/g, (_m: string, kind: string, json: string) => {
+    const ACTION_TYPES = new Set([
+      "savings_deposit", "savings_withdraw", "tbill_purchase", "loan_repay", "transfer",
+    ]);
+    const CHART_TYPES = new Set(["pie", "donut", "bar", "line"]);
+    const stripped = raw.replace(/```[a-zA-Z0-9_-]*\s*([\s\S]*?)```/g, (_m: string, body: string) => {
+      const txt = body.trim();
       try {
-        const parsed = JSON.parse(json.trim());
-        if (kind === "chart") charts.push(parsed);
-        else actions.push(parsed);
+        const parsed = JSON.parse(txt);
+        const t = (parsed && typeof parsed === "object" ? (parsed as { type?: string }).type : "") || "";
+        if (CHART_TYPES.has(t) && Array.isArray((parsed as { data?: unknown }).data)) {
+          charts.push(parsed);
+        } else if (ACTION_TYPES.has(t)) {
+          actions.push(parsed);
+        }
       } catch (e) {
-        console.warn("Failed to parse", kind, "block:", e);
+        console.warn("Unparseable fenced block, dropping:", e);
       }
       return "";
-    }).trim();
+    }).replace(/\n{3,}/g, "\n\n").trim();
 
     return new Response(JSON.stringify({
       targetAgentId: targetId,
