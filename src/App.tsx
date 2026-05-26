@@ -149,6 +149,7 @@ const App = () => {
     </WizardProvider>
     </KycApplicationProvider>
   </QueryClientProvider>
-);
+  );
+};
 
 export default App;
