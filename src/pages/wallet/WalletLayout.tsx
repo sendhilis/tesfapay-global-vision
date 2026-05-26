@@ -20,6 +20,7 @@ import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import { Home, Send, Receipt, PiggyBank, History, User } from "lucide-react";
 import tesfaLogo from "@/assets/tesfa-logo.png";
 import TesfaAI from "@/components/TesfaAI";
+import AdminBar from "@/components/AdminBar";
 import { useBankConfig } from "@/contexts/BankConfigContext";
 
 const navItems = [
