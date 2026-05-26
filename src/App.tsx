@@ -60,6 +60,7 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<RootGate />} />
+          <Route path="/launchpad" element={<LaunchpadRoute />} />
           <Route path="/home" element={<Index />} />
           <Route path="/platform/:moduleId" element={<PlatformModule />} />
           <Route path="/setup" element={<Setup />} />
