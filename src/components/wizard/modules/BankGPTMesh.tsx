@@ -13,7 +13,11 @@
  * speaks English and Amharic with the same voice.
  */
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Send, Volume2, Languages, Sparkles, Zap, User2 } from "lucide-react";
+import { Send, Volume2, Languages, Sparkles, Zap, User2, CheckCircle2 } from "lucide-react";
+import {
+  PieChart, Pie, Cell, BarChart, Bar, LineChart, Line,
+  XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
+} from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 import { useBankConfig, type MeshAgentId } from "@/contexts/BankConfigContext";
 import {
@@ -21,7 +25,9 @@ import {
   customerSnapshot,
   detectLang,
   nudgesForAgent,
+  applyAction,
   type CustomerProfile,
+  type AgentAction,
 } from "@/platform/customerDataPlatform";
 
 const AGENT_ORDER: MeshAgentId[] = [
@@ -29,10 +35,65 @@ const AGENT_ORDER: MeshAgentId[] = [
   "loanAgent", "complaintAgent", "notificationAgent",
 ];
 
+type ChartSpec = {
+  type: "pie" | "donut" | "bar" | "line";
+  title?: string;
+  currency?: string | null;
+  data: Array<Record<string, string | number>>;
+};
+
 type Msg =
-  | { kind: "agent"; agentId: MeshAgentId; text: string; lang: "en" | "am" }
+  | { kind: "agent"; agentId: MeshAgentId; text: string; lang: "en" | "am"; charts?: ChartSpec[] }
   | { kind: "user"; text: string }
-  | { kind: "handoff"; to: MeshAgentId; text: string };
+  | { kind: "handoff"; to: MeshAgentId; text: string }
+  | { kind: "receipt"; text: string };
+
+const CHART_PALETTE = ["#22c55e", "#3b82f6", "#f59e0b", "#ec4899", "#8b5cf6", "#06b6d4", "#ef4444", "#84cc16"];
+
+function AgentChart({ spec, color }: { spec: ChartSpec; color: string }) {
+  const title = spec.title;
+  const data = spec.data ?? [];
+  const fmt = (n: number) => (spec.currency ? `${spec.currency} ${n.toLocaleString()}` : n.toLocaleString());
+  return (
+    <div className="mt-2 rounded-xl border border-border bg-background/60 p-2">
+      {title && <p className="mb-1 text-[11px] font-semibold text-foreground">{title}</p>}
+      <div className="h-44 w-full">
+        <ResponsiveContainer width="100%" height="100%">
+          {spec.type === "pie" || spec.type === "donut" ? (
+            <PieChart>
+              <Pie
+                data={data} dataKey="value" nameKey="name"
+                innerRadius={spec.type === "donut" ? 32 : 0} outerRadius={62}
+                paddingAngle={2}
+              >
+                {data.map((_, i) => <Cell key={i} fill={CHART_PALETTE[i % CHART_PALETTE.length]} />)}
+              </Pie>
+              <Tooltip formatter={(v: number) => fmt(v)} contentStyle={{ fontSize: 11 }} />
+              <Legend wrapperStyle={{ fontSize: 10 }} />
+            </PieChart>
+          ) : spec.type === "bar" ? (
+            <BarChart data={data} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
+              <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+              <YAxis tick={{ fontSize: 10 }} />
+              <Tooltip formatter={(v: number) => fmt(v)} contentStyle={{ fontSize: 11 }} />
+              <Bar dataKey="value" fill={color} radius={[4, 4, 0, 0]} />
+            </BarChart>
+          ) : (
+            <LineChart data={data} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
+              <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+              <YAxis tick={{ fontSize: 10 }} />
+              <Tooltip formatter={(v: number) => fmt(v)} contentStyle={{ fontSize: 11 }} />
+              <Legend wrapperStyle={{ fontSize: 10 }} />
+              {Object.keys(data[0] ?? {}).filter((k) => k !== "name").map((k, i) => (
+                <Line key={k} type="monotone" dataKey={k} stroke={CHART_PALETTE[i % CHART_PALETTE.length]} strokeWidth={2} dot={false} />
+              ))}
+            </LineChart>
+          )}
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+}
 
 const SUGGESTIONS_EN = [
   "How is my spending this month?",
