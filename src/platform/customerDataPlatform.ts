@@ -2,11 +2,10 @@
  * Synthetic Customer Data Platform (CDP)
  * ─────────────────────────────────────────────────────────────
  * Stand-in for the real banking CDP that the BankGPT AI Mesh
- * agents will read from at runtime. Every chat request to the
- * mesh-chat edge function ships a snapshot of this profile so
- * each agent can answer with concrete numbers ("you spent ETB
- * 4,210 on groceries last month") instead of generic banking
- * platitudes.
+ * agents read from at runtime. Every chat request ships a
+ * snapshot of this profile so each agent can answer with
+ * concrete numbers AND structured analytics that the UI renders
+ * as pies, bars and line charts.
  *
  * In production the Spring Boot CDP service replaces this file.
  * The shape (`CustomerProfile`) stays identical.
@@ -16,7 +15,7 @@ export type Txn = {
   id: string;
   date: string;          // ISO yyyy-mm-dd
   merchant: string;
-  category: "groceries" | "transport" | "salary" | "transfer" | "bills" | "dining" | "remittance" | "fees" | "savings";
+  category: "groceries" | "transport" | "salary" | "transfer" | "bills" | "dining" | "remittance" | "fees" | "savings" | "entertainment" | "health" | "education" | "shopping";
   amount: number;        // ETB, negative = debit
 };
 
@@ -58,6 +57,19 @@ export type SavingsGoal = {
   dueDate: string;
 };
 
+export type MonthlyPoint = {
+  month: string;     // "Jan", "Feb"...
+  inflow: number;
+  outflow: number;
+  savings: number;
+};
+
+export type CreditFactor = {
+  factor: string;          // e.g. "Payment history"
+  weight: number;          // 0..100 (contribution to score)
+  status: "excellent" | "good" | "fair" | "poor";
+};
+
 export type CustomerProfile = {
   customerId: string;
   firstName: string;
@@ -82,6 +94,13 @@ export type CustomerProfile = {
   investments: Investment[];
   savingsGoals: SavingsGoal[];
   recentTransactions: Txn[];
+  // Analytics
+  monthlyTrend: MonthlyPoint[];               // last 6 months
+  spendByCategory: { category: string; amount: number }[];
+  creditFactors: CreditFactor[];
+  netWorthETB: number;
+  debtToIncome: number;        // 0..1
+  savingsRate: number;         // 0..1
   // Behaviour signals (drive proactive nudges)
   signals: {
     lastSalaryCreditedAt?: string;
@@ -93,6 +112,35 @@ export type CustomerProfile = {
     eligibleForTBillETB?: number;
   };
 };
+
+const SELAM_SPEND = [
+  { category: "Groceries", amount: 4_210 },
+  { category: "Transport", amount: 1_650 },
+  { category: "Bills", amount: 2_400 },
+  { category: "Dining", amount: 1_880 },
+  { category: "Remittance", amount: 2_000 },
+  { category: "Shopping", amount: 1_460 },
+  { category: "Entertainment", amount: 980 },
+  { category: "Health", amount: 620 },
+];
+
+const BEKELE_SPEND = [
+  { category: "Supplier payouts", amount: 52_000 },
+  { category: "Rent", amount: 8_500 },
+  { category: "Loan installment", amount: 14_300 },
+  { category: "Transport / logistics", amount: 6_200 },
+  { category: "Utilities", amount: 2_400 },
+  { category: "Staff wages", amount: 9_000 },
+];
+
+const TIGIST_SPEND = [
+  { category: "Groceries", amount: 5_800 },
+  { category: "Education (daughter)", amount: 4_500 },
+  { category: "Bills", amount: 3_200 },
+  { category: "Dining", amount: 1_400 },
+  { category: "Investments sweep", amount: 5_000 },
+  { category: "Health", amount: 1_100 },
+];
 
 const PROFILES: Record<string, CustomerProfile> = {
   selam: {
@@ -112,16 +160,7 @@ const PROFILES: Record<string, CustomerProfile> = {
     riskTier: "low",
     kycTier: 2,
     loans: [
-      {
-        id: "LN-44210",
-        product: "Mercato Cash micro-loan",
-        principal: 5_000,
-        outstanding: 1_800,
-        monthlyInstallment: 600,
-        rate: 5,
-        nextDueDate: "2026-06-05",
-        status: "active",
-      },
+      { id: "LN-44210", product: "Mercato Cash micro-loan", principal: 5_000, outstanding: 1_800, monthlyInstallment: 600, rate: 5, nextDueDate: "2026-06-05", status: "active" },
     ],
     cards: [
       { id: "CD-1", brand: "Visa", type: "debit", last4: "4421", status: "active" },
@@ -143,6 +182,25 @@ const PROFILES: Record<string, CustomerProfile> = {
       { id: "T6", date: "2026-05-19", merchant: "Tomoca Coffee",            category: "dining",    amount:    -240 },
       { id: "T7", date: "2026-05-18", merchant: "Goal sweep — Lalibela",    category: "savings",   amount:  -1_000 },
     ],
+    monthlyTrend: [
+      { month: "Dec", inflow: 17_800, outflow: 16_200, savings: 1_000 },
+      { month: "Jan", inflow: 18_200, outflow: 15_400, savings: 1_200 },
+      { month: "Feb", inflow: 18_500, outflow: 16_100, savings: 1_400 },
+      { month: "Mar", inflow: 19_000, outflow: 15_800, savings: 1_600 },
+      { month: "Apr", inflow: 18_500, outflow: 15_900, savings: 1_800 },
+      { month: "May", inflow: 18_500, outflow: 15_900, savings: 2_000 },
+    ],
+    spendByCategory: SELAM_SPEND,
+    creditFactors: [
+      { factor: "Payment history",   weight: 35, status: "excellent" },
+      { factor: "Credit utilisation", weight: 22, status: "good" },
+      { factor: "Account age",        weight: 15, status: "fair" },
+      { factor: "Credit mix",         weight: 15, status: "good" },
+      { factor: "Recent enquiries",   weight: 13, status: "excellent" },
+    ],
+    netWorthETB: 22_580,
+    debtToIncome: 0.097,
+    savingsRate: 0.14,
     signals: {
       lastSalaryCreditedAt: "2026-05-23",
       lowBalanceFlag: false,
@@ -170,20 +228,9 @@ const PROFILES: Record<string, CustomerProfile> = {
     riskTier: "medium",
     kycTier: 3,
     loans: [
-      {
-        id: "LN-50991",
-        product: "Working-capital loan",
-        principal: 150_000,
-        outstanding: 92_400,
-        monthlyInstallment: 14_300,
-        rate: 11,
-        nextDueDate: "2026-06-10",
-        status: "active",
-      },
+      { id: "LN-50991", product: "Working-capital loan", principal: 150_000, outstanding: 92_400, monthlyInstallment: 14_300, rate: 11, nextDueDate: "2026-06-10", status: "active" },
     ],
-    cards: [
-      { id: "CD-3", brand: "Visa", type: "debit", last4: "7711", status: "active" },
-    ],
+    cards: [{ id: "CD-3", brand: "Visa", type: "debit", last4: "7711", status: "active" }],
     investments: [],
     savingsGoals: [
       { id: "SG-3", name: "Shop renovation", target: 60_000, saved: 6_000, dueDate: "2027-01-31" },
@@ -194,6 +241,25 @@ const PROFILES: Record<string, CustomerProfile> = {
       { id: "T3", date: "2026-05-21", merchant: "Rent — Mercato stall",      category: "bills",     amount:  -8_500 },
       { id: "T4", date: "2026-05-20", merchant: "Loan installment",          category: "fees",      amount: -14_300 },
     ],
+    monthlyTrend: [
+      { month: "Dec", inflow: 88_000, outflow: 84_000, savings: 1_000 },
+      { month: "Jan", inflow: 92_000, outflow: 90_000, savings: 1_500 },
+      { month: "Feb", inflow: 85_000, outflow: 82_000, savings: 800 },
+      { month: "Mar", inflow: 98_000, outflow: 89_000, savings: 1_800 },
+      { month: "Apr", inflow: 96_000, outflow: 91_000, savings: 1_000 },
+      { month: "May", inflow: 95_000, outflow: 88_000, savings: 900 },
+    ],
+    spendByCategory: BEKELE_SPEND,
+    creditFactors: [
+      { factor: "Payment history",   weight: 35, status: "good" },
+      { factor: "Credit utilisation", weight: 22, status: "fair" },
+      { factor: "Account age",        weight: 15, status: "good" },
+      { factor: "Credit mix",         weight: 15, status: "fair" },
+      { factor: "Recent enquiries",   weight: 13, status: "good" },
+    ],
+    netWorthETB: -47_500,
+    debtToIncome: 0.18,
+    savingsRate: 0.012,
     signals: {
       lowBalanceFlag: false,
       missedInstallmentLast90d: 0,
@@ -219,9 +285,7 @@ const PROFILES: Record<string, CustomerProfile> = {
     riskTier: "low",
     kycTier: 3,
     loans: [],
-    cards: [
-      { id: "CD-4", brand: "Visa", type: "credit", last4: "2266", limit: 50_000, outstanding: 7_400, status: "active" },
-    ],
+    cards: [{ id: "CD-4", brand: "Visa", type: "credit", last4: "2266", limit: 50_000, outstanding: 7_400, status: "active" }],
     investments: [
       { id: "IV-2", instrument: "T-Bill 182d",  principal: 40_000, currentValue: 41_580, rate: 8.1, maturityDate: "2026-11-04" },
       { id: "IV-3", instrument: "Fixed Deposit", principal: 30_000, currentValue: 31_120, rate: 7.5, maturityDate: "2027-02-14" },
@@ -234,9 +298,28 @@ const PROFILES: Record<string, CustomerProfile> = {
       { id: "T2", date: "2026-05-24", merchant: "Auto-sweep to T-Bill",category: "savings", amount:  -5_000 },
       { id: "T3", date: "2026-05-23", merchant: "Shoa Supermarket",    category: "groceries",amount:  -2_140 },
     ],
+    monthlyTrend: [
+      { month: "Dec", inflow: 31_500, outflow: 20_800, savings: 7_000 },
+      { month: "Jan", inflow: 32_000, outflow: 21_200, savings: 7_500 },
+      { month: "Feb", inflow: 32_000, outflow: 22_000, savings: 7_200 },
+      { month: "Mar", inflow: 32_500, outflow: 21_400, savings: 8_000 },
+      { month: "Apr", inflow: 32_000, outflow: 21_500, savings: 8_500 },
+      { month: "May", inflow: 32_000, outflow: 21_500, savings: 9_000 },
+    ],
+    spendByCategory: TIGIST_SPEND,
+    creditFactors: [
+      { factor: "Payment history",   weight: 35, status: "excellent" },
+      { factor: "Credit utilisation", weight: 22, status: "excellent" },
+      { factor: "Account age",        weight: 15, status: "good" },
+      { factor: "Credit mix",         weight: 15, status: "excellent" },
+      { factor: "Recent enquiries",   weight: 13, status: "excellent" },
+    ],
+    netWorthETB: 158_700,
+    debtToIncome: 0.04,
+    savingsRate: 0.33,
     signals: {
       lastSalaryCreditedAt: "2026-05-25",
-      lowBalanceFlag: true,                 // wallet < cushion
+      lowBalanceFlag: true,
       missedInstallmentLast90d: 0,
       daysSinceLogin: 0,
       eligibleForTBillETB: 25_000,
@@ -251,27 +334,32 @@ export function getCustomer(idOrFirstName: string): CustomerProfile {
   return PROFILES[key] ?? PROFILES.selam;
 }
 
-/** Compact JSON the edge function can stuff into the system prompt. */
+/** Compact JSON the edge function stuffs into the system prompt. */
 export function customerSnapshot(p: CustomerProfile) {
   return {
-    customer: { id: p.customerId, name: p.firstName, persona: p.persona, city: p.city, language: p.language },
+    customer: { id: p.customerId, name: p.firstName, persona: p.persona, city: p.city, language: p.language, age: p.age },
     balances: {
       wallet: p.walletBalanceETB,
       savings: p.savingsBalanceETB,
       monthlyInflow: p.monthlyInflowETB,
       monthlyOutflow: p.monthlyOutflowETB,
+      netWorth: p.netWorthETB,
+      savingsRate: p.savingsRate,
+      debtToIncome: p.debtToIncome,
     },
     scores: { credit: p.creditScore, engagement: p.engagementScore, risk: p.riskTier, kycTier: p.kycTier },
+    creditFactors: p.creditFactors,
     loans: p.loans,
-    cards: p.cards.map((c) => ({ ...c })),
+    cards: p.cards,
     investments: p.investments,
     savingsGoals: p.savingsGoals,
+    spendByCategory: p.spendByCategory,
+    monthlyTrend: p.monthlyTrend,
     last7Transactions: p.recentTransactions.slice(0, 7),
     signals: p.signals,
   };
 }
 
-/** Suggest proactive nudges per agent based on signals. */
 export function nudgesForAgent(
   agentId: string,
   p: CustomerProfile,
@@ -290,7 +378,7 @@ export function nudgesForAgent(
       if (top) {
         const pct = Math.round((top.saved / top.target) * 100);
         out.push(am
-          ? `“${top.name}” ላይ ${pct}% ደርሰሃል። ጨርሰህ ለመድረስ በሳምንት ${Math.round((top.target - top.saved) / 12).toLocaleString()} ብር ብቻ ያስፈልጋል።`
+          ? `“${top.name}” ላይ ${pct}% ደርሰሃል።`
           : `You're ${pct}% to "${top.name}". Just ETB ${Math.round((top.target - top.saved) / 12).toLocaleString()}/week gets you there.`);
       }
       break;
@@ -299,44 +387,30 @@ export function nudgesForAgent(
       if (p.signals.eligibleForTBillETB) {
         out.push(am
           ? `እስከ ${p.signals.eligibleForTBillETB.toLocaleString()} ብር T-Bill (8.1%) ለመግዛት ብቁ ነህ።`
-          : `You qualify for up to ETB ${p.signals.eligibleForTBillETB.toLocaleString()} in T-Bills at 8.1% — safer than your wallet sitting idle.`);
+          : `You qualify for up to ETB ${p.signals.eligibleForTBillETB.toLocaleString()} in T-Bills at 8.1% — safer than idle wallet.`);
       }
       break;
     }
     case "loanAgent": {
       if (p.signals.eligibleForLoanETB) {
         out.push(am
-          ? `እስከ ${p.signals.eligibleForLoanETB.toLocaleString()} ብር በ5% ወለድ በቅጽበት መበደር ትችላለህ።`
-          : `Pre-approved: up to ETB ${p.signals.eligibleForLoanETB.toLocaleString()} at 5% — instant disbursement, no paperwork.`);
-      }
-      const ln = p.loans.find((l) => l.status === "active");
-      if (ln) {
-        out.push(am
-          ? `የ${ln.monthlyInstallment.toLocaleString()} ብር ክፍያ በ${ln.nextDueDate} ይከፈላል።`
-          : `Heads up — ETB ${ln.monthlyInstallment.toLocaleString()} loan installment due on ${ln.nextDueDate}.`);
+          ? `እስከ ${p.signals.eligibleForLoanETB.toLocaleString()} ብር በ5% ወለድ መበደር ትችላለህ።`
+          : `Pre-approved: up to ETB ${p.signals.eligibleForLoanETB.toLocaleString()} at 5% — instant.`);
       }
       break;
     }
     case "onboarding": {
       if (p.kycTier < 3) {
         out.push(am
-          ? `KYC ደረጃህን ወደ Tier ${p.kycTier + 1} አሳድግ — የበለጠ ገደብ ያለ ይከፍታል።`
-          : `Upgrade to KYC Tier ${p.kycTier + 1} to unlock higher limits — takes 2 minutes with your Fayda ID.`);
-      }
-      break;
-    }
-    case "complaintAgent": {
-      if (p.signals.missedInstallmentLast90d > 0) {
-        out.push(am
-          ? `ቅሬታ ካለህ እርዳለሁ።`
-          : `If something doesn't look right on your account, I can investigate and resolve it within hours.`);
+          ? `KYC ደረጃህን ወደ Tier ${p.kycTier + 1} አሳድግ።`
+          : `Upgrade to KYC Tier ${p.kycTier + 1} to unlock higher limits — 2 minutes with your Fayda ID.`);
       }
       break;
     }
     case "concierge": {
       if (p.signals.lowBalanceFlag) {
         out.push(am
-          ? `Wallet ቀሪሕ ${p.walletBalanceETB.toLocaleString()} ብር ብቻ ነው።`
+          ? `Wallet ${p.walletBalanceETB.toLocaleString()} ብር ብቻ ነው።`
           : `Your wallet is running low (ETB ${p.walletBalanceETB.toLocaleString()}). Want to transfer from savings?`);
       }
       break;
@@ -345,7 +419,93 @@ export function nudgesForAgent(
   return out;
 }
 
-/** Tiny Amharic-script detector for auto language picking. */
 export function detectLang(text: string): "en" | "am" {
   return /[\u1200-\u137F]/.test(text) ? "am" : "en";
+}
+
+/* ─────────────────────────────────────────────────────────────
+ * Action application — keeps wallet, savings, investments and
+ * transaction history in sync when an agent executes something
+ * for the customer (savings deposit, T-Bill purchase, etc.).
+ * ────────────────────────────────────────────────────────────── */
+
+export type AgentAction =
+  | { type: "savings_deposit";  goalId?: string; goalName?: string; amount: number }
+  | { type: "savings_withdraw"; goalId?: string; goalName?: string; amount: number }
+  | { type: "tbill_purchase";   amount: number; tenor?: "91d" | "182d" | "364d" }
+  | { type: "loan_repay";       loanId?: string; amount: number }
+  | { type: "transfer";         to: string; amount: number };
+
+export function applyAction(p: CustomerProfile, a: AgentAction): { profile: CustomerProfile; receipt: string } {
+  const next: CustomerProfile = JSON.parse(JSON.stringify(p));
+  const today = new Date().toISOString().slice(0, 10);
+  const newTxn = (merchant: string, category: Txn["category"], amount: number): Txn => ({
+    id: `T${Date.now()}`, date: today, merchant, category, amount,
+  });
+
+  switch (a.type) {
+    case "savings_deposit": {
+      const amt = Math.max(0, Math.round(a.amount));
+      if (amt <= 0 || next.walletBalanceETB < amt) {
+        return { profile: p, receipt: `Insufficient wallet balance for ETB ${amt.toLocaleString()} deposit.` };
+      }
+      const goal = next.savingsGoals.find((g) => g.id === a.goalId)
+        ?? next.savingsGoals.find((g) => a.goalName && g.name.toLowerCase().includes(a.goalName.toLowerCase()))
+        ?? next.savingsGoals[0];
+      next.walletBalanceETB -= amt;
+      next.savingsBalanceETB += amt;
+      if (goal) goal.saved += amt;
+      next.recentTransactions = [newTxn(`Savings → ${goal?.name ?? "savings"}`, "savings", -amt), ...next.recentTransactions].slice(0, 12);
+      return { profile: next, receipt: `Moved ETB ${amt.toLocaleString()} from wallet to ${goal?.name ?? "savings"}.` };
+    }
+    case "savings_withdraw": {
+      const amt = Math.max(0, Math.round(a.amount));
+      const goal = next.savingsGoals.find((g) => g.id === a.goalId) ?? next.savingsGoals[0];
+      if (amt <= 0 || !goal || goal.saved < amt) {
+        return { profile: p, receipt: `Not enough saved in goal for ETB ${amt.toLocaleString()} withdrawal.` };
+      }
+      goal.saved -= amt;
+      next.savingsBalanceETB = Math.max(0, next.savingsBalanceETB - amt);
+      next.walletBalanceETB += amt;
+      next.recentTransactions = [newTxn(`Withdraw ← ${goal.name}`, "savings", amt), ...next.recentTransactions].slice(0, 12);
+      return { profile: next, receipt: `Returned ETB ${amt.toLocaleString()} from ${goal.name} to wallet.` };
+    }
+    case "tbill_purchase": {
+      const amt = Math.max(0, Math.round(a.amount));
+      if (amt <= 0 || next.walletBalanceETB < amt) {
+        return { profile: p, receipt: `Need ETB ${amt.toLocaleString()} in wallet for T-Bill purchase.` };
+      }
+      next.walletBalanceETB -= amt;
+      const tenor = a.tenor ?? "91d";
+      const instrument = (tenor === "182d" ? "T-Bill 182d" : tenor === "364d" ? "T-Bill 364d" : "T-Bill 91d") as Investment["instrument"];
+      const rate = tenor === "364d" ? 8.8 : tenor === "182d" ? 8.1 : 7.4;
+      next.investments.unshift({
+        id: `IV-${Date.now()}`, instrument, principal: amt, currentValue: amt, rate,
+        maturityDate: new Date(Date.now() + (tenor === "364d" ? 364 : tenor === "182d" ? 182 : 91) * 86400000).toISOString().slice(0, 10),
+      });
+      next.recentTransactions = [newTxn(`Buy ${instrument}`, "savings", -amt), ...next.recentTransactions].slice(0, 12);
+      return { profile: next, receipt: `Purchased ${instrument} for ETB ${amt.toLocaleString()} at ${rate}%.` };
+    }
+    case "loan_repay": {
+      const amt = Math.max(0, Math.round(a.amount));
+      const loan = next.loans.find((l) => l.id === a.loanId) ?? next.loans[0];
+      if (!loan || amt <= 0 || next.walletBalanceETB < amt) {
+        return { profile: p, receipt: `Cannot repay ETB ${amt.toLocaleString()} — check wallet and active loans.` };
+      }
+      next.walletBalanceETB -= amt;
+      loan.outstanding = Math.max(0, loan.outstanding - amt);
+      if (loan.outstanding === 0) loan.status = "closed";
+      next.recentTransactions = [newTxn(`Loan repayment — ${loan.product}`, "fees", -amt), ...next.recentTransactions].slice(0, 12);
+      return { profile: next, receipt: `Paid ETB ${amt.toLocaleString()} toward ${loan.product}. Outstanding: ETB ${loan.outstanding.toLocaleString()}.` };
+    }
+    case "transfer": {
+      const amt = Math.max(0, Math.round(a.amount));
+      if (amt <= 0 || next.walletBalanceETB < amt) {
+        return { profile: p, receipt: `Insufficient wallet balance for ETB ${amt.toLocaleString()} transfer.` };
+      }
+      next.walletBalanceETB -= amt;
+      next.recentTransactions = [newTxn(`Send to ${a.to}`, "transfer", -amt), ...next.recentTransactions].slice(0, 12);
+      return { profile: next, receipt: `Sent ETB ${amt.toLocaleString()} to ${a.to}.` };
+    }
+  }
 }

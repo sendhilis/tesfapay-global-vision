@@ -1,5 +1,5 @@
-// AI Mesh chat endpoint — routes to the right agent and streams a reply
-// using Lovable AI Gateway. No API key needed from the user.
+// AI Mesh chat endpoint — routes to the right agent, returns a reply
+// plus optional structured visualisations and balance-mutating actions.
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 
 type MeshAgent = {
@@ -22,9 +22,7 @@ type Body = {
   bankName: string;
   messages: { role: "user" | "assistant"; content: string; agentName?: string }[];
   model?: string;
-  /** Snapshot of the customer 360 from the CDP — balances, txns, loans, etc. */
   customer?: Record<string, unknown>;
-  /** "en" | "am" — agent must reply in this language. */
   language?: "en" | "am";
 };
 
@@ -47,6 +45,42 @@ function describeTone(a: MeshAgent): string {
   return `Register: ${reg}. Length: ${len}. Expressiveness: ${exp}. ${emo}`;
 }
 
+const VIZ_PROTOCOL = `
+ANALYTICAL OUTPUT PROTOCOL
+You are a highly analytical agent. When numbers, trends, breakdowns,
+allocations, comparisons or scores are relevant to the user's question,
+ALWAYS attach one or more visualisations after your text reply using
+fenced code blocks tagged exactly \`\`\`chart and \`\`\`action.
+
+Chart block schema (JSON):
+{
+  "type": "pie" | "donut" | "bar" | "line",
+  "title": "Short chart title",
+  "currency": "ETB" | null,
+  "data": [ { "name": "Label", "value": 123 }, ... ]   // for line: name = x-axis label
+}
+- Use "pie" or "donut" for category breakdowns (spend categories, wealth allocation, credit factor weights).
+- Use "bar" for comparisons (goal progress, monthly outflow vs inflow snapshot).
+- Use "line" for trends over time (use monthlyTrend; you may put multiple series by including {name, inflow, outflow, savings} objects).
+- Pull data ONLY from the CUSTOMER_PROFILE_JSON. Never invent numbers.
+- Emit at most 2 chart blocks per reply.
+
+Action block schema — emit ONLY when the user clearly asks to MOVE money
+(deposit, withdraw, buy T-Bill, repay loan, send). Schema:
+{
+  "type": "savings_deposit" | "savings_withdraw" | "tbill_purchase" | "loan_repay" | "transfer",
+  "amount": 1000,
+  "goalId": "SG-1",        // for savings_*
+  "loanId": "LN-44210",    // for loan_repay
+  "tenor": "91d"|"182d"|"364d", // for tbill_purchase
+  "to": "Mother"           // for transfer
+}
+The host app will execute the action and update wallet/savings balances.
+Confirm the action in your text reply (e.g. "Moving ETB 1,000 from your wallet…").
+
+Keep your prose tight; let the charts do the heavy lifting.
+`;
+
 function buildSystem(
   a: MeshAgent,
   persona: { firstName: string; line: string },
@@ -55,17 +89,16 @@ function buildSystem(
   language: "en" | "am",
 ) {
   const langLine = language === "am"
-    ? `IMPORTANT: Reply ONLY in Amharic (አማርኛ). Use Ethiopian script. Keep numbers and currency codes (ETB) in Latin characters.`
+    ? `IMPORTANT: Reply prose ONLY in Amharic (አማርኛ). Keep numbers, currency codes (ETB), JSON keys and chart labels in Latin characters.`
     : `Reply in clear, natural English.`;
 
   const customerBlock = customer
     ? [
-        `You have live access to this customer's 360° profile from the bank CDP. Use it to give specific, concrete answers — quote real balances, real transactions, real loan terms. Never invent numbers.`,
+        `You have live access to this customer's 360° profile from the bank CDP. Quote real balances, real transactions, real loan terms. Never invent numbers.`,
         `CUSTOMER_PROFILE_JSON:`,
         "```json",
         JSON.stringify(customer, null, 2),
         "```",
-        `Rules: (1) If the answer requires data not in this profile, say so briefly. (2) Always be proactive — if a relevant nudge fits (low balance, missed installment, eligible loan/T-Bill, near savings goal), surface it. (3) Quote ETB amounts with thousands separators.`,
       ].join("\n")
     : "";
 
@@ -77,8 +110,8 @@ function buildSystem(
     describeTone(a),
     langLine,
     customerBlock,
+    VIZ_PROTOCOL,
     `Speak in the first person as ${a.name}. Never say you are an AI language model. Never mention OpenAI, Google, or Gemini.`,
-    `If the user's request is outside your specialty, briefly help and suggest they ask the Concierge to route them.`,
     `Be concrete, warm, and useful.`,
   ].filter(Boolean).join("\n\n");
 }
@@ -109,7 +142,6 @@ Deno.serve(async (req) => {
 
     const system = buildSystem(agent, persona, bankName, body.customer, body.language ?? "en");
 
-    // Build conversation: keep last 8 turns to bound tokens
     const recent = messages.slice(-8).map((m) => ({
       role: m.role,
       content: m.role === "assistant" && m.agentName ? `[${m.agentName}]: ${m.content}` : m.content,
@@ -122,7 +154,7 @@ Deno.serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: body.model || "google/gemini-3-flash-preview",
+        model: body.model || "google/gemini-2.5-flash",
         messages: [{ role: "system", content: system }, ...recent],
       }),
     });
@@ -134,7 +166,7 @@ Deno.serve(async (req) => {
         });
       }
       if (aiRes.status === 402) {
-        return new Response(JSON.stringify({ error: "AI credits exhausted. Add funds in Settings → Workspace → Usage." }), {
+        return new Response(JSON.stringify({ error: "AI credits exhausted." }), {
           status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
@@ -146,7 +178,22 @@ Deno.serve(async (req) => {
     }
 
     const data = await aiRes.json();
-    const reply = data?.choices?.[0]?.message?.content?.trim() || "(no reply)";
+    const raw = data?.choices?.[0]?.message?.content?.trim() || "(no reply)";
+
+    // Extract ```chart``` and ```action``` blocks; return both raw text (for TTS/markdown)
+    // and parsed structured payloads.
+    const charts: unknown[] = [];
+    const actions: unknown[] = [];
+    const stripped = raw.replace(/```(chart|action)\s*([\s\S]*?)```/g, (_m: string, kind: string, json: string) => {
+      try {
+        const parsed = JSON.parse(json.trim());
+        if (kind === "chart") charts.push(parsed);
+        else actions.push(parsed);
+      } catch (e) {
+        console.warn("Failed to parse", kind, "block:", e);
+      }
+      return "";
+    }).trim();
 
     return new Response(JSON.stringify({
       targetAgentId: targetId,
@@ -154,7 +201,9 @@ Deno.serve(async (req) => {
         to: targetId,
         text: agent.handoffMessage || `Connecting you to ${agent.name}…`,
       } : null,
-      reply,
+      reply: stripped || raw,
+      charts,
+      actions,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

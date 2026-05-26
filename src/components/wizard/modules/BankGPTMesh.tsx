@@ -13,7 +13,11 @@
  * speaks English and Amharic with the same voice.
  */
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Send, Volume2, Languages, Sparkles, Zap, User2 } from "lucide-react";
+import { Send, Volume2, Languages, Sparkles, Zap, User2, CheckCircle2 } from "lucide-react";
+import {
+  PieChart, Pie, Cell, BarChart, Bar, LineChart, Line,
+  XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
+} from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 import { useBankConfig, type MeshAgentId } from "@/contexts/BankConfigContext";
 import {
@@ -21,7 +25,9 @@ import {
   customerSnapshot,
   detectLang,
   nudgesForAgent,
+  applyAction,
   type CustomerProfile,
+  type AgentAction,
 } from "@/platform/customerDataPlatform";
 
 const AGENT_ORDER: MeshAgentId[] = [
@@ -29,10 +35,65 @@ const AGENT_ORDER: MeshAgentId[] = [
   "loanAgent", "complaintAgent", "notificationAgent",
 ];
 
+type ChartSpec = {
+  type: "pie" | "donut" | "bar" | "line";
+  title?: string;
+  currency?: string | null;
+  data: Array<Record<string, string | number>>;
+};
+
 type Msg =
-  | { kind: "agent"; agentId: MeshAgentId; text: string; lang: "en" | "am" }
+  | { kind: "agent"; agentId: MeshAgentId; text: string; lang: "en" | "am"; charts?: ChartSpec[] }
   | { kind: "user"; text: string }
-  | { kind: "handoff"; to: MeshAgentId; text: string };
+  | { kind: "handoff"; to: MeshAgentId; text: string }
+  | { kind: "receipt"; text: string };
+
+const CHART_PALETTE = ["#22c55e", "#3b82f6", "#f59e0b", "#ec4899", "#8b5cf6", "#06b6d4", "#ef4444", "#84cc16"];
+
+function AgentChart({ spec, color }: { spec: ChartSpec; color: string }) {
+  const title = spec.title;
+  const data = spec.data ?? [];
+  const fmt = (n: number) => (spec.currency ? `${spec.currency} ${n.toLocaleString()}` : n.toLocaleString());
+  return (
+    <div className="mt-2 rounded-xl border border-border bg-background/60 p-2">
+      {title && <p className="mb-1 text-[11px] font-semibold text-foreground">{title}</p>}
+      <div className="h-44 w-full">
+        <ResponsiveContainer width="100%" height="100%">
+          {spec.type === "pie" || spec.type === "donut" ? (
+            <PieChart>
+              <Pie
+                data={data} dataKey="value" nameKey="name"
+                innerRadius={spec.type === "donut" ? 32 : 0} outerRadius={62}
+                paddingAngle={2}
+              >
+                {data.map((_, i) => <Cell key={i} fill={CHART_PALETTE[i % CHART_PALETTE.length]} />)}
+              </Pie>
+              <Tooltip formatter={(v: number) => fmt(v)} contentStyle={{ fontSize: 11 }} />
+              <Legend wrapperStyle={{ fontSize: 10 }} />
+            </PieChart>
+          ) : spec.type === "bar" ? (
+            <BarChart data={data} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
+              <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+              <YAxis tick={{ fontSize: 10 }} />
+              <Tooltip formatter={(v: number) => fmt(v)} contentStyle={{ fontSize: 11 }} />
+              <Bar dataKey="value" fill={color} radius={[4, 4, 0, 0]} />
+            </BarChart>
+          ) : (
+            <LineChart data={data} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
+              <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+              <YAxis tick={{ fontSize: 10 }} />
+              <Tooltip formatter={(v: number) => fmt(v)} contentStyle={{ fontSize: 11 }} />
+              <Legend wrapperStyle={{ fontSize: 10 }} />
+              {Object.keys(data[0] ?? {}).filter((k) => k !== "name").map((k, i) => (
+                <Line key={k} type="monotone" dataKey={k} stroke={CHART_PALETTE[i % CHART_PALETTE.length]} strokeWidth={2} dot={false} />
+              ))}
+            </LineChart>
+          )}
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+}
 
 const SUGGESTIONS_EN = [
   "How is my spending this month?",
@@ -134,15 +195,37 @@ export function BankGPTMesh() {
       });
 
       if (error) throw error;
-      const reply = (data as { reply: string; targetAgentId: MeshAgentId; handoff?: { to: MeshAgentId; text: string } | null });
+      const reply = (data as {
+        reply: string;
+        targetAgentId: MeshAgentId;
+        handoff?: { to: MeshAgentId; text: string } | null;
+        charts?: ChartSpec[];
+        actions?: AgentAction[];
+      });
       const targetId = (reply.targetAgentId ?? "concierge") as MeshAgentId;
+
+      // Apply any balance-mutating actions to the customer profile so the
+      // wallet/savings panel and future agent calls stay in sync.
+      const receipts: string[] = [];
+      if (reply.actions?.length) {
+        setCustomer((prev) => {
+          let next = prev;
+          for (const a of reply.actions!) {
+            const { profile, receipt } = applyAction(next, a);
+            next = profile;
+            receipts.push(receipt);
+          }
+          return next;
+        });
+      }
 
       setMessages((m) => {
         const out: Msg[] = [...m];
         if (reply.handoff) {
           out.push({ kind: "handoff", to: reply.handoff.to as MeshAgentId, text: reply.handoff.text });
         }
-        out.push({ kind: "agent", agentId: targetId, text: reply.reply, lang: detected });
+        out.push({ kind: "agent", agentId: targetId, text: reply.reply, lang: detected, charts: reply.charts });
+        for (const r of receipts) out.push({ kind: "receipt", text: r });
         return out;
       });
       setCurrentAgent(targetId);
@@ -277,11 +360,20 @@ export function BankGPTMesh() {
                   </div>
                 );
               }
+              if (m.kind === "receipt") {
+                return (
+                  <div key={i} className="my-1.5">
+                    <div className="mx-auto max-w-[80%] flex items-center justify-center gap-2 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-center text-[11px] text-foreground">
+                      <CheckCircle2 className="h-3 w-3 text-emerald-500" /> {m.text}
+                    </div>
+                  </div>
+                );
+              }
               const a = mesh.agents[m.agentId];
               return (
                 <div key={i} className="flex justify-start">
                   <div
-                    className="max-w-[80%] rounded-2xl rounded-bl-sm border bg-background px-3 py-2 text-sm text-foreground"
+                    className="max-w-[85%] rounded-2xl rounded-bl-sm border bg-background px-3 py-2 text-sm text-foreground"
                     style={{ borderLeft: `3px solid ${a.color}` }}
                   >
                     <div className="mb-1 flex items-center justify-between gap-2">
@@ -299,7 +391,8 @@ export function BankGPTMesh() {
                         <Volume2 className={"h-3 w-3 " + (speakingIdx === i ? "animate-pulse text-primary" : "")} />
                       </button>
                     </div>
-                    <p className="leading-relaxed whitespace-pre-wrap">{m.text}</p>
+                    {m.text && <p className="leading-relaxed whitespace-pre-wrap">{m.text}</p>}
+                    {m.charts?.map((c, ci) => <AgentChart key={ci} spec={c} color={a.color} />)}
                   </div>
                 </div>
               );
