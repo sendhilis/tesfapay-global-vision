@@ -10,13 +10,14 @@ import { useNavigate } from "react-router-dom";
 import { ArrowRight, Settings2, Sparkles } from "lucide-react";
 import { useBankConfig, useWizard } from "@/contexts/BankConfigContext";
 import { ABX_MODULES, getModule, type AbxModule } from "@/platform/ModuleRegistry";
+import AdminBar from "@/components/AdminBar";
 
 function moduleRoute(m: AbxModule) {
   // Wallet has its own dedicated layout; everything else mounts via ModuleHost.
   return m.id === "wallet" ? "/wallet" : `/platform/${m.id}`;
 }
 
-export default function Launchpad() {
+export default function Launchpad({ skipAutoRedirect = false }: { skipAutoRedirect?: boolean } = {}) {
   const cfg = useBankConfig();
   const { reset } = useWizard();
   const navigate = useNavigate();
