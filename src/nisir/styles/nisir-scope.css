@@ -1,0 +1,138 @@
+/**
+ * Nisir Digital — scoped design tokens.
+ * Everything in here is applied ONLY inside `.nisir-scope` so the
+ * ABX shell theme is never mutated. Nisir components keep their
+ * exact original look-and-feel because they reference the same
+ * token names (--background, --primary, …) that we override here.
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Ethiopic:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+.nisir-scope {
+  /* Nisir Ethiopian brand palette */
+  --background: 40 30% 97%;
+  --foreground: 160 30% 12%;
+
+  --card: 0 0% 100%;
+  --card-foreground: 160 30% 12%;
+
+  --popover: 0 0% 100%;
+  --popover-foreground: 160 30% 12%;
+
+  /* Deep Ethiopian green */
+  --primary: 152 55% 22%;
+  --primary-foreground: 45 100% 96%;
+
+  /* Warm gold accent */
+  --secondary: 42 85% 55%;
+  --secondary-foreground: 160 30% 12%;
+
+  --muted: 40 20% 92%;
+  --muted-foreground: 160 10% 45%;
+
+  --accent: 42 85% 55%;
+  --accent-foreground: 160 30% 12%;
+
+  --destructive: 0 72% 51%;
+  --destructive-foreground: 0 0% 100%;
+
+  --border: 40 15% 88%;
+  --input: 40 15% 88%;
+  --ring: 152 55% 22%;
+
+  --radius: 0.75rem;
+
+  --portal-retail: 152 55% 22%;
+  --portal-agency: 200 65% 38%;
+  --portal-merchant: 25 80% 50%;
+  --portal-admin: 260 45% 40%;
+
+  --success: 152 60% 36%;
+  --warning: 38 92% 50%;
+  --info: 200 80% 50%;
+
+  --gradient-hero: linear-gradient(135deg, hsl(152 55% 22%), hsl(152 45% 30%));
+  --gradient-gold: linear-gradient(135deg, hsl(42 85% 55%), hsl(38 90% 60%));
+  --gradient-warm: linear-gradient(180deg, hsl(40 30% 97%), hsl(35 25% 93%));
+
+  --shadow-card: 0 2px 12px hsl(160 30% 12% / 0.06);
+  --shadow-elevated: 0 8px 30px hsl(160 30% 12% / 0.1);
+  --shadow-portal-tile: 0 4px 20px hsl(160 30% 12% / 0.08);
+
+  --sidebar-background: 160 20% 98%;
+  --sidebar-foreground: 160 30% 12%;
+  --sidebar-primary: 152 55% 22%;
+  --sidebar-primary-foreground: 45 100% 96%;
+  --sidebar-accent: 40 20% 95%;
+  --sidebar-accent-foreground: 160 30% 12%;
+  --sidebar-border: 40 15% 90%;
+  --sidebar-ring: 152 55% 22%;
+
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-family: 'Plus Jakarta Sans', 'Noto Sans Ethiopic', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  min-height: 100%;
+}
+
+.dark .nisir-scope {
+  --background: 160 20% 8%;
+  --foreground: 40 20% 92%;
+  --card: 160 18% 12%;
+  --card-foreground: 40 20% 92%;
+  --popover: 160 18% 12%;
+  --popover-foreground: 40 20% 92%;
+  --primary: 152 50% 45%;
+  --primary-foreground: 160 30% 8%;
+  --secondary: 42 70% 50%;
+  --secondary-foreground: 40 20% 92%;
+  --muted: 160 15% 18%;
+  --muted-foreground: 40 15% 60%;
+  --accent: 42 70% 50%;
+  --accent-foreground: 40 20% 92%;
+  --destructive: 0 62% 40%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 160 12% 22%;
+  --input: 160 12% 22%;
+  --ring: 152 50% 45%;
+  --sidebar-background: 160 20% 10%;
+  --sidebar-foreground: 40 20% 92%;
+  --sidebar-primary: 152 50% 45%;
+  --sidebar-primary-foreground: 160 30% 8%;
+  --sidebar-accent: 160 15% 16%;
+  --sidebar-accent-foreground: 40 20% 92%;
+  --sidebar-border: 160 12% 20%;
+  --sidebar-ring: 152 50% 45%;
+}
+
+.nisir-scope h1,
+.nisir-scope h2,
+.nisir-scope h3,
+.nisir-scope h4,
+.nisir-scope h5,
+.nisir-scope h6 {
+  font-family: 'Plus Jakarta Sans', 'Noto Sans Ethiopic', sans-serif;
+}
+
+.nisir-scope .font-ethiopic {
+  font-family: 'Noto Sans Ethiopic', sans-serif;
+}
+
+.nisir-scope .portal-tile {
+  border-radius: 1rem;
+  padding: 1.5rem;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  box-shadow: var(--shadow-portal-tile);
+}
+.nisir-scope .portal-tile:hover {
+  box-shadow: var(--shadow-elevated);
+  transform: translateY(-2px);
+}
+.nisir-scope .card-elevated {
+  box-shadow: var(--shadow-card);
+}
+.nisir-scope .text-balance {
+  text-wrap: balance;
+}
