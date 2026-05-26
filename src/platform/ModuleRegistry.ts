@@ -149,6 +149,7 @@ export const ABX_MODULES: AbxModule[] = [
     description: "Web banking portal for retail and SME customers.",
     icon: Globe,
     status: "live",
+    defaultEnabled: true,
     route: "/platform/internet-banking",
     settings: {
       fields: [
