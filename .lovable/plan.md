@@ -1,94 +1,82 @@
-# BankGPT Configure + Agent Builder
+# Lift Nisir portals into ABX platform modules
 
-The current BankGPT module screen only shows the AI Mesh demo + Analytics. The "Configure" panel (`BankGPTSettings.tsx`) with on/off toggles only opens from the W-MOD Configure drawer, so admins inside `/platform/bankgpt` cannot see it. We'll fix that and add a full Agent Builder so the bank has end-to-end flexibility.
+This is a sizable port: **61 page files across 4 portals**, **31 SQL migrations**, **10 edge functions**, **2 contexts**, **9 portal-specific hooks**, **shared components**, and Nisir's own design tokens. To keep look & feel + behavior 100% identical while not breaking existing ABX, the work is split into 4 phases.
 
-## 1. Surface Configure inside BankGPT view
+## Architecture
 
-Add a third tab **Configure** to `BankGPTView.tsx`:
-- AI Mesh roster — embed `BankGPTSettings` (on/off + locked + tone preview)
-- Quick links to deeper editors (persona, KB, sandbox)
-
-Tabs become: **AI Mesh | Configure | Agent Builder | Analytics**
-
-## 2. Agent Builder (new) — `BankGPTAgentBuilder.tsx`
-
-A wizard-style, 6-step flow per agent (existing OR new):
-
-1. **Identity & Persona**
-   - Name, tagline, emoji/initial, brand color
-   - Role description, system prompt (with template suggestions)
-   - Tone sliders (formal↔casual, terse↔verbose, reserved↔expressive)
-   - Language coverage (EN / አማ / both)
-   - Use-emoji toggle, handoff message, greeting on handoff
-
-2. **Intent & Routing**
-   - Keywords / trigger phrases (chips)
-   - Sample utterances (5–10 examples)
-   - Confidence threshold slider
-   - Handoff rules (when to escalate to which agent / human)
-
-3. **Knowledge Base (RAG)**
-   - Upload docs (PDF, DOCX, TXT, URL) — list view with status
-   - Chunk size / overlap controls (sensible defaults)
-   - "Index now" button → simulated embedding progress, doc count, token count, last indexed timestamp
-   - Per-doc enable/disable, re-index, delete
-   - Retrieval settings: top-K, similarity threshold, hybrid (BM25 + vector) toggle
-
-4. **Tools & Actions**
-   - Toggleable capabilities: read balance, move money, open savings goal, buy T-Bill, repay loan, raise complaint, send notification, fetch transactions, generate chart
-   - Per-tool approval policy: auto / require confirmation / admin-only
-   - Daily/transaction limits per tool
-
-5. **Sandbox Testing**
-   - Split view: chat window on left, "what the agent sees" inspector on right (matched KB chunks, routed intent, tool calls, latency)
-   - Preset test scenarios (e.g. "Customer asks for loan eligibility", "Customer wants to move 1000 ETB to goal")
-   - Pass/fail tagging, save test runs as regression cases
-   - "Promote to production" button (gated)
-
-6. **Widget & Deployment**
-   - Widget preview (floating bubble, inline card, full-screen)
-   - Placement picker: which screens in host app (Home, Wallet, Loans, Cards, Investments)
-   - Trigger rules (idle 5s, low balance event, post-transaction, salary credit)
-   - Embed snippet (copy-paste JS for host bank app) + Capacitor deep-link
-   - Activation toggle + go-live checklist (persona ✓, KB indexed ✓, sandbox passed ✓, widget placed ✓)
-
-## 3. Data model (client-side, persisted via BankConfigContext)
-
-Extend `config.ai.mesh.agents[id]` with:
-```
-knowledgeBase: { docs: [{ id, name, type, size, status, indexedAt, enabled }], chunkSize, overlap, topK, similarityThreshold, hybrid }
-intents: { keywords[], sampleUtterances[], confidenceThreshold, handoffRules[] }
-tools: { [toolId]: { enabled, approvalPolicy, dailyLimit } }
-sandbox: { testRuns: [{ id, prompt, expected, actual, passed, timestamp }] }
-widget: { surfaces[], triggers[], style, enabled }
-goLive: { personaComplete, kbIndexed, sandboxPassed, widgetPlaced }
+```text
+ABX Wizard (existing)
+└── Platform Modules Registry
+    ├── bankgpt, smart-branch, globalpay, ...   (existing)
+    └── nisir-retail | nisir-ib | nisir-agency | nisir-merchant   (NEW)
+            │
+            ▼
+        ModuleHost
+            │
+            ▼
+   <NisirPortalMount portal="retail|ib|agency|merchant">
+       <NisirProviders>            ← AuthProvider, LanguageProvider, QueryClient, NisirToaster
+         <NisirCssScope>           ← imports Nisir index.css scoped to .nisir-scope
+           <MemoryRouter basename="/" initialEntries={["/retail"]}>
+             <Routes>  …Nisir's original routes, file-for-file…  </Routes>
+           </MemoryRouter>
+         </NisirCssScope>
+       </NisirProviders>
+   </NisirPortalMount>
 ```
 
-For brand-new agents, push into `agents` map with a generated id and same shape (no `locked: true`).
+Key invariant: **the lifted .tsx files are copied byte-for-byte**. All ABX-specific wrapping happens in the mount layer.
 
-## 4. UX
+## Phase 1 — Backend port (one migration + edge functions)
 
-- Agent Builder opens with **agent picker** (existing roster + "+ New agent" card)
-- Each step is a left-rail with progress dots; right panel is the editor
-- Footer always shows: Save Draft / Test in Sandbox / Activate
-- All persisted to BankConfigContext → flows through to live `mesh-chat` edge function (which already reads agent config from payload)
+- Read all 31 Nisir migrations, concatenate into one consolidated migration applied to ABX Cloud (idempotent `CREATE TABLE IF NOT EXISTS`, `CREATE OR REPLACE FUNCTION`, etc.). RLS + triggers + enums preserved.
+- Copy all 10 edge functions to `supabase/functions/` (aml-screening, bdp-ingest, bdp-seed-demo, create-test-users, integration-test-proxy, integration-webhook-receiver, kyc-verify, loan-engine, loan-reminder, nisir-ai-chat). They use `Deno.env.get('SUPABASE_*')` already → no edits needed.
+- Add `supabase/config.toml` entries for any function with `verify_jwt = false` (kyc-verify, nisir-ai-chat, etc., matching Nisir).
 
-## 5. Critical analysis note shown in Configure tab
+## Phase 2 — Code lift (verbatim copies)
 
-A small "Bank Flexibility Checklist" callout listing what the bank CAN configure (persona, KB, tools, routing, widgets, limits, languages, branding) — so admins immediately see BankGPT's full surface area.
+Using `cross_project--read_project_file` → `code--write`:
 
-## Files
+- `src/nisir/pages/{retail,ib,agency,merchant}/*` — all 61 files copied unchanged
+- `src/nisir/components/**` — agency/, copilot/, kyc/, loans/, payments/, KycTierCard, LanguageToggle, MobilePortalLayout, NavLink, NisirAIWidget, OtpVerificationDialog, TechurateABXFooter
+- `src/nisir/contexts/{LanguageContext,MerchantWalletContext}.tsx`
+- `src/nisir/hooks/{useAuth,useAccounts,useLoans,useNotifications,useProfile,useTransactions,useTransactionToasts,useCorporateRole,useBDPReport,useDailyBriefing}.tsx`
+- `src/nisir/data/regulatoryReportMockData.ts`
+- `src/nisir/index.css` — Nisir's tokens, wrapped under `.nisir-scope { … }` via a small build step (or imported as-is and namespaced by giving Nisir tokens distinct names — see Technical notes)
+- `src/nisir/assets/**` via `cross_project--copy_project_asset`
 
-- **edit** `src/components/wizard/modules/BankGPTView.tsx` — add Configure + Agent Builder tabs
-- **new** `src/components/wizard/modules/bankgpt/AgentBuilder.tsx` — wizard shell + agent picker
-- **new** `src/components/wizard/modules/bankgpt/steps/StepPersona.tsx`
-- **new** `src/components/wizard/modules/bankgpt/steps/StepIntents.tsx`
-- **new** `src/components/wizard/modules/bankgpt/steps/StepKnowledgeBase.tsx`
-- **new** `src/components/wizard/modules/bankgpt/steps/StepTools.tsx`
-- **new** `src/components/wizard/modules/bankgpt/steps/StepSandbox.tsx`
-- **new** `src/components/wizard/modules/bankgpt/steps/StepWidget.tsx`
-- **edit** `src/contexts/BankConfigContext.tsx` — extend agent schema with KB/intents/tools/widget/goLive (optional fields, backward-compatible)
+Path remap: a single `tsconfig` path alias `@nisir/*` → `src/nisir/*`. Inside copied files, the `@/` alias inside `src/nisir/**` resolves to `src/nisir/**` via a vite alias rule so internal imports (`@/components/ui/button`, `@/hooks/useAuth`) keep working without edits.
 
-No backend changes required — RAG/embedding is simulated in the prototype (matches the rest of the app's localStorage-based demo state). The hooks are designed so the future Spring Boot backend can plug straight in.
+## Phase 3 — Mount layer + registry
 
-Approve to build.
+New ABX-side files (small):
+
+- `src/platform/nisir/NisirProviders.tsx` — wraps QueryClient + LanguageProvider + AuthProvider + Toasters
+- `src/platform/nisir/NisirPortalMount.tsx` — MemoryRouter + Routes per portal (Retail / IB / Agency / Merchant). Routes copy-pasted from Nisir App.tsx, minus the cross-portal ones.
+- `src/platform/nisir/demoAutoLogin.ts` — on first mount, seeds a demo user session via `supabase.auth.signInWithPassword` against a fixed test account created by `create-test-users` edge function.
+- Update `src/platform/ModuleRegistry.ts` — add 4 modules (`nisir-retail`, `nisir-ib`, `nisir-agency`, `nisir-merchant`) with icons (Smartphone, Globe, Store, Building2), category Customer Channels, status `live`.
+- Update `src/platform/ModuleHost.tsx` — switch on those 4 ids, render `<NisirPortalMount portal="…"/>`.
+- Add a launchpad tile after Go-Live for each enabled portal (uses existing PlatformModule route `/platform/:moduleId`).
+
+## Phase 4 — Dependencies & validation
+
+- Install missing deps: `framer-motion`, `qrcode.react`, `react-markdown`, `next-themes`, `vaul`, `input-otp` (skip ones already present).
+- Run `code--exec` typecheck-equivalent (rg for obvious unresolved imports).
+- Browser smoke test: open `/setup`, enable all 4 Nisir modules, hit Go Live, navigate to each portal via launchpad, verify landing renders identical to nisir-hub.lovable.app.
+
+## Technical notes
+
+- **CSS scoping**: Nisir uses HSL semantic tokens like ABX but with different values. To avoid clobbering ABX, I'll wrap Nisir's `:root { --background: … }` block as `.nisir-scope { --background: … }` and add `className="nisir-scope"` to `NisirPortalMount`. Tailwind classes inside Nisir components resolve against the nearest CSS-var scope, so look & feel stays identical.
+- **Auth**: Nisir's `useAuth` uses `supabase.auth`. Since we're porting the schema to ABX Cloud and ABX uses the same Supabase client singleton, sessions Just Work. `demoAutoLogin` signs in a seeded demo user (`retail-demo@nisir.test`, etc.) the first time a portal is mounted with no session — preserves the Protected Route gate without ever showing the Nisir login screen.
+- **Routing**: MemoryRouter with `basename="/"` keeps Nisir's hardcoded `<Link to="/retail/accounts">` working. Browser URL stays at `/platform/nisir-retail`; portal navigation is internal.
+- **What does NOT change**: zero edits to existing ABX files except `App.tsx` (no change needed — modules render via existing `/platform/:moduleId`), `ModuleRegistry.ts` (4 new entries), `ModuleHost.tsx` (4 new switch cases), `vite.config.ts` (1 alias rule), `tsconfig.json` (1 path).
+
+## What I'm NOT doing (per your scope answer)
+
+- Not porting Nisir's `/admin/*` console — ABX already has admin and you didn't include it.
+- Not porting LandingPage / AuthPage / ProductShowcase — those are app shell, not portal modules.
+- Not touching existing ABX modules (BankGPT, GlobalPay, Smart Branch, etc.).
+
+## Estimated size
+
+Roughly 90+ file copies + 1 migration + 10 edge functions + ~7 new mount-layer files. This will run across **3–4 build loops** to stay within tool-call limits. After approval I'll start with Phase 1 (backend) so the schema is live before any UI lift.
