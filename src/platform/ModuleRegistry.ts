@@ -130,7 +130,7 @@ export const ABX_MODULES: AbxModule[] = [
     category: "channels",
     description: "Retail mobile banking app for account holders.",
     icon: Smartphone,
-    status: "stub",
+    status: "live",
     defaultEnabled: true,
     route: "/platform/mobile-banking",
     settings: {
@@ -148,7 +148,7 @@ export const ABX_MODULES: AbxModule[] = [
     category: "channels",
     description: "Web banking portal for retail and SME customers.",
     icon: Globe,
-    status: "stub",
+    status: "live",
     route: "/platform/internet-banking",
     settings: {
       fields: [
@@ -187,7 +187,7 @@ export const ABX_MODULES: AbxModule[] = [
     category: "channels",
     description: "Agent and merchant POS / cash-in-out platform.",
     icon: Store,
-    status: "stub",
+    status: "live",
     route: "/platform/agency-banking",
     settings: {
       sections: [
@@ -215,7 +215,7 @@ export const ABX_MODULES: AbxModule[] = [
     category: "channels",
     description: "Merchant acceptance — QR sales, wallet, settlements and vendor payouts.",
     icon: Store,
-    status: "stub",
+    status: "live",
     defaultEnabled: true,
     route: "/platform/merchant-portal",
     settings: {
