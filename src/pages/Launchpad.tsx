@@ -32,13 +32,14 @@ export default function Launchpad({ skipAutoRedirect = false }: { skipAutoRedire
 
   // If only one module is enabled, skip the launchpad entirely.
   useEffect(() => {
-    if (enabled.length === 1) {
+    if (!skipAutoRedirect && enabled.length === 1) {
       navigate(moduleRoute(enabled[0]), { replace: true });
     }
-  }, [enabled, navigate]);
+  }, [enabled, navigate, skipAutoRedirect]);
 
   return (
     <div className="min-h-dvh bg-background">
+      <AdminBar label="Modules Launchpad" />
       <header className="border-b border-border">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
           <div>
