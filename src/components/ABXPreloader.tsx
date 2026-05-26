@@ -8,24 +8,17 @@ import { useEffect, useState } from "react";
  * Shows once per browser session (sessionStorage flag), ~2.2s, then fades out.
  */
 export default function ABXPreloader() {
-  const [mounted, setMounted] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return !sessionStorage.getItem("abx-preloader-seen");
-  });
+  const [mounted, setMounted] = useState(true);
   const [leaving, setLeaving] = useState(false);
 
   useEffect(() => {
-    if (!mounted) return;
-    const t1 = window.setTimeout(() => setLeaving(true), 2000);
-    const t2 = window.setTimeout(() => {
-      setMounted(false);
-      sessionStorage.setItem("abx-preloader-seen", "1");
-    }, 2700);
+    const t1 = window.setTimeout(() => setLeaving(true), 2200);
+    const t2 = window.setTimeout(() => setMounted(false), 2900);
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
     };
-  }, [mounted]);
+  }, []);
 
   if (!mounted) return null;
 
