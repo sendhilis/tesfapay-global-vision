@@ -1,83 +1,94 @@
-# Wizard Redesign: Theme-First Model
+# BankGPT Configure + Agent Builder
 
-## The Problem
+The current BankGPT module screen only shows the AI Mesh demo + Analytics. The "Configure" panel (`BankGPTSettings.tsx`) with on/off toggles only opens from the W-MOD Configure drawer, so admins inside `/platform/bankgpt` cannot see it. We'll fix that and add a full Agent Builder so the bank has end-to-end flexibility.
 
-Today the wizard exposes ~36 freeform inputs (hex pickers, font dropdowns, layout toggles). A bank admin can produce visually broken combinations, and even when they don't, the **wallet preview never visibly transforms** because the wizard's outputs are too granular and unopinionated to make the wallet *feel* different. The user sees "old wallet UI" because individually swapping `--primary` doesn't restructure layout, type scale, card shape, motion, or imagery — it just retints.
+## 1. Surface Configure inside BankGPT view
 
-## The Fix: ABX-Curated Themes + Bounded Overrides
+Add a third tab **Configure** to `BankGPTView.tsx`:
+- AI Mesh roster — embed `BankGPTSettings` (on/off + locked + tone preview)
+- Quick links to deeper editors (persona, KB, sandbox)
 
-Replace freeform design choices with **4 ABX-designed themes**. Each theme is a complete, opinionated design system (palette + typography + radius + shadow + density + motion + home layout + card style + nav style + imagery). Banks pick one theme, then customize **only inside the safe envelope** of that theme — primary accent shift (within hue family), bank name/logo/tagline, product list, AI tone. No raw hex pickers, no font dropdowns, no layout selector.
+Tabs become: **AI Mesh | Configure | Agent Builder | Analytics**
 
-### The 4 ABX Themes
+## 2. Agent Builder (new) — `BankGPTAgentBuilder.tsx`
 
-| Theme | Vibe | Palette | Type | Radius | Density | Home Layout | Nav |
-|-------|------|---------|------|--------|---------|-------------|-----|
-| **Emerald Heritage** | Ethiopian premium banking (current GlobalPay) | Deep green + gold | Sora / Plus Jakarta | 24px | Comfortable | Hero balance + grid | Bottom tabs |
-| **Indigo Modern** | Fintech challenger | Indigo + white | Space Grotesk / Inter | 16px | Compact | Compact cards + list | Bottom tabs |
-| **Onyx Premium** | Private banking | Black + champagne gold | Cormorant / Inter | 8px | Spacious | Minimal hero + list | Floating hub |
-| **Coral Daily** | Mass-market youth | Coral + cream | Outfit / Figtree | 32px | Comfortable | Stories + bento | Bottom tabs |
+A wizard-style, 6-step flow per agent (existing OR new):
 
-Each theme ships its own CSS token block, font pair, motion register, and wallpaper/gradient.
+1. **Identity & Persona**
+   - Name, tagline, emoji/initial, brand color
+   - Role description, system prompt (with template suggestions)
+   - Tone sliders (formal↔casual, terse↔verbose, reserved↔expressive)
+   - Language coverage (EN / አማ / both)
+   - Use-emoji toggle, handoff message, greeting on handoff
 
-### What the Wizard Becomes
+2. **Intent & Routing**
+   - Keywords / trigger phrases (chips)
+   - Sample utterances (5–10 examples)
+   - Confidence threshold slider
+   - Handoff rules (when to escalate to which agent / human)
 
-Drop the 36-step monster down to a focused flow:
+3. **Knowledge Base (RAG)**
+   - Upload docs (PDF, DOCX, TXT, URL) — list view with status
+   - Chunk size / overlap controls (sensible defaults)
+   - "Index now" button → simulated embedding progress, doc count, token count, last indexed timestamp
+   - Per-doc enable/disable, re-index, delete
+   - Retrieval settings: top-K, similarity threshold, hybrid (BM25 + vector) toggle
 
-1. **W01** Welcome
-2. **W02** Bank identity (name, short name, tagline, logo)
-3. **W03** **Pick your theme** — 4 large visual cards rendering an actual mini-wallet preview for each theme (not swatches — real UI)
-4. **W04** Accent tuning — slider that shifts theme's primary within its hue family (±20°) + light/dark mode toggle. No raw hex.
-5. **W05** Home layout variant — 2-3 theme-approved variants only (e.g. Emerald offers "Hero+Grid" or "Stacked Cards")
-6. **W06** Products (existing card builder — keep)
-7. **W07** AI tone (existing — keep)
-8. **W08** Onboarding / KYC method (existing — keep)
-9. **W09** Compliance (Fayda, NBE — keep)
-10. **W10** Review & Go Live — full-wallet preview, then publish
+4. **Tools & Actions**
+   - Toggleable capabilities: read balance, move money, open savings goal, buy T-Bill, repay loan, raise complaint, send notification, fetch transactions, generate chart
+   - Per-tool approval policy: auto / require confirmation / admin-only
+   - Daily/transaction limits per tool
 
-All the freeform M1/M2 steps (W07 colour picker, W08 7-colour palette, W09 font picker, W10 visual style, W11 nav style, W12 home layout, W13 interaction, W14 UX details) **collapse into W03+W04+W05** above. The persona/branch/process/Ethiopia modules either stay as-is (compliance, branches) or get hidden behind an "Advanced" disclosure.
+5. **Sandbox Testing**
+   - Split view: chat window on left, "what the agent sees" inspector on right (matched KB chunks, routed intent, tool calls, latency)
+   - Preset test scenarios (e.g. "Customer asks for loan eligibility", "Customer wants to move 1000 ETB to goal")
+   - Pass/fail tagging, save test runs as regression cases
+   - "Promote to production" button (gated)
 
-### Why The Preview Will Actually Change Now
+6. **Widget & Deployment**
+   - Widget preview (floating bubble, inline card, full-screen)
+   - Placement picker: which screens in host app (Home, Wallet, Loans, Cards, Investments)
+   - Trigger rules (idle 5s, low balance event, post-transaction, salary credit)
+   - Embed snippet (copy-paste JS for host bank app) + Capacitor deep-link
+   - Activation toggle + go-live checklist (persona ✓, KB indexed ✓, sandbox passed ✓, widget placed ✓)
 
-Each theme overrides **the full token surface** the wallet reads:
-- All semantic colors (`--primary`, `--background`, `--card`, `--foreground`, `--muted`, `--border`, `--accent`, plus legacy `--tesfa-gold`, `--tesfa-green`, `--gradient-green`, `--gradient-gold`)
-- Font family for body + display
-- `--radius` (drives every rounded-* class)
-- Shadow tokens
-- Density scale (drives padding via a `data-density` attribute on `<html>`)
-- A `data-theme` attribute on `<html>` so theme-specific CSS rules can target structural changes (e.g. `[data-theme="onyx"] .wallet-card { border-radius: 4px; backdrop-filter: blur(20px); }`)
+## 3. Data model (client-side, persisted via BankConfigContext)
 
-The wallet's `WalletHome` reads `data-theme` to pick between 2-3 home-layout variants the chosen theme allows. Same for `WalletLayout` nav style.
+Extend `config.ai.mesh.agents[id]` with:
+```
+knowledgeBase: { docs: [{ id, name, type, size, status, indexedAt, enabled }], chunkSize, overlap, topK, similarityThreshold, hybrid }
+intents: { keywords[], sampleUtterances[], confidenceThreshold, handoffRules[] }
+tools: { [toolId]: { enabled, approvalPolicy, dailyLimit } }
+sandbox: { testRuns: [{ id, prompt, expected, actual, passed, timestamp }] }
+widget: { surfaces[], triggers[], style, enabled }
+goLive: { personaComplete, kbIndexed, sandboxPassed, widgetPlaced }
+```
 
-## Technical Details
+For brand-new agents, push into `agents` map with a generated id and same shape (no `locked: true`).
 
-### New files
-- `src/lib/abx-themes.ts` — the 4 theme definitions (tokens, font pair, allowed layout variants, accent hue range)
-- `src/components/wizard/ThemePickerCard.tsx` — renders mini-wallet preview per theme
-- `src/components/wizard/AccentTuner.tsx` — hue-shift slider bounded to theme
-- `src/components/wallet/HomeVariants/` — 2-3 home layout components selectable per theme
+## 4. UX
 
-### Edited files
-- `src/lib/wizard-config.ts` — collapse STEPS to ~10 entries
-- `src/contexts/BankConfigContext.tsx` — add `themeId`, `accentShift`, `homeVariant`; `applyBrandTokens` writes full token surface + `data-theme` + `data-density` attrs
-- `src/components/wizard/steps.tsx` — new W03/W04/W05 step components; delete now-obsolete steps
-- `src/index.css` — add theme-scoped rules `[data-theme="emerald"|"indigo"|"onyx"|"coral"] { ... }` for structural differences not expressible via tokens
-- `src/pages/wallet/WalletHome.tsx` — read `themeId` + `homeVariant`, switch between layout components
-- `src/pages/wallet/WalletLayout.tsx` — switch nav style per theme
+- Agent Builder opens with **agent picker** (existing roster + "+ New agent" card)
+- Each step is a left-rail with progress dots; right panel is the editor
+- Footer always shows: Save Draft / Test in Sandbox / Activate
+- All persisted to BankConfigContext → flows through to live `mesh-chat` edge function (which already reads agent config from payload)
 
-### Migration
-Existing localStorage configs without `themeId` default to `"emerald"` (current look). No breaking change for the demo.
+## 5. Critical analysis note shown in Configure tab
 
-### Out of scope this round
-- Persona-specific UX overrides (W18)
-- Custom workflow builder (W31)
-- Branch map (W28)
+A small "Bank Flexibility Checklist" callout listing what the bank CAN configure (persona, KB, tools, routing, widgets, limits, languages, branding) — so admins immediately see BankGPT's full surface area.
 
-Those stay in their current state; the focus is making theme selection actually transform the wallet.
+## Files
 
-## Outcome
+- **edit** `src/components/wizard/modules/BankGPTView.tsx` — add Configure + Agent Builder tabs
+- **new** `src/components/wizard/modules/bankgpt/AgentBuilder.tsx` — wizard shell + agent picker
+- **new** `src/components/wizard/modules/bankgpt/steps/StepPersona.tsx`
+- **new** `src/components/wizard/modules/bankgpt/steps/StepIntents.tsx`
+- **new** `src/components/wizard/modules/bankgpt/steps/StepKnowledgeBase.tsx`
+- **new** `src/components/wizard/modules/bankgpt/steps/StepTools.tsx`
+- **new** `src/components/wizard/modules/bankgpt/steps/StepSandbox.tsx`
+- **new** `src/components/wizard/modules/bankgpt/steps/StepWidget.tsx`
+- **edit** `src/contexts/BankConfigContext.tsx` — extend agent schema with KB/intents/tools/widget/goLive (optional fields, backward-compatible)
 
-After the bank admin completes the new wizard:
-- Picks "Onyx Premium" → wallet repaints to black/gold, sharp 4px corners, serif headings, floating nav hub, minimal hero
-- Picks "Coral Daily" → wallet repaints to coral/cream, 32px pillowy cards, stories row at top, bottom tabs
-- Picks "Indigo Modern" → tight 16px cards, list-style home, Inter throughout
-- The preview is dramatically, obviously different per theme — no more "looks the same as before"
+No backend changes required — RAG/embedding is simulated in the prototype (matches the rest of the app's localStorage-based demo state). The hooks are designed so the future Spring Boot backend can plug straight in.
+
+Approve to build.
