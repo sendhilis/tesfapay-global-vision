@@ -284,8 +284,11 @@ export function BankGPTMesh() {
                     className="max-w-[80%] rounded-2xl rounded-bl-sm border bg-background px-3 py-2 text-sm text-foreground"
                     style={{ borderLeft: `3px solid ${a.color}` }}
                   >
-                    <div className="mb-0.5 flex items-center justify-between gap-2">
-                      <span className="text-[9px] font-semibold uppercase tracking-widest" style={{ color: a.color }}>
+                    <div className="mb-1 flex items-center justify-between gap-2">
+                      <span
+                        className="rounded-md px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-white"
+                        style={{ background: a.color }}
+                      >
                         {a.name}
                       </span>
                       <button
