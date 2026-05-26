@@ -19,7 +19,7 @@ import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import {
   LayoutDashboard, Users, ArrowLeftRight, FileCheck, BarChart2,
-  Bell, Settings, ChevronLeft, ChevronRight, Menu, X
+  Bell, Settings, ChevronLeft, ChevronRight, Menu, X, Sparkles
 } from "lucide-react";
 import tesfaLogo from "@/assets/tesfa-logo.png";
 import adminHeroBg from "@/assets/admin-hero-bg.jpg";
@@ -35,6 +35,7 @@ const navItems = [
   { to: "/admin/emoney", icon: Banknote, label: "EMoney Mgmt" },
   { to: "/admin/reports", icon: ReportIcon, label: "Reports" },
   { to: "/admin/analytics", icon: BarChart2, label: "Analytics" },
+  { to: "/admin/bankgpt-analytics", icon: Sparkles, label: "BankGPT Analytics" },
   { to: "/proposal", icon: ScrollText, label: "Proposal Doc" },
   { to: "/showcase", icon: Presentation, label: "Product Showcase" },
 ];

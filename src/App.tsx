@@ -18,6 +18,7 @@ import AdminUsers from "./pages/admin/AdminUsers";
 import AdminTransactions from "./pages/admin/AdminTransactions";
 import AdminKYC from "./pages/admin/AdminKYC";
 import AdminAnalytics from "./pages/admin/AdminAnalytics";
+import AdminBankGPTAnalytics from "./pages/admin/AdminBankGPTAnalytics";
 import AdminLayout from "./pages/admin/AdminLayout";
 import AdminEMoney from "./pages/admin/AdminEMoney";
 import AdminReports from "./pages/admin/AdminReports";
@@ -100,6 +101,7 @@ const App = () => (
             <Route path="emoney" element={<AdminEMoney />} />
             <Route path="reports" element={<AdminReports />} />
             <Route path="analytics" element={<AdminAnalytics />} />
+            <Route path="bankgpt-analytics" element={<AdminBankGPTAnalytics />} />
           </Route>
 
           {/* Agent Portal Routes */}
