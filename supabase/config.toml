@@ -1,1 +1,10 @@
 project_id = "sgjfidsnyxhjxkevjgje"
+
+[functions.integration-webhook-receiver]
+verify_jwt = false
+
+[functions.nisir-ai-chat]
+verify_jwt = false
+
+[functions.kyc-verify]
+verify_jwt = false
