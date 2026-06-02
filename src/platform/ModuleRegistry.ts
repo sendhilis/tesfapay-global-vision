@@ -141,6 +141,10 @@ export const ABX_MODULES: AbxModule[] = [
     status: "live",
     defaultEnabled: true,
     route: "/platform/mobile-banking",
+    // Techurate ABX Core Mobile Banking — set VITE_ABX_MB_URL to the hosted app
+    // URL (e.g. https://abx-mb.techurate.example/) to replace the Nisir retail
+    // portal with the live Techurate app. When unset, falls back to Nisir.
+    iframeUrl: import.meta.env.VITE_ABX_MB_URL as string | undefined,
     settings: {
       fields: [
         { key: "sessionTimeoutMin", label: "Session timeout (minutes)", type: "number", default: 5, min: 1, max: 30 },
