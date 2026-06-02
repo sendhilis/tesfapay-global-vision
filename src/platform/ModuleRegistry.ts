@@ -56,6 +56,14 @@ export type AbxModule = {
   /** Federation contract — populated once the Techurate team ships a remoteEntry.js */
   remoteEntry?: string;
   exposedModule?: string;
+  /**
+   * Iframe URL — when set, ModuleHost mounts this URL in a sandboxed iframe
+   * instead of the bundled Nisir portal / stub. This is the primary route
+   * for integrating live Techurate apps hosted at their own origin.
+   * Reads from a Vite env var so ops can swap hosts per environment (dev/UAT/prod)
+   * without a code change.
+   */
+  iframeUrl?: string;
   /** Internal route segment under /platform/:moduleId */
   route: string;
   /** Module-specific config form. Stored under BankConfig.moduleSettings[id]. */
@@ -133,6 +141,10 @@ export const ABX_MODULES: AbxModule[] = [
     status: "live",
     defaultEnabled: true,
     route: "/platform/mobile-banking",
+    // Techurate ABX Core Mobile Banking — set VITE_ABX_MB_URL to the hosted app
+    // URL (e.g. https://abx-mb.techurate.example/) to replace the Nisir retail
+    // portal with the live Techurate app. When unset, falls back to Nisir.
+    iframeUrl: import.meta.env.VITE_ABX_MB_URL as string | undefined,
     settings: {
       fields: [
         { key: "sessionTimeoutMin", label: "Session timeout (minutes)", type: "number", default: 5, min: 1, max: 30 },
