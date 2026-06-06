@@ -52,7 +52,7 @@ const TOOL_META: Record<ToolId, { label: string; desc: string }> = {
 };
 
 export function AgentBuilder() {
-  const { config: bankCfg } = useWizard();
+  const { config: bankCfg, setConfig } = useWizard();
   const { customAgents, add: addCustom, remove: removeCustom } = useCustomAgents();
   const roster = useMemo(() => {
     const base = Object.values(bankCfg.ai.mesh.agents).map((a) => ({
@@ -63,6 +63,19 @@ export function AgentBuilder() {
 
   const [activeId, setActiveId] = useState<string | null>(null);
   const [step, setStep] = useState<StepId>("persona");
+
+  function loadCardDemo(kbUrl: string) {
+    applyCardSpecialistPreset(bankCfg, setConfig, kbUrl || DEFAULT_CARD_KB_URL);
+    setActiveId(CARD_AGENT_ID);
+    setStep("sandbox");
+    toast({
+      title: "Card Specialist loaded",
+      description: "Persona, KB, tools and guardrails are pre-configured. Jump to the Voice Sandbox to demo.",
+    });
+    setTimeout(() => {
+      speak("Card Concierge is ready. Tap the microphone in the Voice Sandbox to start the demo in English or Amharic.", "en");
+    }, 500);
+  }
 
   if (!activeId) {
     return (
@@ -75,6 +88,7 @@ export function AgentBuilder() {
           toast({ title: "New agent created", description: "Configure its persona to begin." });
         }}
         onDelete={removeCustom}
+        onLoadCardDemo={loadCardDemo}
       />
     );
   }
