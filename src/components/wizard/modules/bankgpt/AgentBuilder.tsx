@@ -21,6 +21,11 @@ import {
   useAgentBuilder, useCustomAgents,
   type AgentBuilderConfig, type ToolId, type KbDoc,
 } from "./agentBuilderStore";
+import { VoiceSandbox } from "./VoiceSandbox";
+import { speak } from "./voiceUtils";
+import {
+  applyCardSpecialistPreset, CARD_AGENT_ID, DEFAULT_CARD_KB_URL,
+} from "./cardSpecialistPreset";
 
 const STEPS = [
   { id: "persona",    label: "Persona",     icon: User },
