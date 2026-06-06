@@ -1,6 +1,10 @@
 // Agent Sandbox Chat — bilingual (English / Amharic) single-agent endpoint
-// used by the BankGPT Agent Builder Sandbox tab. Grounds replies in
-// uploaded / URL-attached KB doc names so the demo feels real.
+// used by the BankGPT Agent Builder Sandbox tab.
+//
+// Real lightweight RAG: any KB doc with an http(s) `source` (or type:"url")
+// is fetched at request time, stripped to plain text and injected as
+// authoritative grounding context. The LLM is instructed to answer ONLY
+// from that context. Fetched pages are cached in-memory per isolate.
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 
 type Tone = { formal_casual: number; terse_verbose: number; reserved_expressive: number };
@@ -30,6 +34,62 @@ function describeTone(t: Tone, usesEmoji: boolean) {
   return `Register: ${reg}. Length: ${len}. Expressiveness: ${exp}. ${usesEmoji ? "May use 1 relevant emoji." : "Do not use emojis."}`;
 }
 
+/* ───────────── Lightweight URL → text RAG ───────────── */
+
+const PAGE_CACHE = new Map<string, { text: string; fetchedAt: number }>();
+const CACHE_TTL_MS = 10 * 60 * 1000; // 10 min
+const MAX_CHARS_PER_DOC = 6000;
+const MAX_TOTAL_CHARS = 14000;
+
+function htmlToText(html: string): string {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<noscript[\s\S]*?<\/noscript>/gi, " ")
+    .replace(/<!--[\s\S]*?-->/g, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+async function fetchUrlText(url: string): Promise<string | null> {
+  try {
+    const cached = PAGE_CACHE.get(url);
+    if (cached && Date.now() - cached.fetchedAt < CACHE_TTL_MS) return cached.text;
+
+    const ctl = AbortSignal.timeout(8000);
+    const res = await fetch(url, {
+      signal: ctl,
+      redirect: "follow",
+      headers: {
+        "User-Agent": "Mozilla/5.0 (compatible; ABX-BankGPT-Sandbox/1.0)",
+        Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      },
+    });
+    if (!res.ok) {
+      console.warn("KB fetch failed", url, res.status);
+      return null;
+    }
+    const html = await res.text();
+    const text = htmlToText(html).slice(0, MAX_CHARS_PER_DOC);
+    PAGE_CACHE.set(url, { text, fetchedAt: Date.now() });
+    return text;
+  } catch (e) {
+    console.warn("KB fetch error", url, e instanceof Error ? e.message : e);
+    return null;
+  }
+}
+
+function bankNameFromUrl(url: string): string | null {
+  try {
+    const host = new URL(url).hostname.replace(/^www\./, "");
+    const root = host.split(".").slice(0, -1).join(".") || host;
+    return root.charAt(0).toUpperCase() + root.slice(1);
+  } catch { return null; }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -52,26 +112,54 @@ Deno.serve(async (req) => {
     }
 
     const enabledDocs = (kb?.docs ?? []).filter((d) => d.enabled && d.status === "indexed");
-    const kbBlock = enabledDocs.length
-      ? `KNOWLEDGE BASE (use these as your authoritative grounding sources — cite by document name when relevant):\n${
-          enabledDocs.slice(0, 8).map((d, i) => `  [${i + 1}] ${d.name}${d.source && d.source !== "upload" ? ` (${d.source})` : ""}`).join("\n")
-        }`
-      : "KNOWLEDGE BASE: (none attached — answer from general banking knowledge, be transparent about it).";
+
+    // Fetch any URL-backed KB docs in parallel.
+    const urlDocs = enabledDocs.filter(
+      (d) => (d.type === "url") || (d.source && /^https?:\/\//i.test(d.source)),
+    );
+    const fetched = await Promise.all(
+      urlDocs.slice(0, 4).map(async (d) => {
+        const u = d.source && /^https?:\/\//i.test(d.source) ? d.source : d.name;
+        const text = await fetchUrlText(u);
+        return text ? { url: u, name: d.name, text } : null;
+      }),
+    );
+    const liveSources = fetched.filter(Boolean) as { url: string; name: string; text: string }[];
+
+    // Derive bank from first URL if not provided.
+    const derivedBank = liveSources.length ? bankNameFromUrl(liveSources[0].url) : null;
+    const bankName = agent.bankName || derivedBank || "the bank";
+
+    let totalChars = 0;
+    const groundingBlocks = liveSources.map((s, i) => {
+      const remaining = Math.max(0, MAX_TOTAL_CHARS - totalChars);
+      const slice = s.text.slice(0, remaining);
+      totalChars += slice.length;
+      return `[Source ${i + 1}] ${s.url}\n${slice}`;
+    }).filter((b) => b.length > 0);
+
+    const otherDocs = enabledDocs.filter((d) => !urlDocs.includes(d));
+
+    const kbBlock = (groundingBlocks.length || otherDocs.length)
+      ? `KNOWLEDGE BASE — authoritative grounding. Answer ONLY using facts found below. If a specific number, fee, product, or policy is not in these sources, say so plainly and offer to escalate. Do NOT invent product names, fees, limits, or competing-bank info.
+
+${groundingBlocks.join("\n\n---\n\n")}${otherDocs.length ? `\n\nAdditional attached docs (names only): ${otherDocs.map((d) => d.name).join(", ")}` : ""}`
+      : `KNOWLEDGE BASE: (none successfully fetched — be transparent that you have no bank-specific source and only offer general guidance).`;
 
     const toolBlock = tools?.length
-      ? `AVAILABLE ACTIONS (simulate these in your reply — describe what you would do, do NOT actually execute):\n${
-          tools.map((t) => `  • ${t.label} [policy: ${t.approval}${t.dailyLimit ? `, daily limit ETB ${t.dailyLimit}` : ""}]`).join("\n")
-        }`
+      ? `AVAILABLE ACTIONS (simulate — describe what you would do, do NOT actually execute):
+${tools.map((t) => `  • ${t.label} [policy: ${t.approval}${t.dailyLimit ? `, daily limit ETB ${t.dailyLimit}` : ""}]`).join("\n")}`
       : "";
 
     const langLine = language === "am"
-      ? `CRITICAL: Reply ONLY in Amharic (አማርኛ) prose. Keep numbers, currency codes (ETB) and product names like "VISA" or "Mastercard" in Latin script. This is a spoken demo — keep replies under 3 short sentences so the TTS sounds natural.`
-      : `Reply in clear, natural, conversational English. This is a spoken demo — keep replies under 3 short sentences so the TTS sounds natural.`;
+      ? `CRITICAL: Reply ONLY in Amharic (አማርኛ). Keep numbers, currency codes (ETB) and product/brand names (VISA, Mastercard) in Latin script. This is a spoken demo — keep replies under 3 short sentences.`
+      : `Reply in clear, natural, conversational English. This is a spoken demo — keep replies under 3 short sentences.`;
 
     const system = [
-      `You are ${agent.name}, an AI specialist agent inside the ${agent.bankName || "bank"}'s BankGPT mesh.`,
+      `You are ${agent.name}, an AI specialist agent for ${bankName}.`,
       `Role: ${agent.tagline}`,
       agent.systemPrompt,
+      `You must ground every factual claim in the KNOWLEDGE BASE below (the bank's own published content). Never name or quote any other bank. If the user asks about a product or fee that is not in the KB, reply that you don't have that specific information for ${bankName} and offer to connect them with a human agent.`,
       describeTone(agent.tone, agent.usesEmoji),
       langLine,
       kbBlock,
@@ -83,10 +171,7 @@ Deno.serve(async (req) => {
 
     const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
+      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         model: body.model || "google/gemini-2.5-flash",
         messages: [{ role: "system", content: system }, ...recent],
@@ -117,7 +202,9 @@ Deno.serve(async (req) => {
 
     return new Response(JSON.stringify({
       reply,
-      groundedCitations: enabledDocs.length,
+      groundedCitations: liveSources.length,
+      groundedSources: liveSources.map((s) => s.url),
+      derivedBank: derivedBank,
       language,
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {
