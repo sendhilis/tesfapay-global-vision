@@ -223,16 +223,21 @@ export function BankGPTMesh() {
         });
       }
 
+      let agentIdx = 0;
       setMessages((m) => {
         const out: Msg[] = [...m];
         if (reply.handoff) {
           out.push({ kind: "handoff", to: reply.handoff.to as MeshAgentId, text: reply.handoff.text });
         }
         out.push({ kind: "agent", agentId: targetId, text: reply.reply, lang: detected, charts: reply.charts });
+        agentIdx = out.length - 1;
         for (const r of receipts) out.push({ kind: "receipt", text: r });
         return out;
       });
       setCurrentAgent(targetId);
+      if (opts?.speak && reply.reply) {
+        speak(agentIdx, reply.reply, detected);
+      }
     } catch (e) {
       console.error("BankGPT send failed", e);
       setMessages((m) => [...m, {
