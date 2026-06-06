@@ -13,7 +13,8 @@
  * speaks English and Amharic with the same voice.
  */
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Send, Volume2, Languages, Sparkles, Zap, User2, CheckCircle2 } from "lucide-react";
+import { Send, Volume2, Languages, Sparkles, Zap, User2, CheckCircle2, Mic, Square, Loader2 } from "lucide-react";
+import { startRecording, transcribe, speak as speakTTS } from "./bankgpt/voiceUtils";
 import {
   PieChart, Pie, Cell, BarChart, Bar, LineChart, Line,
   XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
@@ -121,6 +122,9 @@ export function BankGPTMesh() {
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [speakingIdx, setSpeakingIdx] = useState<number | null>(null);
+  const [recording, setRecording] = useState(false);
+  const [sttBusy, setSttBusy] = useState(false);
+  const recRef = useRef<{ stop: () => Promise<Blob> } | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -159,7 +163,7 @@ export function BankGPTMesh() {
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, busy]);
 
-  async function send(textArg?: string) {
+  async function send(textArg?: string, opts?: { speak?: boolean }) {
     const text = (textArg ?? input).trim();
     if (!text || busy) return;
     setInput("");
@@ -219,16 +223,21 @@ export function BankGPTMesh() {
         });
       }
 
+      let agentIdx = 0;
       setMessages((m) => {
         const out: Msg[] = [...m];
         if (reply.handoff) {
           out.push({ kind: "handoff", to: reply.handoff.to as MeshAgentId, text: reply.handoff.text });
         }
         out.push({ kind: "agent", agentId: targetId, text: reply.reply, lang: detected, charts: reply.charts });
+        agentIdx = out.length - 1;
         for (const r of receipts) out.push({ kind: "receipt", text: r });
         return out;
       });
       setCurrentAgent(targetId);
+      if (opts?.speak && reply.reply) {
+        speak(agentIdx, reply.reply, detected);
+      }
     } catch (e) {
       console.error("BankGPT send failed", e);
       setMessages((m) => [...m, {
@@ -244,21 +253,36 @@ export function BankGPTMesh() {
 
   async function speak(idx: number, text: string, language: "en" | "am") {
     try {
-      if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
       setSpeakingIdx(idx);
-      const { data, error } = await supabase.functions.invoke("elevenlabs-tts", {
-        body: { text, lang: language },
-      });
-      if (error) throw error;
-      const blob = data instanceof Blob ? data : new Blob([data as ArrayBuffer], { type: "audio/mpeg" });
-      const url = URL.createObjectURL(blob);
-      const audio = new Audio(url);
-      audioRef.current = audio;
-      audio.onended = () => { setSpeakingIdx(null); URL.revokeObjectURL(url); };
-      await audio.play();
+      await speakTTS(text, language);
     } catch (e) {
       console.error("TTS failed", e);
+    } finally {
       setSpeakingIdx(null);
+    }
+  }
+
+  async function toggleRecord() {
+    if (recording) {
+      setRecording(false);
+      setSttBusy(true);
+      try {
+        const blob = await recRef.current!.stop();
+        recRef.current = null;
+        const text = await transcribe(blob, lang);
+        if (text) await send(text, { speak: true });
+      } catch (e) {
+        console.error("STT failed", e);
+      } finally {
+        setSttBusy(false);
+      }
+    } else {
+      try {
+        recRef.current = await startRecording();
+        setRecording(true);
+      } catch (e) {
+        console.error("Mic blocked", e);
+      }
     }
   }
 
@@ -422,12 +446,30 @@ export function BankGPTMesh() {
               ))}
             </div>
             <div className="flex items-center gap-2">
+              <button
+                onClick={toggleRecord}
+                disabled={busy || sttBusy}
+                className={
+                  "rounded-lg p-2 text-primary-foreground disabled:opacity-50 " +
+                  (recording ? "bg-rose-500 animate-pulse" : "bg-secondary")
+                }
+                aria-label={recording ? "Stop recording" : "Speak"}
+                title={lang === "am" ? "በድምፅ ይናገሩ" : "Speak"}
+              >
+                {sttBusy ? <Loader2 className="h-4 w-4 animate-spin" /> :
+                  recording ? <Square className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+              </button>
               <input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && send()}
-                placeholder={lang === "am" ? "መልዕክት ይጻፉ…" : "Ask anything about your money…"}
-                className="flex-1 rounded-lg bg-muted px-3 py-2 text-sm text-foreground focus:outline-none"
+                placeholder={
+                  sttBusy ? (lang === "am" ? "በመተርጎም ላይ…" : "Transcribing…")
+                  : recording ? (lang === "am" ? "በማዳመጥ ላይ…" : "Listening…")
+                  : (lang === "am" ? "መልዕክት ይጻፉ ወይም ማይክሮፎኑን ይጫኑ…" : "Ask anything — type or tap the mic…")
+                }
+                disabled={recording || sttBusy}
+                className="flex-1 rounded-lg bg-muted px-3 py-2 text-sm text-foreground focus:outline-none disabled:opacity-60"
               />
               <button
                 onClick={() => send()}
