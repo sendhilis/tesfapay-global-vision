@@ -266,6 +266,30 @@ export function BankGPTMesh() {
     }
   }
 
+  async function toggleRecord() {
+    if (recording) {
+      setRecording(false);
+      setSttBusy(true);
+      try {
+        const blob = await recRef.current!.stop();
+        recRef.current = null;
+        const text = await transcribe(blob, lang);
+        if (text) await send(text);
+      } catch (e) {
+        console.error("STT failed", e);
+      } finally {
+        setSttBusy(false);
+      }
+    } else {
+      try {
+        recRef.current = await startRecording();
+        setRecording(true);
+      } catch (e) {
+        console.error("Mic blocked", e);
+      }
+    }
+  }
+
   const suggestions = lang === "am" ? SUGGESTIONS_AM : SUGGESTIONS_EN;
 
   return (
