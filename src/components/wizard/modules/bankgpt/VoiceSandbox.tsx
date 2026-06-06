@@ -17,6 +17,21 @@ import type { AgentBuilderConfig } from "./agentBuilderStore";
 
 type Msg = { role: "user" | "assistant"; content: string; lang?: "en" | "am" };
 
+function bankNameFromKbUrl(config: AgentBuilderConfig): string | null {
+  const urlDoc = config.kb.docs.find((d) => d.enabled && d.type === "url" && (d.source || d.name));
+  const raw = urlDoc?.source || urlDoc?.name;
+  if (!raw) return null;
+  try {
+    const host = new URL(raw).hostname.replace(/^www\./, "");
+    const label = host.split(".")[0]
+      .replace(/[-_]+/g, " ")
+      .replace(/([a-z])bank\b/i, "$1 bank")
+      .replace(/\s+/g, " ")
+      .trim();
+    return label ? label.split(" ").map((w) => w.length <= 3 ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1)).join(" ") : null;
+  } catch { return null; }
+}
+
 export function VoiceSandbox({
   agentMeta, config, logAudit,
 }: {
@@ -26,7 +41,7 @@ export function VoiceSandbox({
 }) {
   const { config: bankCfg } = useWizard();
   const baseAgent: any = (bankCfg.ai.mesh.agents as any)[agentMeta.id];
-  const bankName = bankCfg.bank?.name || "the bank";
+  const bankName = bankNameFromKbUrl(config) || bankCfg.bank?.name || "the bank";
 
   const [lang, setLang] = useState<"en" | "am">("en");
   const [messages, setMessages] = useState<Msg[]>([]);

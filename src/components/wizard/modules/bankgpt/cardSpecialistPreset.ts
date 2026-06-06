@@ -15,6 +15,18 @@ export const CARD_AGENT_ID = "cardSpecialist";
 
 export const DEFAULT_CARD_KB_URL = "https://www.cbe.com.et/personal-banking/cards/";
 
+function bankNameFromKbUrl(kbUrl: string): string | null {
+  try {
+    const host = new URL(kbUrl).hostname.replace(/^www\./, "");
+    const label = host.split(".")[0]
+      .replace(/[-_]+/g, " ")
+      .replace(/([a-z])bank\b/i, "$1 bank")
+      .replace(/\s+/g, " ")
+      .trim();
+    return label ? label.split(" ").map((w) => w.length <= 3 ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1)).join(" ") : null;
+  } catch { return null; }
+}
+
 export function buildCardSpecialistMeshAgent(bankName: string) {
   return {
     id: CARD_AGENT_ID,
@@ -138,7 +150,7 @@ export function applyCardSpecialistPreset(
   setConfig: (c: BankConfig) => void,
   kbUrl: string,
 ) {
-  const meshAgent = buildCardSpecialistMeshAgent(bankCfg.bank?.name || "the bank");
+  const meshAgent = buildCardSpecialistMeshAgent(bankNameFromKbUrl(kbUrl) || bankCfg.bank?.name || "the bank");
   setConfig({
     ...bankCfg,
     ai: {
