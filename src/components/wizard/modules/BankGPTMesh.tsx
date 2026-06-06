@@ -253,20 +253,11 @@ export function BankGPTMesh() {
 
   async function speak(idx: number, text: string, language: "en" | "am") {
     try {
-      if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
       setSpeakingIdx(idx);
-      const { data, error } = await supabase.functions.invoke("elevenlabs-tts", {
-        body: { text, lang: language },
-      });
-      if (error) throw error;
-      const blob = data instanceof Blob ? data : new Blob([data as ArrayBuffer], { type: "audio/mpeg" });
-      const url = URL.createObjectURL(blob);
-      const audio = new Audio(url);
-      audioRef.current = audio;
-      audio.onended = () => { setSpeakingIdx(null); URL.revokeObjectURL(url); };
-      await audio.play();
+      await speakTTS(text, language);
     } catch (e) {
       console.error("TTS failed", e);
+    } finally {
       setSpeakingIdx(null);
     }
   }
