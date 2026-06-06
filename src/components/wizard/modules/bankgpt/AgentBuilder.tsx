@@ -21,6 +21,11 @@ import {
   useAgentBuilder, useCustomAgents,
   type AgentBuilderConfig, type ToolId, type KbDoc,
 } from "./agentBuilderStore";
+import { VoiceSandbox } from "./VoiceSandbox";
+import { speak } from "./voiceUtils";
+import {
+  applyCardSpecialistPreset, CARD_AGENT_ID, DEFAULT_CARD_KB_URL,
+} from "./cardSpecialistPreset";
 
 const STEPS = [
   { id: "persona",    label: "Persona",     icon: User },
@@ -47,7 +52,7 @@ const TOOL_META: Record<ToolId, { label: string; desc: string }> = {
 };
 
 export function AgentBuilder() {
-  const { config: bankCfg } = useWizard();
+  const { config: bankCfg, setConfig } = useWizard();
   const { customAgents, add: addCustom, remove: removeCustom } = useCustomAgents();
   const roster = useMemo(() => {
     const base = Object.values(bankCfg.ai.mesh.agents).map((a) => ({
@@ -58,6 +63,19 @@ export function AgentBuilder() {
 
   const [activeId, setActiveId] = useState<string | null>(null);
   const [step, setStep] = useState<StepId>("persona");
+
+  function loadCardDemo(kbUrl: string) {
+    applyCardSpecialistPreset(bankCfg, setConfig, kbUrl || DEFAULT_CARD_KB_URL);
+    setActiveId(CARD_AGENT_ID);
+    setStep("sandbox");
+    toast({
+      title: "Card Specialist loaded",
+      description: "Persona, KB, tools and guardrails are pre-configured. Jump to the Voice Sandbox to demo.",
+    });
+    setTimeout(() => {
+      speak("Card Concierge is ready. Tap the microphone in the Voice Sandbox to start the demo in English or Amharic.", "en");
+    }, 500);
+  }
 
   if (!activeId) {
     return (
@@ -70,6 +88,7 @@ export function AgentBuilder() {
           toast({ title: "New agent created", description: "Configure its persona to begin." });
         }}
         onDelete={removeCustom}
+        onLoadCardDemo={loadCardDemo}
       />
     );
   }
@@ -122,10 +141,12 @@ export function AgentBuilder() {
 
 /* ───────────────────────── Roster picker ───────────────────────── */
 
-function RosterPicker({ roster, onPick, onNew, onDelete }: {
+function RosterPicker({ roster, onPick, onNew, onDelete, onLoadCardDemo }: {
   roster: { id: string; name: string; tagline: string; color: string; emoji: string; custom: boolean }[];
   onPick: (id: string) => void; onNew: () => void; onDelete: (id: string) => void;
+  onLoadCardDemo: (kbUrl: string) => void;
 }) {
+  const [kbUrl, setKbUrl] = useState(DEFAULT_CARD_KB_URL);
   return (
     <div className="space-y-4">
       <div className="glass rounded-xl p-4">
@@ -137,6 +158,34 @@ function RosterPicker({ roster, onPick, onNew, onDelete }: {
             enforce guardrails, test in a sandbox, watch observability, then deploy as a widget.
             Every change is recorded in the audit trail.
           </div>
+        </div>
+      </div>
+
+      {/* Featured demo: Credit & Debit Card Specialist */}
+      <div className="rounded-xl border-2 border-tesfa-gold/50 bg-gradient-to-br from-tesfa-gold/10 via-tesfa-gold/5 to-transparent p-4">
+        <div className="flex items-start gap-3 mb-3">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl text-2xl shrink-0"
+               style={{ background: "linear-gradient(135deg,#7C3AED,#3B82F6)" }}>💳</div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className="text-sm font-bold text-foreground">Credit & Debit Card Specialist — Live Demo</p>
+              <Badge className="text-[9px] bg-tesfa-gold text-tesfa-dark">Voice · EN + አማ</Badge>
+            </div>
+            <p className="text-[11px] text-muted-foreground mt-0.5">
+              One-click preset: persona, KB (bank cards URL + fee schedule + cardholder T&Cs),
+              tools and guardrails — ready to demo end-to-end via ElevenLabs voice.
+            </p>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2 items-end">
+          <div>
+            <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Bank cards knowledge URL</label>
+            <Input value={kbUrl} onChange={(e) => setKbUrl(e.target.value)}
+              placeholder="https://www.yourbank.com/cards" className="h-9 text-xs" />
+          </div>
+          <Button onClick={() => onLoadCardDemo(kbUrl)} className="bg-gradient-gold text-tesfa-dark hover:opacity-90">
+            <Sparkles className="h-3.5 w-3.5 mr-1" /> Load demo & go to Voice Sandbox
+          </Button>
         </div>
       </div>
 
@@ -673,9 +722,12 @@ function StepSandbox({ agentMeta, config, update, logAudit }: any) {
   const totalTokens = runs.reduce((s: number, r: any) => s + (r.tokensIn ?? 0) + (r.tokensOut ?? 0), 0);
 
   return (
-    <Card title="Sandbox + Observability" desc="Test in isolation. Live metrics, guardrail hits and latency are captured.">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <Card title="Sandbox + Observability" desc="Test in isolation by voice or text. Live metrics, guardrail hits and latency are captured.">
+      <VoiceSandbox agentMeta={agentMeta} config={config} logAudit={logAudit} />
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
         <div className="space-y-2">
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Text-only regression test</p>
           <Field label="Test prompt" full><Textarea rows={3} value={promptText} onChange={(e) => setPromptText(e.target.value)} /></Field>
           <Field label="Expected (substring match — optional)" full><Input value={expected} onChange={(e) => setExpected(e.target.value)} /></Field>
           <Button size="sm" onClick={run} disabled={running || !promptText}>
