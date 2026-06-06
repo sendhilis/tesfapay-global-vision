@@ -163,7 +163,7 @@ export function BankGPTMesh() {
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, busy]);
 
-  async function send(textArg?: string) {
+  async function send(textArg?: string, opts?: { speak?: boolean }) {
     const text = (textArg ?? input).trim();
     if (!text || busy) return;
     setInput("");
