@@ -14,7 +14,7 @@
  */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Send, Volume2, Languages, Sparkles, Zap, User2, CheckCircle2, Mic, Square, Loader2 } from "lucide-react";
-import { startRecording, transcribe } from "./bankgpt/voiceUtils";
+import { startRecording, transcribe, speak as speakTTS } from "./bankgpt/voiceUtils";
 import {
   PieChart, Pie, Cell, BarChart, Bar, LineChart, Line,
   XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
