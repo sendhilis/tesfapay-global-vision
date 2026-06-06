@@ -122,6 +122,9 @@ export function BankGPTMesh() {
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [speakingIdx, setSpeakingIdx] = useState<number | null>(null);
+  const [recording, setRecording] = useState(false);
+  const [sttBusy, setSttBusy] = useState(false);
+  const recRef = useRef<{ stop: () => Promise<Blob> } | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
