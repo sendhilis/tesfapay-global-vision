@@ -2,14 +2,15 @@
 // used by the BankGPT Agent Builder Sandbox tab.
 //
 // Real lightweight RAG: any KB doc with an http(s) `source` (or type:"url")
-// is fetched at request time, stripped to plain text and injected as
-// authoritative grounding context. The LLM is instructed to answer ONLY
-// from that context. Fetched pages are cached in-memory per isolate.
+// is fetched at request time, strips the source page to text, discovers
+// same-site card/product URLs, then injects those pages as authoritative
+// grounding context. Fetched pages are cached in-memory per isolate.
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 
 type Tone = { formal_casual: number; terse_verbose: number; reserved_expressive: number };
 type KbDoc = { name: string; type: string; status: string; enabled: boolean; source?: string };
 type Tool = { id: string; label: string; approval: string; dailyLimit?: number };
+type Page = { url: string; finalUrl: string; html: string; text: string };
 
 type Body = {
   agent: {
@@ -36,10 +37,12 @@ function describeTone(t: Tone, usesEmoji: boolean) {
 
 /* ───────────── Lightweight URL → text RAG ───────────── */
 
-const PAGE_CACHE = new Map<string, { text: string; fetchedAt: number }>();
+const PAGE_CACHE = new Map<string, { page: Page; fetchedAt: number }>();
 const CACHE_TTL_MS = 10 * 60 * 1000; // 10 min
 const MAX_CHARS_PER_DOC = 6000;
 const MAX_TOTAL_CHARS = 14000;
+const MAX_DISCOVERED_PAGES_PER_DOC = 5;
+const CARD_LINK_RE = /\b(card|cards|visa|mastercard|credit|debit|travel|prepaid|atm|pos|ካርድ|ቪዛ)\b/i;
 
 function htmlToText(html: string): string {
   return html
@@ -54,13 +57,51 @@ function htmlToText(html: string): string {
     .trim();
 }
 
-async function fetchUrlText(url: string): Promise<string | null> {
+function normalizeUrl(raw: string, base?: string): string | null {
   try {
-    const cached = PAGE_CACHE.get(url);
-    if (cached && Date.now() - cached.fetchedAt < CACHE_TTL_MS) return cached.text;
+    const u = new URL(raw, base);
+    if (!/^https?:$/.test(u.protocol)) return null;
+    u.hash = "";
+    return u.toString();
+  } catch { return null; }
+}
+
+function sameSite(a: string, b: string): boolean {
+  try {
+    const ah = new URL(a).hostname.replace(/^www\./, "");
+    const bh = new URL(b).hostname.replace(/^www\./, "");
+    return ah === bh || ah.endsWith(`.${bh}`) || bh.endsWith(`.${ah}`);
+  } catch { return false; }
+}
+
+function extractCardLinks(html: string, baseUrl: string): string[] {
+  const links: { url: string; score: number }[] = [];
+  const re = /<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(html))) {
+    const href = normalizeUrl(m[1], baseUrl);
+    if (!href || !sameSite(href, baseUrl)) continue;
+    const anchor = htmlToText(m[2] || "");
+    const haystack = `${href} ${anchor}`;
+    if (!CARD_LINK_RE.test(haystack)) continue;
+    const score = (/(card|cards|ካርድ)/i.test(haystack) ? 4 : 0)
+      + (/(credit|debit|visa|mastercard|travel|prepaid|ቪዛ)/i.test(haystack) ? 3 : 0)
+      + (/(fee|charge|apply|application|limit)/i.test(haystack) ? 1 : 0);
+    links.push({ url: href, score });
+  }
+  return [...new Map(links.sort((a, b) => b.score - a.score).map((l) => [l.url, l.url])).values()]
+    .slice(0, MAX_DISCOVERED_PAGES_PER_DOC);
+}
+
+async function fetchUrlPage(url: string): Promise<Page | null> {
+  try {
+    const normalized = normalizeUrl(url);
+    if (!normalized) return null;
+    const cached = PAGE_CACHE.get(normalized);
+    if (cached && Date.now() - cached.fetchedAt < CACHE_TTL_MS) return cached.page;
 
     const ctl = AbortSignal.timeout(8000);
-    const res = await fetch(url, {
+    const res = await fetch(normalized, {
       signal: ctl,
       redirect: "follow",
       headers: {
@@ -69,13 +110,13 @@ async function fetchUrlText(url: string): Promise<string | null> {
       },
     });
     if (!res.ok) {
-      console.warn("KB fetch failed", url, res.status);
+      console.warn("KB fetch failed", normalized, res.status);
       return null;
     }
     const html = await res.text();
-    const text = htmlToText(html).slice(0, MAX_CHARS_PER_DOC);
-    PAGE_CACHE.set(url, { text, fetchedAt: Date.now() });
-    return text;
+    const page = { url: normalized, finalUrl: res.url || normalized, html, text: htmlToText(html).slice(0, MAX_CHARS_PER_DOC) };
+    PAGE_CACHE.set(normalized, { page, fetchedAt: Date.now() });
+    return page;
   } catch (e) {
     console.warn("KB fetch error", url, e instanceof Error ? e.message : e);
     return null;
@@ -85,9 +126,38 @@ async function fetchUrlText(url: string): Promise<string | null> {
 function bankNameFromUrl(url: string): string | null {
   try {
     const host = new URL(url).hostname.replace(/^www\./, "");
-    const root = host.split(".").slice(0, -1).join(".") || host;
-    return root.charAt(0).toUpperCase() + root.slice(1);
+    const label = host.split(".")[0]
+      .replace(/[-_]+/g, " ")
+      .replace(/([a-z])bank\b/i, "$1 bank")
+      .replace(/\s+/g, " ")
+      .trim();
+    if (!label) return null;
+    return label.split(" ").map((w) => w.length <= 3 ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
   } catch { return null; }
+}
+
+async function buildLiveSources(urlDocs: KbDoc[]) {
+  const seen = new Set<string>();
+  const sources: { url: string; name: string; text: string }[] = [];
+
+  await Promise.all(urlDocs.slice(0, 4).map(async (d) => {
+    const seed = d.source && /^https?:\/\//i.test(d.source) ? d.source : d.name;
+    const primary = await fetchUrlPage(seed);
+    if (!primary) return;
+
+    const candidates = [primary.finalUrl, ...extractCardLinks(primary.html, primary.finalUrl)];
+    const pages = await Promise.all(candidates.map(async (candidate) => {
+      if (seen.has(candidate)) return null;
+      seen.add(candidate);
+      return candidate === primary.finalUrl ? primary : await fetchUrlPage(candidate);
+    }));
+
+    for (const page of pages) {
+      if (page?.text) sources.push({ url: page.finalUrl, name: d.name, text: page.text });
+    }
+  }));
+
+  return sources;
 }
 
 Deno.serve(async (req) => {
@@ -117,18 +187,12 @@ Deno.serve(async (req) => {
     const urlDocs = enabledDocs.filter(
       (d) => (d.type === "url") || (d.source && /^https?:\/\//i.test(d.source)),
     );
-    const fetched = await Promise.all(
-      urlDocs.slice(0, 4).map(async (d) => {
-        const u = d.source && /^https?:\/\//i.test(d.source) ? d.source : d.name;
-        const text = await fetchUrlText(u);
-        return text ? { url: u, name: d.name, text } : null;
-      }),
-    );
-    const liveSources = fetched.filter(Boolean) as { url: string; name: string; text: string }[];
+    const liveSources = await buildLiveSources(urlDocs);
 
-    // Derive bank from first URL if not provided.
+    // Prefer the live KB URL's bank name over the platform's current bank config;
+    // otherwise a demo created under Awash Bank keeps answering as Awash.
     const derivedBank = liveSources.length ? bankNameFromUrl(liveSources[0].url) : null;
-    const bankName = agent.bankName || derivedBank || "the bank";
+    const bankName = derivedBank || agent.bankName || "the bank";
 
     let totalChars = 0;
     const groundingBlocks = liveSources.map((s, i) => {
@@ -159,7 +223,8 @@ ${tools.map((t) => `  • ${t.label} [policy: ${t.approval}${t.dailyLimit ? `, d
       `You are ${agent.name}, an AI specialist agent for ${bankName}.`,
       `Role: ${agent.tagline}`,
       agent.systemPrompt,
-      `You must ground every factual claim in the KNOWLEDGE BASE below (the bank's own published content). Never name or quote any other bank. If the user asks about a product or fee that is not in the KB, reply that you don't have that specific information for ${bankName} and offer to connect them with a human agent.`,
+      `You must ground every factual claim in the KNOWLEDGE BASE below (the bank's own published content from ${bankName}). Never name or quote any other bank, even if the platform profile or previous session used another bank name. If the user asks about a product or fee that is not in the KB, reply that you don't have that specific information for ${bankName} and offer to connect them with a human agent.`,
+      `For task requests like apply for card, block card, dispute, replacement or limit change: use AVAILABLE ACTIONS as simulated backend tasks, ask for confirmation when policy says confirm, and never claim a task completed unless it is safe to simulate.`,
       describeTone(agent.tone, agent.usesEmoji),
       langLine,
       kbBlock,
