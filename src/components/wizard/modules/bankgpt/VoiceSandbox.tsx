@@ -26,6 +26,7 @@ export function VoiceSandbox({
 }) {
   const { config: bankCfg } = useWizard();
   const baseAgent: any = (bankCfg.ai.mesh.agents as any)[agentMeta.id];
+  const bankName = bankCfg.bank?.name || "the bank";
 
   const [lang, setLang] = useState<"en" | "am">("en");
   const [messages, setMessages] = useState<Msg[]>([]);
@@ -45,7 +46,7 @@ export function VoiceSandbox({
         systemPrompt: baseAgent?.systemPrompt ?? "",
         tone: baseAgent?.tone ?? { formal_casual: 50, terse_verbose: 40, reserved_expressive: 60 },
         usesEmoji: baseAgent?.usesEmoji ?? true,
-        bankName: bankCfg.bankName,
+        bankName,
       },
       kb: { docs: config.kb.docs, topK: config.kb.topK },
       tools: (Object.entries(config.tools) as [string, any][])

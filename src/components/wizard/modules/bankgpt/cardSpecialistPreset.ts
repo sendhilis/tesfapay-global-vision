@@ -162,14 +162,14 @@ export function applyCardSpecialistPreset(
   setConfig: (c: BankConfig) => void,
   kbUrl: string,
 ) {
-  const meshAgent = buildCardSpecialistMeshAgent(bankCfg.bankName || "the bank");
+  const meshAgent = buildCardSpecialistMeshAgent(bankCfg.bank?.name || "the bank");
   setConfig({
     ...bankCfg,
     ai: {
       ...bankCfg.ai,
       mesh: {
         ...bankCfg.ai.mesh,
-        agents: { ...bankCfg.ai.mesh.agents, [CARD_AGENT_ID]: meshAgent as any },
+        agents: { ...bankCfg.ai.mesh.agents, [CARD_AGENT_ID]: meshAgent } as any,
       },
     },
   });
