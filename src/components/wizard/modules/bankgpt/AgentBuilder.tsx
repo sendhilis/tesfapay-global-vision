@@ -728,7 +728,6 @@ function StepSandbox({ agentMeta, config, update, logAudit }: any) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
         <div className="space-y-2">
           <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Text-only regression test</p>
-        <div className="space-y-2">
           <Field label="Test prompt" full><Textarea rows={3} value={promptText} onChange={(e) => setPromptText(e.target.value)} /></Field>
           <Field label="Expected (substring match — optional)" full><Input value={expected} onChange={(e) => setExpected(e.target.value)} /></Field>
           <Button size="sm" onClick={run} disabled={running || !promptText}>
