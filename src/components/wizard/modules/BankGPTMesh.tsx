@@ -450,12 +450,30 @@ export function BankGPTMesh() {
               ))}
             </div>
             <div className="flex items-center gap-2">
+              <button
+                onClick={toggleRecord}
+                disabled={busy || sttBusy}
+                className={
+                  "rounded-lg p-2 text-primary-foreground disabled:opacity-50 " +
+                  (recording ? "bg-rose-500 animate-pulse" : "bg-secondary")
+                }
+                aria-label={recording ? "Stop recording" : "Speak"}
+                title={lang === "am" ? "በድምፅ ይናገሩ" : "Speak"}
+              >
+                {sttBusy ? <Loader2 className="h-4 w-4 animate-spin" /> :
+                  recording ? <Square className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+              </button>
               <input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && send()}
-                placeholder={lang === "am" ? "መልዕክት ይጻፉ…" : "Ask anything about your money…"}
-                className="flex-1 rounded-lg bg-muted px-3 py-2 text-sm text-foreground focus:outline-none"
+                placeholder={
+                  sttBusy ? (lang === "am" ? "በመተርጎም ላይ…" : "Transcribing…")
+                  : recording ? (lang === "am" ? "በማዳመጥ ላይ…" : "Listening…")
+                  : (lang === "am" ? "መልዕክት ይጻፉ ወይም ማይክሮፎኑን ይጫኑ…" : "Ask anything — type or tap the mic…")
+                }
+                disabled={recording || sttBusy}
+                className="flex-1 rounded-lg bg-muted px-3 py-2 text-sm text-foreground focus:outline-none disabled:opacity-60"
               />
               <button
                 onClick={() => send()}
