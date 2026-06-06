@@ -722,8 +722,12 @@ function StepSandbox({ agentMeta, config, update, logAudit }: any) {
   const totalTokens = runs.reduce((s: number, r: any) => s + (r.tokensIn ?? 0) + (r.tokensOut ?? 0), 0);
 
   return (
-    <Card title="Sandbox + Observability" desc="Test in isolation. Live metrics, guardrail hits and latency are captured.">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <Card title="Sandbox + Observability" desc="Test in isolation by voice or text. Live metrics, guardrail hits and latency are captured.">
+      <VoiceSandbox agentMeta={agentMeta} config={config} logAudit={logAudit} />
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+        <div className="space-y-2">
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Text-only regression test</p>
         <div className="space-y-2">
           <Field label="Test prompt" full><Textarea rows={3} value={promptText} onChange={(e) => setPromptText(e.target.value)} /></Field>
           <Field label="Expected (substring match — optional)" full><Input value={expected} onChange={(e) => setExpected(e.target.value)} /></Field>
