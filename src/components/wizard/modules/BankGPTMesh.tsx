@@ -270,7 +270,7 @@ export function BankGPTMesh() {
         const blob = await recRef.current!.stop();
         recRef.current = null;
         const text = await transcribe(blob, lang);
-        if (text) await send(text);
+        if (text) await send(text, { speak: true });
       } catch (e) {
         console.error("STT failed", e);
       } finally {
