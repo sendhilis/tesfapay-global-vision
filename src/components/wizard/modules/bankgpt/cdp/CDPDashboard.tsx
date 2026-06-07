@@ -10,17 +10,18 @@ import {
   ResponsiveContainer, LineChart, Line,
 } from "recharts";
 import {
-  Users, TrendingUp, AlertTriangle, Search, Bot, Bell, Zap, ArrowUpRight,
-  ArrowDownRight, RefreshCw, Clock, Activity, Database, ChevronDown,
-  ChevronRight, Wallet, CreditCard, Target, Landmark, Building2,
-  Smartphone, Receipt, DollarSign, PiggyBank, Percent, Globe, MapPin,
+  Users, TrendingUp, AlertTriangle, Search, Bot, RefreshCw, Clock, Activity,
+  Database, ChevronDown, ChevronRight, Wallet, CreditCard, Target, Landmark,
+  Building2, Smartphone, Receipt, DollarSign, PiggyBank, Percent, MapPin,
+  ShieldAlert, MessageSquare, Heart, FileWarning, UserPlus, Sparkles,
+  Compass, Briefcase, BadgeCheck, Inbox,
 } from "lucide-react";
 import {
   generateCustomersForPersona, generateRandomEvent,
-  PERSONA_LABELS, PERSONA_DESCRIPTIONS, cdpStats,
+  PERSONA_LABELS, PERSONA_DESCRIPTIONS, PERSONA_COLORS, cdpStats,
   type AgentPersona, type Customer, type CustomerEvent,
 } from "./ethiopiaCustomers";
-import { SPEND_CATEGORIES, type SpendProfile } from "./spendCategoriesET";
+import { type SpendProfile } from "./spendCategoriesET";
 
 /* ── helpers ─────────────────────────────────────────────── */
 
