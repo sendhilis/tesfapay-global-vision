@@ -215,10 +215,14 @@ export function CouncilMode() {
     setResult(null);
     setSpoken(new Set());
     setActionTaken(false);
+    setDialogue([]);
+    setConsensus(false);
+    setCurrentAction("");
     setElapsed(0);
     setBusy("thinking");
     if (elapsedTimer.current) window.clearInterval(elapsedTimer.current);
     elapsedTimer.current = window.setInterval(() => setElapsed((e) => e + 1), 1000);
+
 
     try {
       const { data, error } = await supabase.functions.invoke("council-deliberate", {
