@@ -113,7 +113,13 @@ export function CouncilMode() {
   const concierge = allAgents.find((a) => a.id === "concierge") ?? (mesh.agents.concierge as CouncilAgentMeta);
   const specialists = allAgents.filter((a) => a.id !== concierge.id);
 
+  useEffect(() => {
+    const el = dialogueScrollRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [dialogue, followupBusy]);
+
   useEffect(() => () => {
+
     stopFlag.current = true;
     audioCtxRef.current?.close().catch(() => {});
     if (elapsedTimer.current) window.clearInterval(elapsedTimer.current);
