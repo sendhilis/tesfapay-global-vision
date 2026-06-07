@@ -110,11 +110,19 @@ export function CouncilMode() {
       body: JSON.stringify({ text, lang: language }),
     });
     if (!res.ok) throw new Error(`TTS ${res.status}`);
+    const contentType = res.headers.get("Content-Type") || "";
+    if (!contentType.startsWith("audio/")) throw new Error("TTS returned no audio");
     const buf = await res.arrayBuffer();
     return new Blob([buf], { type: "audio/mpeg" });
   }
 
-  async function speakWithWave(agentId: string, text: string, isSynthesis: boolean, language: "en" | "am"): Promise<void> {
+  async function speakWithWave(
+    agentId: string,
+    text: string,
+    phase: "opening" | "turn" | "synthesis",
+    language: "en" | "am",
+    addressedTo?: string,
+  ): Promise<void> {
     if (stopFlag.current) return;
     const blob = await ttsBlob(text, language);
     const url = URL.createObjectURL(blob);
@@ -132,7 +140,7 @@ export function CouncilMode() {
     analyser.connect(ctx.destination);
     const data = new Uint8Array(analyser.frequencyBinCount);
 
-    setSpeaking({ agentId, levels: Array(24).fill(0), isSynthesis });
+    setSpeaking({ agentId, addressedTo: addressedTo ?? null, levels: Array(24).fill(0), phase });
     let raf = 0;
     const tick = () => {
       analyser.getByteFrequencyData(data);
@@ -153,8 +161,8 @@ export function CouncilMode() {
     cancelAnimationFrame(raf);
     URL.revokeObjectURL(url);
     try { src.disconnect(); analyser.disconnect(); } catch {}
-    setSpeaking({ agentId: null, levels: Array(24).fill(0), isSynthesis: false });
-    setSpoken((prev) => new Set(prev).add(agentId + (isSynthesis ? ":syn" : "")));
+    setSpeaking({ agentId: null, addressedTo: null, levels: Array(24).fill(0), phase: null });
+    setSpoken((prev) => new Set(prev).add(agentId + (phase === "synthesis" ? ":syn" : phase === "opening" ? ":open" : "")));
   }
 
   async function runCouncil(scenarioText?: string) {
@@ -179,25 +187,27 @@ export function CouncilMode() {
           language: lang,
           bankName: cfg.bank.name,
           customerName: "Ato Bekele",
-          agents: enabledIds.map((id) => {
-            const a = mesh.agents[id];
-            return { id, name: a.name, tagline: a.tagline, systemPrompt: a.systemPrompt };
-          }),
+          agents: allAgents.map((a) => ({ id: a.id, name: a.name, tagline: a.tagline, systemPrompt: a.systemPrompt })),
         },
       });
       if (error) throw error;
       const res = data as CouncilResult;
-      if (!res?.contributions?.length) throw new Error("Council returned no contributions");
-      setResult(res);
+      const turns = res.turns?.length ? res.turns : res.contributions;
+      if (!turns?.length) throw new Error("Council returned no contributions");
+      const normalized = { ...res, turns, contributions: turns };
+      setResult(normalized);
       setBusy("deliberating");
 
-      for (const c of res.contributions) {
-        if (stopFlag.current) break;
-        if (!mesh.agents[c.agentId as MeshAgentId]) continue;
-        await speakWithWave(c.agentId, c.opinion, false, res.language);
+      if (normalized.opening?.opinion && !stopFlag.current) {
+        await speakWithWave(normalized.opening.agentId, normalized.opening.opinion, "opening", normalized.language, normalized.opening.addressedTo);
       }
-      if (!stopFlag.current && res.synthesis) {
-        await speakWithWave(res.conciergeId, res.synthesis, true, res.language);
+      for (const c of normalized.turns) {
+        if (stopFlag.current) break;
+        if (!allAgents.some((a) => a.id === c.agentId)) continue;
+        await speakWithWave(c.agentId, c.opinion, "turn", normalized.language, c.addressedTo);
+      }
+      if (!stopFlag.current && normalized.synthesis) {
+        await speakWithWave(normalized.conciergeId, normalized.synthesis, "synthesis", normalized.language);
       }
     } catch (e: any) {
       console.error(e);
@@ -244,11 +254,12 @@ export function CouncilMode() {
     setScenario("");
     setElapsed(0);
     setActionTaken(false);
-    setSpeaking({ agentId: null, levels: Array(24).fill(0), isSynthesis: false });
+    setSpeaking({ agentId: null, addressedTo: null, levels: Array(24).fill(0), phase: null });
   }
 
-  const totalAgents = enabledIds.length;
-  const progress = result ? spoken.size / (totalAgents) : 0; // synthesis included as concierge:syn
+  const totalAgents = allAgents.length;
+  const totalTurns = specialists.length + 2;
+  const progress = result ? spoken.size / totalTurns : 0;
 
   return (
     <div className="space-y-4">
