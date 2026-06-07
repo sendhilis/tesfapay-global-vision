@@ -14,15 +14,18 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { useBankConfig, type MeshAgentId } from "@/contexts/BankConfigContext";
+import { useBankConfig } from "@/contexts/BankConfigContext";
 import { startRecording, transcribe } from "./voiceUtils";
+import { useCustomAgents } from "./agentBuilderStore";
 
 const FN_URL = (name: string) =>
   `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/${name}`;
 const ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
-type Contribution = { agentId: string; opinion: string };
+type Contribution = { agentId: string; addressedTo?: string; opinion: string };
 type CouncilResult = {
+  opening?: Contribution;
+  turns?: Contribution[];
   contributions: Contribution[];
   synthesis: string;
   actionLabel: string;
@@ -32,9 +35,23 @@ type CouncilResult = {
 
 type SpeakingState = {
   agentId: string | null;
+  addressedTo?: string | null;
   levels: number[]; // 24 bars, 0..1
-  isSynthesis: boolean;
+  phase: "opening" | "turn" | "synthesis" | null;
 };
+
+type CouncilAgentMeta = {
+  id: string;
+  name: string;
+  emoji: string;
+  tagline: string;
+  color: string;
+  enabled?: boolean;
+  avatarStyle?: "abstract" | "illustrated" | "initial";
+  systemPrompt?: string;
+};
+
+const BASE_AGENT_ORDER = ["concierge", "onboarding", "savingsCoach", "investmentCoach", "loanAgent", "complaintAgent", "notificationAgent"];
 
 const PRESETS_EN = [
   "My daughter's wedding is in 6 months. Budget is around ETB 350,000. I have ETB 80,000 in savings and earn ETB 45,000/month. How should I plan?",
@@ -50,12 +67,13 @@ const PRESETS_AM = [
 export function CouncilMode() {
   const cfg = useBankConfig();
   const mesh = cfg.ai.mesh;
+  const { customAgents } = useCustomAgents();
 
   const [lang, setLang] = useState<"en" | "am">("en");
   const [scenario, setScenario] = useState("");
   const [busy, setBusy] = useState<"" | "stt" | "thinking" | "deliberating">("");
   const [result, setResult] = useState<CouncilResult | null>(null);
-  const [speaking, setSpeaking] = useState<SpeakingState>({ agentId: null, levels: Array(24).fill(0), isSynthesis: false });
+  const [speaking, setSpeaking] = useState<SpeakingState>({ agentId: null, addressedTo: null, levels: Array(24).fill(0), phase: null });
   const [spoken, setSpoken] = useState<Set<string>>(new Set());
   const [recording, setRecording] = useState(false);
   const [elapsed, setElapsed] = useState(0);
@@ -66,13 +84,17 @@ export function CouncilMode() {
   const audioCtxRef = useRef<AudioContext | null>(null);
   const elapsedTimer = useRef<number | null>(null);
 
-  const enabledIds = useMemo<MeshAgentId[]>(
-    () => (["concierge","onboarding","savingsCoach","investmentCoach","loanAgent","complaintAgent","notificationAgent"] as MeshAgentId[])
-      .filter((id) => mesh.agents[id]?.enabled),
-    [mesh.agents],
-  );
-  const concierge = mesh.agents.concierge;
-  const specialists = enabledIds.filter((id) => id !== "concierge").map((id) => mesh.agents[id]);
+  const allAgents = useMemo<CouncilAgentMeta[]>(() => {
+    const base = Object.values(mesh.agents as Record<string, any>)
+      .map((a) => ({ ...a, id: String(a.id) }));
+    const custom = customAgents
+      .filter((a) => !base.some((b) => b.id === a.id))
+      .map((a) => ({ ...a, enabled: true, avatarStyle: "illustrated" as const, systemPrompt: `${a.name}: ${a.tagline}` }));
+    const order = new Map(BASE_AGENT_ORDER.map((id, i) => [id, i]));
+    return [...base, ...custom].sort((a, b) => (order.get(a.id) ?? 99) - (order.get(b.id) ?? 99));
+  }, [mesh.agents, customAgents]);
+  const concierge = allAgents.find((a) => a.id === "concierge") ?? (mesh.agents.concierge as CouncilAgentMeta);
+  const specialists = allAgents.filter((a) => a.id !== concierge.id);
 
   useEffect(() => () => {
     stopFlag.current = true;
@@ -87,13 +109,28 @@ export function CouncilMode() {
       body: JSON.stringify({ text, lang: language }),
     });
     if (!res.ok) throw new Error(`TTS ${res.status}`);
+    const contentType = res.headers.get("Content-Type") || "";
+    if (!contentType.startsWith("audio/")) throw new Error("TTS returned no audio");
     const buf = await res.arrayBuffer();
     return new Blob([buf], { type: "audio/mpeg" });
   }
 
-  async function speakWithWave(agentId: string, text: string, isSynthesis: boolean, language: "en" | "am"): Promise<void> {
+  async function speakWithWave(
+    agentId: string,
+    text: string,
+    phase: "opening" | "turn" | "synthesis",
+    language: "en" | "am",
+    addressedTo?: string,
+  ): Promise<void> {
     if (stopFlag.current) return;
-    const blob = await ttsBlob(text, language);
+    let blob: Blob;
+    try {
+      blob = await ttsBlob(text, language);
+    } catch (e) {
+      console.warn("Council TTS fallback", e);
+      await simulateSpeech(agentId, phase, addressedTo, text);
+      return;
+    }
     const url = URL.createObjectURL(blob);
     const audio = new Audio(url);
     audio.crossOrigin = "anonymous";
@@ -109,7 +146,7 @@ export function CouncilMode() {
     analyser.connect(ctx.destination);
     const data = new Uint8Array(analyser.frequencyBinCount);
 
-    setSpeaking({ agentId, levels: Array(24).fill(0), isSynthesis });
+    setSpeaking({ agentId, addressedTo: addressedTo ?? null, levels: Array(24).fill(0), phase });
     let raf = 0;
     const tick = () => {
       analyser.getByteFrequencyData(data);
@@ -130,8 +167,25 @@ export function CouncilMode() {
     cancelAnimationFrame(raf);
     URL.revokeObjectURL(url);
     try { src.disconnect(); analyser.disconnect(); } catch {}
-    setSpeaking({ agentId: null, levels: Array(24).fill(0), isSynthesis: false });
-    setSpoken((prev) => new Set(prev).add(agentId + (isSynthesis ? ":syn" : "")));
+    setSpeaking({ agentId: null, addressedTo: null, levels: Array(24).fill(0), phase: null });
+    setSpoken((prev) => new Set(prev).add(agentId + (phase === "synthesis" ? ":syn" : phase === "opening" ? ":open" : "")));
+  }
+
+  async function simulateSpeech(agentId: string, phase: "opening" | "turn" | "synthesis", addressedTo: string | undefined, text: string) {
+    const duration = Math.min(9000, Math.max(2400, text.split(/\s+/).length * (lang === "am" ? 390 : 310)));
+    const started = performance.now();
+    setSpeaking({ agentId, addressedTo: addressedTo ?? null, levels: Array(24).fill(0), phase });
+    await new Promise<void>((resolve) => {
+      const tick = () => {
+        const t = performance.now() - started;
+        const levels = Array.from({ length: 24 }, (_, i) => 0.22 + Math.abs(Math.sin(t / 115 + i * 0.55)) * 0.72);
+        setSpeaking((s) => ({ ...s, levels }));
+        if (t >= duration || stopFlag.current) resolve(); else requestAnimationFrame(tick);
+      };
+      tick();
+    });
+    setSpeaking({ agentId: null, addressedTo: null, levels: Array(24).fill(0), phase: null });
+    setSpoken((prev) => new Set(prev).add(agentId + (phase === "synthesis" ? ":syn" : phase === "opening" ? ":open" : "")));
   }
 
   async function runCouncil(scenarioText?: string) {
@@ -156,25 +210,27 @@ export function CouncilMode() {
           language: lang,
           bankName: cfg.bank.name,
           customerName: "Ato Bekele",
-          agents: enabledIds.map((id) => {
-            const a = mesh.agents[id];
-            return { id, name: a.name, tagline: a.tagline, systemPrompt: a.systemPrompt };
-          }),
+          agents: allAgents.map((a) => ({ id: a.id, name: a.name, tagline: a.tagline, systemPrompt: a.systemPrompt })),
         },
       });
       if (error) throw error;
       const res = data as CouncilResult;
-      if (!res?.contributions?.length) throw new Error("Council returned no contributions");
-      setResult(res);
+      const turns = res.turns?.length ? res.turns : res.contributions;
+      if (!turns?.length) throw new Error("Council returned no contributions");
+      const normalized = { ...res, turns, contributions: turns };
+      setResult(normalized);
       setBusy("deliberating");
 
-      for (const c of res.contributions) {
-        if (stopFlag.current) break;
-        if (!mesh.agents[c.agentId as MeshAgentId]) continue;
-        await speakWithWave(c.agentId, c.opinion, false, res.language);
+      if (normalized.opening?.opinion && !stopFlag.current) {
+        await speakWithWave(normalized.opening.agentId, normalized.opening.opinion, "opening", normalized.language, normalized.opening.addressedTo);
       }
-      if (!stopFlag.current && res.synthesis) {
-        await speakWithWave(res.conciergeId, res.synthesis, true, res.language);
+      for (const c of normalized.turns) {
+        if (stopFlag.current) break;
+        if (!allAgents.some((a) => a.id === c.agentId)) continue;
+        await speakWithWave(c.agentId, c.opinion, "turn", normalized.language, c.addressedTo);
+      }
+      if (!stopFlag.current && normalized.synthesis) {
+        await speakWithWave(normalized.conciergeId, normalized.synthesis, "synthesis", normalized.language);
       }
     } catch (e: any) {
       console.error(e);
@@ -221,11 +277,12 @@ export function CouncilMode() {
     setScenario("");
     setElapsed(0);
     setActionTaken(false);
-    setSpeaking({ agentId: null, levels: Array(24).fill(0), isSynthesis: false });
+    setSpeaking({ agentId: null, addressedTo: null, levels: Array(24).fill(0), phase: null });
   }
 
-  const totalAgents = enabledIds.length;
-  const progress = result ? spoken.size / (totalAgents) : 0; // synthesis included as concierge:syn
+  const totalAgents = allAgents.length;
+  const totalTurns = specialists.length + 2;
+  const progress = result ? spoken.size / totalTurns : 0;
 
   return (
     <div className="space-y-4">
@@ -241,14 +298,14 @@ export function CouncilMode() {
             </h2>
             <p className="text-xs text-muted-foreground">
               {lang === "am"
-                ? "ሁሉም የባንክ ጥበበኞች በ90 ሰከንዶች ውስጥ ይመክራሉ — በድምጽ።"
-                : `All ${totalAgents} specialist agents deliberate live in 90 seconds — voice-first, in-persona, with a final action plan.`}
+                ? "ሁሉም የAI ወኪሎች በ90 ሰከንድ ውስጥ ራሳቸው ይመካከራሉ — ውሳኔ እስኪታወጅ ድረስ ምንም ጣልቃ ገብነት የለም።"
+                : `All ${totalAgents} AI agents deliberate with each other in one autonomous 90-second council — no user intervention until the decision.`}
             </p>
           </div>
           <div className="flex items-center gap-2">
             <div className="inline-flex glass rounded-lg p-0.5">
               {(["en","am"] as const).map((l) => (
-                <button key={l} onClick={() => setLang(l)}
+                <button key={l} onClick={() => setLang(l)} disabled={!!busy || recording}
                   className={`px-3 py-1 rounded-md text-[11px] font-semibold inline-flex items-center gap-1 ${
                     lang === l ? "bg-gradient-gold text-tesfa-dark" : "text-muted-foreground"
                   }`}>
@@ -256,7 +313,7 @@ export function CouncilMode() {
                 </button>
               ))}
             </div>
-            {result && (
+            {result && !busy && (
               <Button size="sm" variant="outline" onClick={reset}>
                 <RotateCcw className="h-3.5 w-3.5 mr-1" /> Reset
               </Button>
@@ -308,7 +365,7 @@ export function CouncilMode() {
               <div className="h-full bg-gradient-gold transition-all"
                 style={{ width: `${Math.min(100, progress * 100)}%` }} />
             </div>
-            <span>{spoken.size} / {totalAgents} {lang === "am" ? "ተናግረዋል" : "spoken"}</span>
+            <span>{spoken.size} / {totalTurns} {lang === "am" ? "የምክር ቤት ተራዎች" : "council turns"}</span>
           </div>
         )}
       </div>
@@ -317,18 +374,19 @@ export function CouncilMode() {
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
         {specialists.map((a) => {
           const contrib = result?.contributions.find((c) => c.agentId === a.id);
-          const active = speaking.agentId === a.id && !speaking.isSynthesis;
+          const active = speaking.agentId === a.id && speaking.phase === "turn";
           const done = spoken.has(a.id);
+          const addressedName = allAgents.find((agent) => agent.id === contrib?.addressedTo)?.name ?? contrib?.addressedTo;
           return (
             <SpeakerCard key={a.id} agent={a} active={active} done={done}
-              text={contrib?.opinion} levels={active ? speaking.levels : null} />
+              text={(active || done) ? contrib?.opinion : undefined} addressedTo={(active || done) ? addressedName : undefined} levels={active ? speaking.levels : null} />
           );
         })}
       </div>
 
       {/* Concierge synthesis card */}
       <div className={`rounded-2xl border-2 p-4 transition-all ${
-        speaking.isSynthesis ? "border-tesfa-gold shadow-[0_0_40px_rgba(212,175,55,0.4)] bg-gradient-to-br from-tesfa-gold/10 to-transparent" :
+        speaking.phase === "synthesis" || speaking.phase === "opening" ? "border-tesfa-gold shadow-[0_0_40px_rgba(212,175,55,0.4)] bg-gradient-to-br from-tesfa-gold/10 to-transparent" :
         result?.synthesis ? "border-tesfa-gold/50 bg-background/60" :
         "border-dashed border-border bg-background/30"
       }`}>
@@ -349,8 +407,13 @@ export function CouncilMode() {
           </div>
           {spoken.has(concierge.id + ":syn") && <CheckCircle2 className="h-5 w-5 text-emerald-500" />}
         </div>
-        {speaking.isSynthesis && <Waveform levels={speaking.levels} color={concierge.color} large />}
-        {result?.synthesis ? (
+        {(speaking.phase === "synthesis" || speaking.phase === "opening") && <Waveform levels={speaking.levels} color={concierge.color} large />}
+        {result?.opening?.opinion && (speaking.phase === "opening" || spoken.has(concierge.id + ":open")) && (
+          <p className="text-xs text-muted-foreground leading-relaxed mt-2">
+            <span className="font-semibold text-foreground">Opening: </span>{result.opening.opinion}
+          </p>
+        )}
+        {result?.synthesis && (speaking.phase === "synthesis" || spoken.has(concierge.id + ":syn")) ? (
           <p className="text-sm text-foreground leading-relaxed mt-2">{result.synthesis}</p>
         ) : (
           <p className="text-xs text-muted-foreground italic">
@@ -386,9 +449,9 @@ export function CouncilMode() {
 }
 
 function SpeakerCard({
-  agent, active, done, text, levels,
+  agent, active, done, text, addressedTo, levels,
 }: {
-  agent: any; active: boolean; done: boolean; text?: string; levels: number[] | null;
+  agent: any; active: boolean; done: boolean; text?: string; addressedTo?: string; levels: number[] | null;
 }) {
   return (
     <div className={`rounded-xl border p-3 transition-all duration-300 ${
@@ -409,6 +472,11 @@ function SpeakerCard({
         {done && !active && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />}
       </div>
       {active && levels && <Waveform levels={levels} color={agent.color} />}
+      {addressedTo && text && (
+        <p className="text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">
+          handoff → {addressedTo}
+        </p>
+      )}
       {text ? (
         <p className={`text-[11px] leading-snug mt-1.5 ${active ? "text-foreground" : "text-muted-foreground"}`}>
           {text}
