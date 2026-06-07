@@ -86,11 +86,20 @@ export function CouncilMode() {
   const [recording, setRecording] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [actionTaken, setActionTaken] = useState(false);
+  const [dialogue, setDialogue] = useState<DialogueTurn[]>([]);
+  const [followupQ, setFollowupQ] = useState("");
+  const [followupBusy, setFollowupBusy] = useState(false);
+  const [followupRec, setFollowupRec] = useState(false);
+  const [currentAction, setCurrentAction] = useState<string>("");
+  const [consensus, setConsensus] = useState(false);
+  const followupRecRef = useRef<{ stop: () => Promise<Blob> } | null>(null);
+  const dialogueScrollRef = useRef<HTMLDivElement | null>(null);
 
   const recRef = useRef<{ stop: () => Promise<Blob> } | null>(null);
   const stopFlag = useRef(false);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const elapsedTimer = useRef<number | null>(null);
+
 
   const allAgents = useMemo<CouncilAgentMeta[]>(() => {
     const base = Object.values(mesh.agents as Record<string, any>)
