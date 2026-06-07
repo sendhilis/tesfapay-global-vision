@@ -148,14 +148,38 @@ export function CostSimulator() {
       setupCloud:  SETUP_CLOUD,
     };
 
-    const totals = {
+    // ───── Voice Stack costs ─────
+    const voiceTurns = monthlyTurns * (voiceSharePct / 100);
+    const elTtsCost = (voiceTurns * VOICE_TTS_CHARS_PER_TURN / 1000) * EL_TTS_USD_PER_1K_CHARS;
+    const elSttCost = (voiceTurns * VOICE_STT_SECONDS_PER_TURN / 3600) * EL_STT_USD_PER_HOUR;
+    const elFull   = elTtsCost + elSttCost;
+    const elTtsOnly = elTtsCost;             // hybrid still pays TTS to ElevenLabs
+    const cfg = VOICE_MODES.find(v => v.id === voiceMode)!;
+    const voiceMonthly =
+      voiceMode === "elevenlabs" ? elFull
+    : voiceMode === "hybrid"     ? elTtsOnly + cfg.monthlyFixed
+    :                              cfg.monthlyFixed;
+    const voiceCapex = cfg.capex;
+    // Reference cost for "what if we used ElevenLabs cloud across the board"
+    const voiceCloudReference = elFull;
+
+    const baseTotals = {
       onprem: perAgent.reduce((s, p) => s + p.onpremCost, 0),
       hybrid: perAgent.reduce((s, p) => s + p.hybridCost, 0),
       cloud:  perAgent.reduce((s, p) => s + p.cloudCost,  0),
+    };
+    const totals = {
+      onprem: baseTotals.onprem + voiceMonthly,
+      hybrid: baseTotals.hybrid + voiceMonthly,
+      cloud:  baseTotals.cloud  + voiceCloudReference, // cloud-only always uses EL
       tokensM: perAgent.reduce((s, p) => s + p.tokensM,   0),
       gpus:   perAgent.reduce((s, p) => s + p.gpusNeeded, 0),
       turns:  monthlyTurns,
     };
+
+    // Fold voice CAPEX into provisioning totals (cloud mode = 0 voice capex)
+    capex.onprem += voiceCapex;
+    capex.hybrid += voiceCapex;
 
     const cheapest = (["onprem","hybrid","cloud"] as const).reduce((a, b) => totals[a] < totals[b] ? a : b);
     const costPerTurn = {
@@ -164,8 +188,14 @@ export function CostSimulator() {
       cloud:  totals.cloud  / Math.max(1, monthlyTurns),
     };
 
-    return { perAgent, totals, capex, cheapest, costPerTurn };
-  }, [customers, turnsPerCustomerMonth, enabled]);
+    const voice = {
+      mode: voiceMode, cfg, voiceTurns, voiceMonthly, voiceCapex,
+      elFull, elTtsOnly, voiceCloudReference,
+      savingsVsElevenLabs: Math.max(0, elFull - voiceMonthly),
+    };
+
+    return { perAgent, totals, capex, cheapest, costPerTurn, voice };
+  }, [customers, turnsPerCustomerMonth, enabled, voiceMode, voiceSharePct]);
 
   const handleUnlock = () => {
     if (pwd === "Techurate@9123") { setUnlocked(true); setErr(false); }
