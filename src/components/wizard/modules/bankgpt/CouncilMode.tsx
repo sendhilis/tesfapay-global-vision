@@ -638,7 +638,7 @@ export function CouncilMode() {
 
 
       <p className="text-[10px] text-muted-foreground text-center">
-        Council pipeline: scenario → Lovable AI orchestrator → {totalAgents}-agent structured deliberation → ElevenLabs TTS ({lang === "am" ? "amh" : "eng"}) → live waveform → Concierge synthesis → bank action.
+        Council pipeline: scenario → AI Engine orchestrator → {totalAgents}-agent structured deliberation → ElevenLabs TTS ({lang === "am" ? "amh" : "eng"}) → live waveform → Concierge synthesis → bank action.
       </p>
     </div>
   );

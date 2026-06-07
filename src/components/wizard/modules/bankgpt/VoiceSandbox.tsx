@@ -2,7 +2,7 @@
  * VoiceSandbox — bilingual (English / Amharic) voice-enabled test
  * panel for the BankGPT Agent Builder Sandbox step.
  *
- * Flow: tap mic → record → ElevenLabs STT → agent-sandbox-chat (Lovable AI)
+ * Flow: tap mic → record → ElevenLabs STT → agent-sandbox-chat (AI Engine)
  * → ElevenLabs TTS playback. Falls back to typed input.
  */
 import { useEffect, useRef, useState } from "react";
@@ -194,7 +194,7 @@ export function VoiceSandbox({
       </div>
 
       <p className="text-[10px] text-muted-foreground">
-        Voice flow: mic → ElevenLabs STT ({lang === "am" ? "amh" : "eng"}) → Lovable AI grounded in {config.kb.docs.filter((d) => d.enabled).length} KB sources → ElevenLabs TTS.
+        Voice flow: mic → ElevenLabs STT ({lang === "am" ? "amh" : "eng"}) → AI Engine grounded in {config.kb.docs.filter((d) => d.enabled).length} KB sources → ElevenLabs TTS.
       </p>
     </div>
   );

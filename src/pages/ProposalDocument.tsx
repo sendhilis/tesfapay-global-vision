@@ -1302,7 +1302,7 @@ const ProposalDocument = () => {
                 <TechRow layer="AI/ML" tech="GPT-4o/5 via Azure OpenAI + pgvector RAG" reason="Conversational AI, fraud detection, credit scoring, compliance" />
                 <TechRow layer="Event Streaming" tech="Supabase Realtime + Webhooks" reason="Real-time notifications, event-driven architecture" />
                 <TechRow layer="Monitoring" tech="Sentry + Custom Analytics + Prometheus" reason="Error tracking, performance monitoring, usage analytics" />
-                <TechRow layer="CI/CD" tech="GitHub Actions + Lovable Cloud" reason="Automated testing, staged deployments, rollback" />
+                <TechRow layer="CI/CD" tech="GitHub Actions + Cloud Build" reason="Automated testing, staged deployments, rollback" />
                 <TechRow layer="SMS Gateway" tech="Ethio Telecom SMPP / Africa's Talking" reason="OTP delivery, transaction notifications, USSD integration" />
               </tbody>
             </table>
