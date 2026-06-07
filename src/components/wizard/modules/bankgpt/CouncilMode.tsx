@@ -305,8 +305,81 @@ export function CouncilMode() {
     setScenario("");
     setElapsed(0);
     setActionTaken(false);
+    setDialogue([]);
+    setConsensus(false);
+    setCurrentAction("");
+    setFollowupQ("");
     setSpeaking({ agentId: null, addressedTo: null, levels: Array(24).fill(0), phase: null });
   }
+
+  async function askFollowup(qText?: string) {
+    const q = (qText ?? followupQ).trim();
+    if (!q || !result) return;
+    setFollowupBusy(true);
+    const userTurn: DialogueTurn = { id: "u-" + Date.now(), role: "user", text: q };
+    setDialogue((d) => [...d, userTurn]);
+    setFollowupQ("");
+    try {
+      const { data, error } = await supabase.functions.invoke("council-followup", {
+        body: {
+          scenario,
+          synthesis: result.synthesis,
+          actionLabel: currentAction || result.actionLabel,
+          question: q,
+          history: [...dialogue, userTurn].map(({ role, agentId, text }) => ({ role, agentId, text })),
+          language: lang,
+          bankName: cfg.bank.name,
+          customerName: "Ato Bekele",
+          agents: allAgents.map((a) => ({ id: a.id, name: a.name, tagline: a.tagline, systemPrompt: a.systemPrompt })),
+        },
+      });
+      if (error) throw error;
+      const r = data as {
+        chairId: string; specialistId: string; chairLine: string;
+        specialistReply: string; updatedActionLabel: string; consensusReached: boolean;
+      };
+      setDialogue((d) => [
+        ...d,
+        { id: "c-" + Date.now(), role: "chair", agentId: r.chairId, text: r.chairLine },
+        { id: "s-" + Date.now() + 1, role: "specialist", agentId: r.specialistId, text: r.specialistReply },
+      ]);
+      if (r.updatedActionLabel) setCurrentAction(r.updatedActionLabel);
+      if (r.consensusReached) setConsensus(true);
+      await speakWithWave(r.chairId, r.chairLine, "chair", lang, r.specialistId);
+      await speakWithWave(r.specialistId, r.specialistReply, "specialist", lang);
+    } catch (e: any) {
+      console.error(e);
+      toast({ title: "Follow-up failed", description: e?.message ?? "Try again", variant: "destructive" });
+    } finally {
+      setFollowupBusy(false);
+    }
+  }
+
+  async function toggleFollowupRecord() {
+    if (followupRec) {
+      setFollowupRec(false);
+      setFollowupBusy(true);
+      try {
+        const blob = await followupRecRef.current!.stop();
+        followupRecRef.current = null;
+        const text = await transcribe(blob, lang);
+        if (text) await askFollowup(text);
+        else toast({ title: "Didn't catch that" });
+      } catch (e: any) {
+        toast({ title: "Voice error", description: e?.message, variant: "destructive" });
+      } finally {
+        setFollowupBusy(false);
+      }
+    } else {
+      try {
+        followupRecRef.current = await startRecording();
+        setFollowupRec(true);
+      } catch {
+        toast({ title: "Microphone blocked", variant: "destructive" });
+      }
+    }
+  }
+
 
   const totalAgents = allAgents.length;
   const totalTurns = specialists.length + 2;
