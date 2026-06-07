@@ -528,13 +528,14 @@ export function CouncilMode() {
               disabled={actionTaken}
               onClick={() => {
                 setActionTaken(true);
+                setConsensus(true);
                 toast({
                   title: lang === "am" ? "ተግባር ተወስዷል ✓" : "Action taken ✓",
-                  description: result.actionLabel,
+                  description: currentAction || result.actionLabel,
                 });
               }}>
               {actionTaken ? <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> : <Send className="h-3.5 w-3.5 mr-1" />}
-              {actionTaken ? (lang === "am" ? "ተፈጸመ" : "Executed") : result.actionLabel}
+              {actionTaken ? (lang === "am" ? "ተፈጸመ" : "Executed") : (currentAction || result.actionLabel)}
             </Button>
             <Button size="sm" variant="outline" onClick={reset}>
               {lang === "am" ? "አዲስ ሁኔታ" : "New scenario"}
@@ -542,6 +543,93 @@ export function CouncilMode() {
           </div>
         )}
       </div>
+
+      {/* Interactive Q&A — user negotiates with council until consensus */}
+      {result?.synthesis && spoken.has(concierge.id + ":syn") && !actionTaken && (
+        <div className="rounded-2xl border border-tesfa-gold/40 bg-background/40 p-4 space-y-3">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <p className="text-sm font-bold text-foreground flex items-center gap-2">
+              <Users className="h-4 w-4 text-tesfa-gold" />
+              {lang === "am" ? "ከምክር ቤቱ ጋር ይነጋገሩ" : "Negotiate with the council"}
+              {consensus && <Badge className="text-[9px] bg-emerald-500/20 text-emerald-600 border-emerald-500/30">{lang === "am" ? "ስምምነት ላይ ተደርሷል" : "Consensus reached"}</Badge>}
+            </p>
+            <p className="text-[10px] text-muted-foreground">
+              {lang === "am" ? "Amara ጥያቄዎን ለትክክለኛው ወኪል ይመራዋል" : "Amara routes your question to the right specialist"}
+            </p>
+          </div>
+
+          <div ref={dialogueScrollRef} className="max-h-72 overflow-y-auto space-y-2 pr-1">
+            {dialogue.filter((t) => t.role === "user" || ["c-","s-","syn-"].some((p) => t.id.startsWith(p))).map((turn) => {
+              const agent = allAgents.find((a) => a.id === turn.agentId);
+              if (turn.role === "user") {
+                return (
+                  <div key={turn.id} className="flex justify-end">
+                    <div className="max-w-[80%] rounded-2xl rounded-br-sm bg-primary text-primary-foreground px-3 py-2 text-xs">
+                      {turn.text}
+                    </div>
+                  </div>
+                );
+              }
+              return (
+                <div key={turn.id} className="flex gap-2 items-start">
+                  <span className="grid h-7 w-7 place-items-center rounded-lg text-[10px] font-bold text-white shrink-0"
+                    style={{ background: agent?.color ?? "#888" }}>
+                    {agent?.avatarStyle === "initial" ? agent?.name?.[0] : (agent?.emoji ?? "•")}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10px] font-semibold text-muted-foreground">
+                      {agent?.name ?? turn.agentId} {turn.role === "chair" && <span className="text-tesfa-gold">· chair</span>}
+                    </p>
+                    <p className="text-xs text-foreground leading-snug">{turn.text}</p>
+                  </div>
+                </div>
+              );
+            })}
+            {followupBusy && (
+              <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                {lang === "am" ? "Amara እያሰበ ነው…" : "Amara is routing…"}
+              </div>
+            )}
+          </div>
+
+          <div className="flex gap-2 flex-wrap">
+            <Button size="sm" variant={followupRec ? "destructive" : "outline"}
+              onClick={toggleFollowupRecord} disabled={followupBusy}>
+              {followupRec ? <Square className="h-3.5 w-3.5" /> : <Mic className="h-3.5 w-3.5" />}
+            </Button>
+            <input
+              value={followupQ}
+              onChange={(e) => setFollowupQ(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); askFollowup(); } }}
+              placeholder={lang === "am" ? "ጥያቄ ይጠይቁ ወይም ይቀይሩ…" : "Ask, push back, or refine (e.g. 'reduce monthly to 6,000')…"}
+              disabled={followupBusy || followupRec}
+              className="flex-1 min-w-[220px] rounded-lg border border-border bg-background/60 px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-tesfa-gold"
+            />
+            <Button size="sm" onClick={() => askFollowup()} disabled={!followupQ.trim() || followupBusy || followupRec}>
+              <Send className="h-3.5 w-3.5 mr-1" />
+              {lang === "am" ? "ላክ" : "Ask"}
+            </Button>
+            <Button size="sm" className="bg-emerald-600 text-white hover:bg-emerald-700"
+              onClick={() => {
+                setActionTaken(true);
+                setConsensus(true);
+                toast({
+                  title: lang === "am" ? "ስምምነት ✓" : "Consensus accepted ✓",
+                  description: currentAction || result.actionLabel,
+                });
+              }}>
+              <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
+              {lang === "am" ? "እቀበላለሁ" : "Accept & execute"}
+            </Button>
+          </div>
+          <p className="text-[10px] text-muted-foreground">
+            {lang === "am" ? "የተግባር አዝራር: " : "Pending action: "}
+            <span className="text-tesfa-gold font-semibold">{currentAction || result.actionLabel}</span>
+          </p>
+        </div>
+      )}
+
 
       <p className="text-[10px] text-muted-foreground text-center">
         Council pipeline: scenario → Lovable AI orchestrator → {totalAgents}-agent structured deliberation → ElevenLabs TTS ({lang === "am" ? "amh" : "eng"}) → live waveform → Concierge synthesis → bank action.
