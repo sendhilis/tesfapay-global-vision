@@ -20,6 +20,7 @@ import { Slider } from "@/components/ui/slider";
 import {
   Cpu, Cloud, Server, TrendingUp, Zap, DollarSign, Users,
   MessageSquare, Plus, Minus, AlertTriangle, CheckCircle2, Layers,
+  Lock, KeyRound,
 } from "lucide-react";
 
 // ───────── Constants (indicative, Ethiopia 2025) ─────────
