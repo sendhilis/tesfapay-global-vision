@@ -14,15 +14,18 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { useBankConfig, type MeshAgentId } from "@/contexts/BankConfigContext";
+import { useBankConfig } from "@/contexts/BankConfigContext";
 import { startRecording, transcribe } from "./voiceUtils";
+import { useCustomAgents } from "./agentBuilderStore";
 
 const FN_URL = (name: string) =>
   `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/${name}`;
 const ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
-type Contribution = { agentId: string; opinion: string };
+type Contribution = { agentId: string; addressedTo?: string; opinion: string };
 type CouncilResult = {
+  opening?: Contribution;
+  turns?: Contribution[];
   contributions: Contribution[];
   synthesis: string;
   actionLabel: string;
@@ -32,9 +35,23 @@ type CouncilResult = {
 
 type SpeakingState = {
   agentId: string | null;
+  addressedTo?: string | null;
   levels: number[]; // 24 bars, 0..1
-  isSynthesis: boolean;
+  phase: "opening" | "turn" | "synthesis" | null;
 };
+
+type CouncilAgentMeta = {
+  id: string;
+  name: string;
+  emoji: string;
+  tagline: string;
+  color: string;
+  enabled?: boolean;
+  avatarStyle?: "abstract" | "illustrated" | "initial";
+  systemPrompt?: string;
+};
+
+const BASE_AGENT_ORDER = ["concierge", "onboarding", "savingsCoach", "investmentCoach", "loanAgent", "complaintAgent", "notificationAgent"];
 
 const PRESETS_EN = [
   "My daughter's wedding is in 6 months. Budget is around ETB 350,000. I have ETB 80,000 in savings and earn ETB 45,000/month. How should I plan?",
@@ -50,12 +67,13 @@ const PRESETS_AM = [
 export function CouncilMode() {
   const cfg = useBankConfig();
   const mesh = cfg.ai.mesh;
+  const { customAgents } = useCustomAgents();
 
   const [lang, setLang] = useState<"en" | "am">("en");
   const [scenario, setScenario] = useState("");
   const [busy, setBusy] = useState<"" | "stt" | "thinking" | "deliberating">("");
   const [result, setResult] = useState<CouncilResult | null>(null);
-  const [speaking, setSpeaking] = useState<SpeakingState>({ agentId: null, levels: Array(24).fill(0), isSynthesis: false });
+  const [speaking, setSpeaking] = useState<SpeakingState>({ agentId: null, addressedTo: null, levels: Array(24).fill(0), phase: null });
   const [spoken, setSpoken] = useState<Set<string>>(new Set());
   const [recording, setRecording] = useState(false);
   const [elapsed, setElapsed] = useState(0);
@@ -66,13 +84,18 @@ export function CouncilMode() {
   const audioCtxRef = useRef<AudioContext | null>(null);
   const elapsedTimer = useRef<number | null>(null);
 
-  const enabledIds = useMemo<MeshAgentId[]>(
-    () => (["concierge","onboarding","savingsCoach","investmentCoach","loanAgent","complaintAgent","notificationAgent"] as MeshAgentId[])
-      .filter((id) => mesh.agents[id]?.enabled),
-    [mesh.agents],
-  );
-  const concierge = mesh.agents.concierge;
-  const specialists = enabledIds.filter((id) => id !== "concierge").map((id) => mesh.agents[id]);
+  const allAgents = useMemo<CouncilAgentMeta[]>(() => {
+    const base = Object.values(mesh.agents as Record<string, any>)
+      .filter((a) => a?.enabled !== false)
+      .map((a) => ({ ...a, id: String(a.id) }));
+    const custom = customAgents
+      .filter((a) => !base.some((b) => b.id === a.id))
+      .map((a) => ({ ...a, enabled: true, avatarStyle: "illustrated" as const, systemPrompt: `${a.name}: ${a.tagline}` }));
+    const order = new Map(BASE_AGENT_ORDER.map((id, i) => [id, i]));
+    return [...base, ...custom].sort((a, b) => (order.get(a.id) ?? 99) - (order.get(b.id) ?? 99));
+  }, [mesh.agents, customAgents]);
+  const concierge = allAgents.find((a) => a.id === "concierge") ?? (mesh.agents.concierge as CouncilAgentMeta);
+  const specialists = allAgents.filter((a) => a.id !== concierge.id);
 
   useEffect(() => () => {
     stopFlag.current = true;
