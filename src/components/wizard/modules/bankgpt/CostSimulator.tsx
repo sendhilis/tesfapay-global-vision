@@ -470,14 +470,17 @@ function ScaleCard({
   );
 }
 
-function PricingAdvisor({ customers, totalOnprem, totalCloud, agentCount }: { customers: number; totalOnprem: number; totalCloud: number; agentCount: number }) {
-  const arpu = customers > 0 ? totalOnprem / customers : 0; // cost per customer per month
-  const sensitive = arpu > 0.50; // > $0.50 / customer / month is high for ET
+function PricingAdvisor({ customers, totalOnprem, totalCloud, agentCount, capexOnprem }: { customers: number; totalOnprem: number; totalCloud: number; agentCount: number; capexOnprem: number }) {
+  const arpu = customers > 0 ? totalOnprem / customers : 0;
+  const sensitive = arpu > 0.50;
   const recommendation =
     customers < 25_000   ? "Start cloud-only. Volume too low to justify GPU CAPEX. Re-evaluate at 25K customers."
   : customers < 100_000  ? "Hybrid sweet spot — workhorse on-prem (1× L40S), frontier reasoning still cloud."
   : customers < 500_000  ? "Full on-prem becomes cheaper. Add 2nd L40S for redundancy. Frontier 70B optional."
                          : "Tier-1 scale. Dedicated 2× H100 cluster pays back in <12 months vs cloud.";
+
+  const monthlySaving = Math.max(1, totalCloud - totalOnprem);
+  const paybackMo = totalCloud > totalOnprem ? Math.ceil(capexOnprem / monthlySaving) : null;
 
   return (
     <div className="glass rounded-xl p-4">
@@ -496,8 +499,8 @@ function PricingAdvisor({ customers, totalOnprem, totalCloud, agentCount }: { cu
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2 pt-2">
             <Metric label="Active agents" value={`${agentCount}`} />
             <Metric label="Cost / 1K customers" value={`$${(arpu * 1000).toFixed(0)}/mo`} />
-            <Metric label="Payback vs cloud" value={totalCloud > totalOnprem ? `${Math.max(1, Math.round((stats_capex_estimate(agentCount)) / Math.max(1, totalCloud - totalOnprem)))} mo` : "—"} />
-            <Metric label="3-yr TCO saved" value={`$${Math.max(0, Math.round((totalCloud - totalOnprem) * 36)).toLocaleString()}`} />
+            <Metric label="Payback vs cloud" value={paybackMo ? `${paybackMo} mo` : "—"} />
+            <Metric label="3-yr TCO saved" value={`$${Math.max(0, Math.round((totalCloud - totalOnprem) * 36 - capexOnprem)).toLocaleString()}`} />
           </div>
         </div>
       </div>
@@ -513,8 +516,4 @@ function Metric({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
-
-// Rough CAPEX estimate for payback calc (avg $20K per active agent's GPU)
-function stats_capex_estimate(agents: number) {
-  return agents * 20_000;
 }
