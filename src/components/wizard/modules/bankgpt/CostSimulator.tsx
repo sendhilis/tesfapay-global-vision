@@ -151,9 +151,48 @@ export function CostSimulator() {
     return { perAgent, totals, capex, cheapest, costPerTurn };
   }, [customers, turnsPerCustomerMonth, enabled]);
 
+  const handleUnlock = () => {
+    if (pwd === "Techurate@9123") { setUnlocked(true); setErr(false); }
+    else { setErr(true); }
+  };
+
   return (
     <div className="space-y-4">
-      {/* Header strip */}
+      {!unlocked && (
+        <div className="glass rounded-xl p-8 flex flex-col items-center justify-center text-center max-w-md mx-auto mt-8">
+          <div className="h-12 w-12 rounded-full bg-tesfa-gold/10 flex items-center justify-center mb-4">
+            <Lock className="h-6 w-6 text-tesfa-gold" />
+          </div>
+          <h3 className="text-sm font-bold text-foreground mb-1">Restricted Access</h3>
+          <p className="text-[11px] text-muted-foreground mb-4">
+            Cost Simulator contains budget provisioning data. Enter the password to unlock.
+          </p>
+          <div className="w-full flex flex-col gap-3">
+            <div className="relative">
+              <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <input
+                type="password"
+                value={pwd}
+                onChange={(e) => { setPwd(e.target.value); setErr(false); }}
+                onKeyDown={(e) => { if (e.key === "Enter") handleUnlock(); }}
+                placeholder="Enter password"
+                className="w-full h-10 rounded-lg border border-border bg-background pl-10 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              />
+            </div>
+            {err && <p className="text-[11px] text-destructive">Incorrect password</p>}
+            <button
+              onClick={handleUnlock}
+              className="w-full h-10 rounded-lg bg-primary text-primary-foreground font-bold text-sm"
+            >
+              Unlock
+            </button>
+          </div>
+        </div>
+      )}
+
+      {unlocked && (
+        <>
+          {/* Header strip */}
       <div className="glass rounded-xl p-4">
         <div className="flex items-start gap-3">
           <Zap className="h-5 w-5 text-tesfa-gold mt-0.5 shrink-0" />
