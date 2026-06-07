@@ -438,7 +438,16 @@ export function CostSimulator() {
       )}
 
       {/* Ethiopia price-sensitivity advisor */}
-      <PricingAdvisor customers={customers} totalOnprem={stats.totals.onprem} totalCloud={stats.totals.cloud} agentCount={enabled.length} />
+      <PricingAdvisor customers={customers} totalOnprem={stats.totals.onprem} totalCloud={stats.totals.cloud} agentCount={enabled.length} capexOnprem={stats.capex.onprem} />
+    </div>
+  );
+}
+
+function CapexRow({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="flex items-baseline justify-between py-0.5">
+      <span className="text-[10px] text-muted-foreground truncate pr-2">{label}</span>
+      <span className="text-[11px] text-foreground font-mono shrink-0">${Math.round(value).toLocaleString()}</span>
     </div>
   );
 }
