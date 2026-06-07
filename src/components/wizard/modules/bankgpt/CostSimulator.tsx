@@ -424,6 +424,95 @@ export function CostSimulator() {
         </p>
       </div>
 
+      {/* Voice Stack add-on */}
+      <div className="glass rounded-xl p-4">
+        <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+          <div className="flex items-center gap-2">
+            <Mic className="h-4 w-4 text-tesfa-gold" />
+            <p className="text-sm font-semibold text-foreground">Voice Stack add-on (STT + TTS)</p>
+          </div>
+          <span className="text-[10px] text-muted-foreground">
+            {stats.voice.voiceTurns.toFixed(0).toLocaleString()} voice turns/mo · {voiceSharePct}% share
+          </span>
+        </div>
+        <p className="text-[11px] text-muted-foreground mb-3">
+          ElevenLabs is cloud-only and per-character billed — hidden line item not covered by the LLM model above.
+          Whisper (STT) and Piper-Amharic (TTS) run on-prem with negligible per-turn cost; the trade-off is a one-time CAPEX (mostly Piper Amharic voice training).
+        </p>
+
+        {/* Voice share slider */}
+        <div className="mb-3">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[10px] text-muted-foreground">Voice share of conversations</span>
+            <span className="text-[10px] text-foreground font-mono">{voiceSharePct}%</span>
+          </div>
+          <Slider min={0} max={100} step={5} value={[voiceSharePct]} onValueChange={(v) => setVoiceSharePct(v[0])} />
+        </div>
+
+        {/* Voice mode picker */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+          {VOICE_MODES.map(m => {
+            const isSel = voiceMode === m.id;
+            // Compute that mode's monthly cost for display
+            const elTts = (stats.voice.voiceTurns * VOICE_TTS_CHARS_PER_TURN / 1000) * EL_TTS_USD_PER_1K_CHARS;
+            const elStt = (stats.voice.voiceTurns * VOICE_STT_SECONDS_PER_TURN / 3600) * EL_STT_USD_PER_HOUR;
+            const monthly =
+              m.id === "elevenlabs" ? elTts + elStt
+            : m.id === "hybrid"     ? elTts + m.monthlyFixed
+            :                         m.monthlyFixed;
+            return (
+              <button
+                key={m.id}
+                onClick={() => setVoiceMode(m.id)}
+                className={`text-left rounded-lg border p-3 transition-colors ${
+                  isSel ? "border-tesfa-gold/60 bg-tesfa-gold/10" : "border-border/40 bg-background/30 hover:border-border"
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-bold text-foreground">{m.label}</span>
+                  {isSel && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />}
+                </div>
+                <p className="text-[10px] text-muted-foreground mb-2 leading-snug">{m.desc}</p>
+                <div className="flex items-baseline justify-between">
+                  <span className="text-[10px] text-muted-foreground">Monthly</span>
+                  <span className="text-sm font-bold text-foreground">${Math.round(monthly).toLocaleString()}</span>
+                </div>
+                <div className="flex items-baseline justify-between">
+                  <span className="text-[10px] text-muted-foreground">One-time CAPEX</span>
+                  <span className="text-[11px] text-tesfa-gold font-mono">${m.capex.toLocaleString()}</span>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="mt-3 rounded-lg bg-background/40 border border-border/40 p-3 grid grid-cols-1 sm:grid-cols-3 gap-3 text-center">
+          <div>
+            <p className="text-[9px] uppercase tracking-wider text-muted-foreground">Voice OPEX / mo</p>
+            <p className="text-sm font-bold text-foreground font-mono">${Math.round(stats.voice.voiceMonthly).toLocaleString()}</p>
+          </div>
+          <div>
+            <p className="text-[9px] uppercase tracking-wider text-muted-foreground">vs ElevenLabs-only</p>
+            <p className="text-sm font-bold text-emerald-400 font-mono">
+              {stats.voice.savingsVsElevenLabs > 0 ? `−$${Math.round(stats.voice.savingsVsElevenLabs).toLocaleString()}/mo` : "—"}
+            </p>
+          </div>
+          <div>
+            <p className="text-[9px] uppercase tracking-wider text-muted-foreground">Voice CAPEX payback</p>
+            <p className="text-sm font-bold text-amber-400 font-mono">
+              {stats.voice.savingsVsElevenLabs > 0 && stats.voice.voiceCapex > 0
+                ? `${Math.ceil(stats.voice.voiceCapex / stats.voice.savingsVsElevenLabs)} mo`
+                : "—"}
+            </p>
+          </div>
+        </div>
+        <p className="text-[10px] text-muted-foreground mt-2">
+          Engine map — STT: <span className="font-mono">faster-whisper large-v3</span> (Amharic-capable, runs on shared L4) ·
+          TTS on-prem: <span className="font-mono">Piper</span> with custom Amharic voice trained from ~10hr corpus (CPU inference, zero GPU).
+          ElevenLabs pricing: ${EL_TTS_USD_PER_1K_CHARS}/1K chars TTS, ${EL_STT_USD_PER_HOUR}/hr STT. Assumes {VOICE_TTS_CHARS_PER_TURN} chars + {VOICE_STT_SECONDS_PER_TURN}s per voice turn.
+        </p>
+      </div>
+
       {/* Agent overlay modules */}
       <div className="glass rounded-xl p-4">
         <div className="flex items-center justify-between mb-3">
