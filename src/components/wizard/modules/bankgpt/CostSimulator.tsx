@@ -68,6 +68,9 @@ export function CostSimulator() {
   const [customers, setCustomers] = useState(50_000);
   const [turnsPerCustomerMonth, setTurns] = useState(8);
   const [agents, setAgents] = useState(DEFAULT_AGENTS);
+  const [unlocked, setUnlocked] = useState(false);
+  const [pwd, setPwd] = useState("");
+  const [err, setErr] = useState(false);
 
   const toggleAgent = (id: string) =>
     setAgents(a => a.map(x => x.id === id && !x.required ? { ...x, enabled: !x.enabled } : x));
