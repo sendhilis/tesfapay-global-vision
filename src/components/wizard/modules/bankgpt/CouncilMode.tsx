@@ -135,7 +135,8 @@ export function CouncilMode() {
   async function speakWithWave(
     agentId: string,
     text: string,
-    phase: "opening" | "turn" | "synthesis",
+    phase: "opening" | "turn" | "synthesis" | "chair" | "specialist",
+
     language: "en" | "am",
     addressedTo?: string,
   ): Promise<void> {
