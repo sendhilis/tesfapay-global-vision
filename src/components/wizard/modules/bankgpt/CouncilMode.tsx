@@ -86,7 +86,6 @@ export function CouncilMode() {
 
   const allAgents = useMemo<CouncilAgentMeta[]>(() => {
     const base = Object.values(mesh.agents as Record<string, any>)
-      .filter((a) => a?.enabled !== false)
       .map((a) => ({ ...a, id: String(a.id) }));
     const custom = customAgents
       .filter((a) => !base.some((b) => b.id === a.id))
