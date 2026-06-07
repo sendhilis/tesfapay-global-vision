@@ -351,18 +351,18 @@ export function CouncilMode() {
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
         {specialists.map((a) => {
           const contrib = result?.contributions.find((c) => c.agentId === a.id);
-          const active = speaking.agentId === a.id && !speaking.isSynthesis;
+          const active = speaking.agentId === a.id && speaking.phase === "turn";
           const done = spoken.has(a.id);
           return (
             <SpeakerCard key={a.id} agent={a} active={active} done={done}
-              text={contrib?.opinion} levels={active ? speaking.levels : null} />
+              text={contrib?.opinion} addressedTo={contrib?.addressedTo} levels={active ? speaking.levels : null} />
           );
         })}
       </div>
 
       {/* Concierge synthesis card */}
       <div className={`rounded-2xl border-2 p-4 transition-all ${
-        speaking.isSynthesis ? "border-tesfa-gold shadow-[0_0_40px_rgba(212,175,55,0.4)] bg-gradient-to-br from-tesfa-gold/10 to-transparent" :
+        speaking.phase === "synthesis" || speaking.phase === "opening" ? "border-tesfa-gold shadow-[0_0_40px_rgba(212,175,55,0.4)] bg-gradient-to-br from-tesfa-gold/10 to-transparent" :
         result?.synthesis ? "border-tesfa-gold/50 bg-background/60" :
         "border-dashed border-border bg-background/30"
       }`}>
@@ -383,7 +383,12 @@ export function CouncilMode() {
           </div>
           {spoken.has(concierge.id + ":syn") && <CheckCircle2 className="h-5 w-5 text-emerald-500" />}
         </div>
-        {speaking.isSynthesis && <Waveform levels={speaking.levels} color={concierge.color} large />}
+        {(speaking.phase === "synthesis" || speaking.phase === "opening") && <Waveform levels={speaking.levels} color={concierge.color} large />}
+        {result?.opening?.opinion && (
+          <p className="text-xs text-muted-foreground leading-relaxed mt-2">
+            <span className="font-semibold text-foreground">Opening: </span>{result.opening.opinion}
+          </p>
+        )}
         {result?.synthesis ? (
           <p className="text-sm text-foreground leading-relaxed mt-2">{result.synthesis}</p>
         ) : (
