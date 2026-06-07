@@ -59,6 +59,7 @@ const EVENT_ICONS: Record<CustomerEvent['event_type'], string> = {
   salary_credit: '💰', deposit: '🏦', transfer_in: '➡️', interest_credit: '📈',
   loan_debit: '🔻', bill_payment: '📄', merchant_payment: '🛒',
   withdrawal: '💸', transfer_out: '⬅️', airtime_topup: '📱',
+  tbill_buy: '🪙', kyc_step: '🪪', complaint_open: '🛡️',
 };
 
 function timeAgo(d: Date) {
