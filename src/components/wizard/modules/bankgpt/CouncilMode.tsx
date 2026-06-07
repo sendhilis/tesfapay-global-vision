@@ -124,7 +124,14 @@ export function CouncilMode() {
     addressedTo?: string,
   ): Promise<void> {
     if (stopFlag.current) return;
-    const blob = await ttsBlob(text, language);
+    let blob: Blob;
+    try {
+      blob = await ttsBlob(text, language);
+    } catch (e) {
+      console.warn("Council TTS fallback", e);
+      await simulateSpeech(agentId, phase, addressedTo, text);
+      return;
+    }
     const url = URL.createObjectURL(blob);
     const audio = new Audio(url);
     audio.crossOrigin = "anonymous";
@@ -161,6 +168,23 @@ export function CouncilMode() {
     cancelAnimationFrame(raf);
     URL.revokeObjectURL(url);
     try { src.disconnect(); analyser.disconnect(); } catch {}
+    setSpeaking({ agentId: null, addressedTo: null, levels: Array(24).fill(0), phase: null });
+    setSpoken((prev) => new Set(prev).add(agentId + (phase === "synthesis" ? ":syn" : phase === "opening" ? ":open" : "")));
+  }
+
+  async function simulateSpeech(agentId: string, phase: "opening" | "turn" | "synthesis", addressedTo: string | undefined, text: string) {
+    const duration = Math.min(9000, Math.max(2400, text.split(/\s+/).length * (lang === "am" ? 390 : 310)));
+    const started = performance.now();
+    setSpeaking({ agentId, addressedTo: addressedTo ?? null, levels: Array(24).fill(0), phase });
+    await new Promise<void>((resolve) => {
+      const tick = () => {
+        const t = performance.now() - started;
+        const levels = Array.from({ length: 24 }, (_, i) => 0.22 + Math.abs(Math.sin(t / 115 + i * 0.55)) * 0.72);
+        setSpeaking((s) => ({ ...s, levels }));
+        if (t >= duration || stopFlag.current) resolve(); else requestAnimationFrame(tick);
+      };
+      tick();
+    });
     setSpeaking({ agentId: null, addressedTo: null, levels: Array(24).fill(0), phase: null });
     setSpoken((prev) => new Set(prev).add(agentId + (phase === "synthesis" ? ":syn" : phase === "opening" ? ":open" : "")));
   }
@@ -353,9 +377,10 @@ export function CouncilMode() {
           const contrib = result?.contributions.find((c) => c.agentId === a.id);
           const active = speaking.agentId === a.id && speaking.phase === "turn";
           const done = spoken.has(a.id);
+          const addressedName = allAgents.find((agent) => agent.id === contrib?.addressedTo)?.name ?? contrib?.addressedTo;
           return (
             <SpeakerCard key={a.id} agent={a} active={active} done={done}
-              text={contrib?.opinion} addressedTo={contrib?.addressedTo} levels={active ? speaking.levels : null} />
+              text={(active || done) ? contrib?.opinion : undefined} addressedTo={(active || done) ? addressedName : undefined} levels={active ? speaking.levels : null} />
           );
         })}
       </div>
@@ -384,12 +409,12 @@ export function CouncilMode() {
           {spoken.has(concierge.id + ":syn") && <CheckCircle2 className="h-5 w-5 text-emerald-500" />}
         </div>
         {(speaking.phase === "synthesis" || speaking.phase === "opening") && <Waveform levels={speaking.levels} color={concierge.color} large />}
-        {result?.opening?.opinion && (
+        {result?.opening?.opinion && (speaking.phase === "opening" || spoken.has(concierge.id + ":open")) && (
           <p className="text-xs text-muted-foreground leading-relaxed mt-2">
             <span className="font-semibold text-foreground">Opening: </span>{result.opening.opinion}
           </p>
         )}
-        {result?.synthesis ? (
+        {result?.synthesis && (speaking.phase === "synthesis" || spoken.has(concierge.id + ":syn")) ? (
           <p className="text-sm text-foreground leading-relaxed mt-2">{result.synthesis}</p>
         ) : (
           <p className="text-xs text-muted-foreground italic">
