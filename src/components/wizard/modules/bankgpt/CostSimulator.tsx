@@ -482,6 +482,7 @@ export function CostSimulator() {
 
       {/* Ethiopia price-sensitivity advisor */}
       <PricingAdvisor customers={customers} totalOnprem={stats.totals.onprem} totalCloud={stats.totals.cloud} agentCount={enabled.length} capexOnprem={stats.capex.onprem} />
+    </>)}
     </div>
   );
 }
