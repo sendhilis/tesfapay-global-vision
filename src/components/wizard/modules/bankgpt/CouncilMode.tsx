@@ -1,0 +1,438 @@
+/**
+ * Council Mode — the "WOW" demo.
+ * The user (banker) describes a life scenario (e.g. wedding). All specialist
+ * agents deliberate live, each speaks in-persona via ElevenLabs TTS with a
+ * real-time waveform on its card. The Concierge synthesizes a final action
+ * plan within ~90 seconds.
+ */
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  Mic, Square, Loader2, Languages, Play, RotateCcw, Sparkles,
+  CheckCircle2, Crown, Users, Send,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useBankConfig, type MeshAgentId } from "@/contexts/BankConfigContext";
+import { startRecording, transcribe } from "./voiceUtils";
+
+const FN_URL = (name: string) =>
+  `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/${name}`;
+const ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+type Contribution = { agentId: string; opinion: string };
+type CouncilResult = {
+  contributions: Contribution[];
+  synthesis: string;
+  actionLabel: string;
+  conciergeId: string;
+  language: "en" | "am";
+};
+
+type SpeakingState = {
+  agentId: string | null;
+  levels: number[]; // 24 bars, 0..1
+  isSynthesis: boolean;
+};
+
+const PRESETS_EN = [
+  "My daughter's wedding is in 6 months. Budget is around ETB 350,000. I have ETB 80,000 in savings and earn ETB 45,000/month. How should I plan?",
+  "I want to buy a car worth ETB 1.2M next year. I currently save ETB 8,000 a month. What's the smartest path?",
+  "My business needs ETB 250,000 working capital for the next 90 days. I have inventory but cash is tight.",
+];
+const PRESETS_AM = [
+  "የልጄ ሰርግ በ6 ወር ውስጥ ነው። በጀቴ 350,000 ብር ነው። 80,000 ብር ቁጠባ አለኝ እና በወር 45,000 ብር አገኛለሁ። እንዴት ላቅድ?",
+  "በመጪው ዓመት 1.2 ሚሊዮን ብር መኪና መግዛት እፈልጋለሁ። በወር 8,000 ብር እቆጥባለሁ።",
+  "ንግዴ ለ90 ቀናት 250,000 ብር የስራ ካፒታል ያስፈልገዋል።",
+];
+
+export function CouncilMode() {
+  const cfg = useBankConfig();
+  const mesh = cfg.ai.mesh;
+
+  const [lang, setLang] = useState<"en" | "am">("en");
+  const [scenario, setScenario] = useState("");
+  const [busy, setBusy] = useState<"" | "stt" | "thinking" | "deliberating">("");
+  const [result, setResult] = useState<CouncilResult | null>(null);
+  const [speaking, setSpeaking] = useState<SpeakingState>({ agentId: null, levels: Array(24).fill(0), isSynthesis: false });
+  const [spoken, setSpoken] = useState<Set<string>>(new Set());
+  const [recording, setRecording] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
+  const [actionTaken, setActionTaken] = useState(false);
+
+  const recRef = useRef<{ stop: () => Promise<Blob> } | null>(null);
+  const stopFlag = useRef(false);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const elapsedTimer = useRef<number | null>(null);
+
+  const enabledIds = useMemo<MeshAgentId[]>(
+    () => (["concierge","onboarding","savingsCoach","investmentCoach","loanAgent","complaintAgent","notificationAgent"] as MeshAgentId[])
+      .filter((id) => mesh.agents[id]?.enabled),
+    [mesh.agents],
+  );
+  const concierge = mesh.agents.concierge;
+  const specialists = enabledIds.filter((id) => id !== "concierge").map((id) => mesh.agents[id]);
+
+  useEffect(() => () => {
+    stopFlag.current = true;
+    audioCtxRef.current?.close().catch(() => {});
+    if (elapsedTimer.current) window.clearInterval(elapsedTimer.current);
+  }, []);
+
+  async function ttsBlob(text: string, language: "en" | "am"): Promise<Blob> {
+    const res = await fetch(FN_URL("elevenlabs-tts"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: ANON_KEY, Authorization: `Bearer ${ANON_KEY}` },
+      body: JSON.stringify({ text, lang: language }),
+    });
+    if (!res.ok) throw new Error(`TTS ${res.status}`);
+    const buf = await res.arrayBuffer();
+    return new Blob([buf], { type: "audio/mpeg" });
+  }
+
+  async function speakWithWave(agentId: string, text: string, isSynthesis: boolean, language: "en" | "am"): Promise<void> {
+    if (stopFlag.current) return;
+    const blob = await ttsBlob(text, language);
+    const url = URL.createObjectURL(blob);
+    const audio = new Audio(url);
+    audio.crossOrigin = "anonymous";
+
+    const Ctx = (window.AudioContext || (window as any).webkitAudioContext) as typeof AudioContext;
+    if (!audioCtxRef.current) audioCtxRef.current = new Ctx();
+    const ctx = audioCtxRef.current;
+    if (ctx.state === "suspended") await ctx.resume();
+    const src = ctx.createMediaElementSource(audio);
+    const analyser = ctx.createAnalyser();
+    analyser.fftSize = 64;
+    src.connect(analyser);
+    analyser.connect(ctx.destination);
+    const data = new Uint8Array(analyser.frequencyBinCount);
+
+    setSpeaking({ agentId, levels: Array(24).fill(0), isSynthesis });
+    let raf = 0;
+    const tick = () => {
+      analyser.getByteFrequencyData(data);
+      const levels = Array.from({ length: 24 }, (_, i) => {
+        const idx = Math.floor((i / 24) * data.length);
+        return Math.min(1, data[idx] / 200);
+      });
+      setSpeaking((s) => ({ ...s, levels }));
+      raf = requestAnimationFrame(tick);
+    };
+    tick();
+
+    await audio.play();
+    await new Promise<void>((resolve) => {
+      audio.onended = () => resolve();
+      audio.onerror = () => resolve();
+    });
+    cancelAnimationFrame(raf);
+    URL.revokeObjectURL(url);
+    try { src.disconnect(); analyser.disconnect(); } catch {}
+    setSpeaking({ agentId: null, levels: Array(24).fill(0), isSynthesis: false });
+    setSpoken((prev) => new Set(prev).add(agentId + (isSynthesis ? ":syn" : "")));
+  }
+
+  async function runCouncil(scenarioText?: string) {
+    const text = (scenarioText ?? scenario).trim();
+    if (!text) {
+      toast({ title: "Describe your scenario", description: "Type or speak the situation first." });
+      return;
+    }
+    stopFlag.current = false;
+    setResult(null);
+    setSpoken(new Set());
+    setActionTaken(false);
+    setElapsed(0);
+    setBusy("thinking");
+    if (elapsedTimer.current) window.clearInterval(elapsedTimer.current);
+    elapsedTimer.current = window.setInterval(() => setElapsed((e) => e + 1), 1000);
+
+    try {
+      const { data, error } = await supabase.functions.invoke("council-deliberate", {
+        body: {
+          scenario: text,
+          language: lang,
+          bankName: cfg.bank.name,
+          customerName: "Ato Bekele",
+          agents: enabledIds.map((id) => {
+            const a = mesh.agents[id];
+            return { id, name: a.name, tagline: a.tagline, systemPrompt: a.systemPrompt };
+          }),
+        },
+      });
+      if (error) throw error;
+      const res = data as CouncilResult;
+      if (!res?.contributions?.length) throw new Error("Council returned no contributions");
+      setResult(res);
+      setBusy("deliberating");
+
+      for (const c of res.contributions) {
+        if (stopFlag.current) break;
+        if (!mesh.agents[c.agentId as MeshAgentId]) continue;
+        await speakWithWave(c.agentId, c.opinion, false, res.language);
+      }
+      if (!stopFlag.current && res.synthesis) {
+        await speakWithWave(res.conciergeId, res.synthesis, true, res.language);
+      }
+    } catch (e: any) {
+      console.error(e);
+      toast({ title: "Council failed", description: e?.message ?? "Try again", variant: "destructive" });
+    } finally {
+      setBusy("");
+      if (elapsedTimer.current) { window.clearInterval(elapsedTimer.current); elapsedTimer.current = null; }
+    }
+  }
+
+  async function toggleRecord() {
+    if (recording) {
+      setRecording(false);
+      setBusy("stt");
+      try {
+        const blob = await recRef.current!.stop();
+        recRef.current = null;
+        const text = await transcribe(blob, lang);
+        if (text) {
+          setScenario(text);
+          await runCouncil(text);
+        } else {
+          toast({ title: "Didn't catch that" });
+        }
+      } catch (e: any) {
+        toast({ title: "Voice error", description: e?.message, variant: "destructive" });
+      } finally {
+        setBusy("");
+      }
+    } else {
+      try {
+        recRef.current = await startRecording();
+        setRecording(true);
+      } catch {
+        toast({ title: "Microphone blocked", variant: "destructive" });
+      }
+    }
+  }
+
+  function reset() {
+    stopFlag.current = true;
+    setResult(null);
+    setSpoken(new Set());
+    setScenario("");
+    setElapsed(0);
+    setActionTaken(false);
+    setSpeaking({ agentId: null, levels: Array(24).fill(0), isSynthesis: false });
+  }
+
+  const totalAgents = enabledIds.length;
+  const progress = result ? spoken.size / (totalAgents) : 0; // synthesis included as concierge:syn
+
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="rounded-2xl border border-tesfa-gold/40 bg-gradient-to-br from-tesfa-gold/10 via-transparent to-primary/5 p-4">
+        <div className="flex items-start gap-3 flex-wrap">
+          <div className="rounded-xl bg-gradient-gold p-2.5 text-tesfa-dark">
+            <Users className="h-5 w-5" />
+          </div>
+          <div className="flex-1 min-w-[240px]">
+            <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
+              AI Council Mode <Sparkles className="h-4 w-4 text-tesfa-gold" />
+            </h2>
+            <p className="text-xs text-muted-foreground">
+              {lang === "am"
+                ? "ሁሉም የባንክ ጥበበኞች በ90 ሰከንዶች ውስጥ ይመክራሉ — በድምጽ።"
+                : `All ${totalAgents} specialist agents deliberate live in 90 seconds — voice-first, in-persona, with a final action plan.`}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="inline-flex glass rounded-lg p-0.5">
+              {(["en","am"] as const).map((l) => (
+                <button key={l} onClick={() => setLang(l)}
+                  className={`px-3 py-1 rounded-md text-[11px] font-semibold inline-flex items-center gap-1 ${
+                    lang === l ? "bg-gradient-gold text-tesfa-dark" : "text-muted-foreground"
+                  }`}>
+                  <Languages className="h-3 w-3" />{l === "en" ? "English" : "አማርኛ"}
+                </button>
+              ))}
+            </div>
+            {result && (
+              <Button size="sm" variant="outline" onClick={reset}>
+                <RotateCcw className="h-3.5 w-3.5 mr-1" /> Reset
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* Scenario input */}
+        <div className="mt-4 space-y-2">
+          <div className="flex gap-2 flex-wrap">
+            <Button size="sm" variant={recording ? "destructive" : "default"}
+              onClick={toggleRecord} disabled={busy === "thinking" || busy === "deliberating" || busy === "stt"}>
+              {recording ? <Square className="h-3.5 w-3.5 mr-1" /> :
+                busy === "stt" ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> :
+                <Mic className="h-3.5 w-3.5 mr-1" />}
+              {recording ? (lang === "am" ? "አቁም" : "Stop") : busy === "stt" ? "…" : (lang === "am" ? "ሁኔታዎን ይናገሩ" : "Speak scenario")}
+            </Button>
+            <textarea
+              value={scenario}
+              onChange={(e) => setScenario(e.target.value)}
+              placeholder={lang === "am" ? "ሁኔታዎን ይተይቡ ወይም ይናገሩ…" : "Type or speak your scenario (wedding, car, business, education)…"}
+              rows={2}
+              className="flex-1 min-w-[260px] rounded-lg border border-border bg-background/60 px-3 py-2 text-xs resize-none focus:outline-none focus:ring-1 focus:ring-tesfa-gold"
+              disabled={!!busy || recording}
+            />
+            <Button size="sm" onClick={() => runCouncil()} disabled={!scenario.trim() || !!busy || recording}>
+              {busy === "thinking" ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Play className="h-3.5 w-3.5 mr-1" />}
+              {busy === "thinking" ? (lang === "am" ? "ምክር ቤት እየተሰበሰበ…" : "Convening…") :
+               busy === "deliberating" ? (lang === "am" ? "በውይይት ላይ…" : "Deliberating…") :
+               (lang === "am" ? "ምክር ቤት ጥራ" : "Convene Council")}
+            </Button>
+          </div>
+          <div className="flex gap-1.5 flex-wrap">
+            {(lang === "am" ? PRESETS_AM : PRESETS_EN).map((p, i) => (
+              <button key={i} onClick={() => setScenario(p)} disabled={!!busy}
+                className="text-[10px] rounded-full border border-border bg-background/60 px-2.5 py-1 text-muted-foreground hover:text-foreground hover:border-tesfa-gold/50">
+                {p.length > 70 ? p.slice(0, 68) + "…" : p}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {(busy === "deliberating" || result) && (
+          <div className="mt-3 flex items-center gap-3 text-[11px] text-muted-foreground">
+            <Badge variant={elapsed > 90 ? "destructive" : "secondary"} className="text-[10px]">
+              {elapsed}s / 90s
+            </Badge>
+            <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
+              <div className="h-full bg-gradient-gold transition-all"
+                style={{ width: `${Math.min(100, progress * 100)}%` }} />
+            </div>
+            <span>{spoken.size} / {totalAgents} {lang === "am" ? "ተናግረዋል" : "spoken"}</span>
+          </div>
+        )}
+      </div>
+
+      {/* Speaker grid */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+        {specialists.map((a) => {
+          const contrib = result?.contributions.find((c) => c.agentId === a.id);
+          const active = speaking.agentId === a.id && !speaking.isSynthesis;
+          const done = spoken.has(a.id);
+          return (
+            <SpeakerCard key={a.id} agent={a} active={active} done={done}
+              text={contrib?.opinion} levels={active ? speaking.levels : null} />
+          );
+        })}
+      </div>
+
+      {/* Concierge synthesis card */}
+      <div className={`rounded-2xl border-2 p-4 transition-all ${
+        speaking.isSynthesis ? "border-tesfa-gold shadow-[0_0_40px_rgba(212,175,55,0.4)] bg-gradient-to-br from-tesfa-gold/10 to-transparent" :
+        result?.synthesis ? "border-tesfa-gold/50 bg-background/60" :
+        "border-dashed border-border bg-background/30"
+      }`}>
+        <div className="flex items-center gap-3 mb-2">
+          <div className="relative">
+            <span className="grid h-10 w-10 place-items-center rounded-xl text-white font-bold"
+              style={{ background: concierge.color }}>
+              {concierge.avatarStyle === "initial" ? concierge.name[0] : concierge.emoji}
+            </span>
+            <Crown className="h-4 w-4 text-tesfa-gold absolute -top-1.5 -right-1.5" />
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-bold text-foreground flex items-center gap-2">
+              {concierge.name}
+              <Badge className="text-[9px] bg-gradient-gold text-tesfa-dark border-0">CHAIR · SYNTHESIS</Badge>
+            </p>
+            <p className="text-[10px] text-muted-foreground">{concierge.tagline}</p>
+          </div>
+          {spoken.has(concierge.id + ":syn") && <CheckCircle2 className="h-5 w-5 text-emerald-500" />}
+        </div>
+        {speaking.isSynthesis && <Waveform levels={speaking.levels} color={concierge.color} large />}
+        {result?.synthesis ? (
+          <p className="text-sm text-foreground leading-relaxed mt-2">{result.synthesis}</p>
+        ) : (
+          <p className="text-xs text-muted-foreground italic">
+            {lang === "am" ? "የምክር ቤት ውጤት እዚህ ይታያል…" : "Final council recommendation will appear here…"}
+          </p>
+        )}
+        {result?.synthesis && spoken.has(concierge.id + ":syn") && (
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button size="sm" className="bg-gradient-gold text-tesfa-dark hover:opacity-90"
+              disabled={actionTaken}
+              onClick={() => {
+                setActionTaken(true);
+                toast({
+                  title: lang === "am" ? "ተግባር ተወስዷል ✓" : "Action taken ✓",
+                  description: result.actionLabel,
+                });
+              }}>
+              {actionTaken ? <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> : <Send className="h-3.5 w-3.5 mr-1" />}
+              {actionTaken ? (lang === "am" ? "ተፈጸመ" : "Executed") : result.actionLabel}
+            </Button>
+            <Button size="sm" variant="outline" onClick={reset}>
+              {lang === "am" ? "አዲስ ሁኔታ" : "New scenario"}
+            </Button>
+          </div>
+        )}
+      </div>
+
+      <p className="text-[10px] text-muted-foreground text-center">
+        Council pipeline: scenario → Lovable AI orchestrator → {totalAgents}-agent structured deliberation → ElevenLabs TTS ({lang === "am" ? "amh" : "eng"}) → live waveform → Concierge synthesis → bank action.
+      </p>
+    </div>
+  );
+}
+
+function SpeakerCard({
+  agent, active, done, text, levels,
+}: {
+  agent: any; active: boolean; done: boolean; text?: string; levels: number[] | null;
+}) {
+  return (
+    <div className={`rounded-xl border p-3 transition-all duration-300 ${
+      active ? "border-2 scale-[1.02] shadow-lg" :
+      done ? "border-emerald-500/40 bg-background/40" :
+      "border-border bg-background/30 opacity-70"
+    }`} style={active ? { borderColor: agent.color, boxShadow: `0 0 24px ${agent.color}55` } : undefined}>
+      <div className="flex items-center gap-2 mb-2">
+        <span className="grid h-8 w-8 place-items-center rounded-lg text-xs font-bold text-white shrink-0"
+          style={{ background: agent.color }}>
+          {agent.avatarStyle === "initial" ? agent.name[0] : agent.emoji}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-xs font-bold text-foreground truncate">{agent.name}</p>
+          <p className="text-[9px] text-muted-foreground truncate">{agent.tagline}</p>
+        </div>
+        {active && <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />}
+        {done && !active && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />}
+      </div>
+      {active && levels && <Waveform levels={levels} color={agent.color} />}
+      {text ? (
+        <p className={`text-[11px] leading-snug mt-1.5 ${active ? "text-foreground" : "text-muted-foreground"}`}>
+          {text}
+        </p>
+      ) : (
+        <p className="text-[10px] text-muted-foreground italic mt-1.5">
+          Awaiting turn…
+        </p>
+      )}
+    </div>
+  );
+}
+
+function Waveform({ levels, color, large = false }: { levels: number[]; color: string; large?: boolean }) {
+  return (
+    <div className={`flex items-end gap-0.5 ${large ? "h-10" : "h-6"} my-1`}>
+      {levels.map((v, i) => (
+        <div key={i} className="flex-1 rounded-sm transition-all duration-75"
+          style={{
+            height: `${Math.max(8, v * 100)}%`,
+            background: color,
+            opacity: 0.4 + v * 0.6,
+          }} />
+      ))}
+    </div>
+  );
+}

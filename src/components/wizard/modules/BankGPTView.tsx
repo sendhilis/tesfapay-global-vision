@@ -4,13 +4,14 @@
  * and Analytics dashboard inside /platform/bankgpt.
  */
 import { useState } from "react";
-import { MessageSquare, BarChart3, SlidersHorizontal, Sparkles, ShieldCheck } from "lucide-react";
+import { MessageSquare, BarChart3, SlidersHorizontal, Sparkles, ShieldCheck, Users } from "lucide-react";
 import { BankGPTMesh } from "./BankGPTMesh";
 import { BankGPTSettings } from "./BankGPTSettings";
 import { AgentBuilder } from "./bankgpt/AgentBuilder";
+import { CouncilMode } from "./bankgpt/CouncilMode";
 import AdminBankGPTAnalytics from "@/pages/admin/AdminBankGPTAnalytics";
 
-type Tab = "mesh" | "configure" | "builder" | "analytics";
+type Tab = "mesh" | "council" | "configure" | "builder" | "analytics";
 
 export function BankGPTView() {
   const [tab, setTab] = useState<Tab>("mesh");
@@ -19,12 +20,14 @@ export function BankGPTView() {
     <div className="space-y-4">
       <div className="inline-flex gap-1 glass rounded-xl p-1 flex-wrap">
         <TabButton active={tab === "mesh"}      onClick={() => setTab("mesh")}      icon={MessageSquare}     label="AI Mesh" />
+        <TabButton active={tab === "council"}   onClick={() => setTab("council")}   icon={Users}             label="Council Mode" />
         <TabButton active={tab === "configure"} onClick={() => setTab("configure")} icon={SlidersHorizontal} label="Configure" />
         <TabButton active={tab === "builder"}   onClick={() => setTab("builder")}   icon={Sparkles}          label="Agent Builder" />
         <TabButton active={tab === "analytics"} onClick={() => setTab("analytics")} icon={BarChart3}         label="Analytics" />
       </div>
 
       {tab === "mesh" && <BankGPTMesh />}
+      {tab === "council" && <CouncilMode />}
       {tab === "configure" && (
         <div className="space-y-4">
           <FlexibilityChecklist />
