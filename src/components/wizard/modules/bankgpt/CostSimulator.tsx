@@ -20,8 +20,22 @@ import { Slider } from "@/components/ui/slider";
 import {
   Cpu, Cloud, Server, TrendingUp, Zap, DollarSign, Users,
   MessageSquare, Plus, Minus, AlertTriangle, CheckCircle2, Layers,
-  Lock, KeyRound,
+  Lock, KeyRound, Mic,
 } from "lucide-react";
+
+// ───────── Voice Stack constants ─────────
+// Avg per voice turn: ~250 TTS chars (≈ 18 sec spoken Amharic/English) + ~5 sec STT.
+const VOICE_TTS_CHARS_PER_TURN = 250;
+const VOICE_STT_SECONDS_PER_TURN = 5;
+// ElevenLabs Creator-tier blended pricing (multilingual_v2):
+const EL_TTS_USD_PER_1K_CHARS = 0.18;     // ≈ $0.045/turn
+const EL_STT_USD_PER_HOUR     = 0.40;     // ≈ $0.00056/turn — negligible
+type VoiceMode = "elevenlabs" | "hybrid" | "onprem";
+const VOICE_MODES: { id: VoiceMode; label: string; desc: string; capex: number; monthlyFixed: number }[] = [
+  { id: "elevenlabs", label: "ElevenLabs Cloud", desc: "Per-character billing. Best voice quality. Cloud egress required.", capex: 0,    monthlyFixed: 0 },
+  { id: "hybrid",     label: "Hybrid (Whisper on-prem + ElevenLabs TTS)", desc: "Free STT on shared GPU; only Amharic TTS billed to ElevenLabs.", capex: 500,  monthlyFixed: 50 },
+  { id: "onprem",     label: "Full On-Prem (Whisper + Piper-Amharic)", desc: "CPU-only Piper voice (one-time training). Zero per-turn cost.", capex: 2000, monthlyFixed: 215 },
+];
 
 // ───────── Constants (indicative, Ethiopia 2025) ─────────
 const ETB_PER_USD = 135;             // NBE indicative rate
