@@ -20,8 +20,22 @@ import { Slider } from "@/components/ui/slider";
 import {
   Cpu, Cloud, Server, TrendingUp, Zap, DollarSign, Users,
   MessageSquare, Plus, Minus, AlertTriangle, CheckCircle2, Layers,
-  Lock, KeyRound,
+  Lock, KeyRound, Mic,
 } from "lucide-react";
+
+// ───────── Voice Stack constants ─────────
+// Avg per voice turn: ~250 TTS chars (≈ 18 sec spoken Amharic/English) + ~5 sec STT.
+const VOICE_TTS_CHARS_PER_TURN = 250;
+const VOICE_STT_SECONDS_PER_TURN = 5;
+// ElevenLabs Creator-tier blended pricing (multilingual_v2):
+const EL_TTS_USD_PER_1K_CHARS = 0.18;     // ≈ $0.045/turn
+const EL_STT_USD_PER_HOUR     = 0.40;     // ≈ $0.00056/turn — negligible
+type VoiceMode = "elevenlabs" | "hybrid" | "onprem";
+const VOICE_MODES: { id: VoiceMode; label: string; desc: string; capex: number; monthlyFixed: number }[] = [
+  { id: "elevenlabs", label: "ElevenLabs Cloud", desc: "Per-character billing. Best voice quality. Cloud egress required.", capex: 0,    monthlyFixed: 0 },
+  { id: "hybrid",     label: "Hybrid (Whisper on-prem + ElevenLabs TTS)", desc: "Free STT on shared GPU; only Amharic TTS billed to ElevenLabs.", capex: 500,  monthlyFixed: 50 },
+  { id: "onprem",     label: "Full On-Prem (Whisper + Piper-Amharic)", desc: "CPU-only Piper voice (one-time training). Zero per-turn cost.", capex: 2000, monthlyFixed: 215 },
+];
 
 // ───────── Constants (indicative, Ethiopia 2025) ─────────
 const ETB_PER_USD = 135;             // NBE indicative rate
@@ -68,6 +82,8 @@ export function CostSimulator() {
   const [customers, setCustomers] = useState(50_000);
   const [turnsPerCustomerMonth, setTurns] = useState(8);
   const [agents, setAgents] = useState(DEFAULT_AGENTS);
+  const [voiceMode, setVoiceMode] = useState<VoiceMode>("hybrid");
+  const [voiceSharePct, setVoiceSharePct] = useState(30); // % of turns that are voice
   const [unlocked, setUnlocked] = useState(false);
   const [pwd, setPwd] = useState("");
   const [err, setErr] = useState(false);
@@ -132,14 +148,38 @@ export function CostSimulator() {
       setupCloud:  SETUP_CLOUD,
     };
 
-    const totals = {
+    // ───── Voice Stack costs ─────
+    const voiceTurns = monthlyTurns * (voiceSharePct / 100);
+    const elTtsCost = (voiceTurns * VOICE_TTS_CHARS_PER_TURN / 1000) * EL_TTS_USD_PER_1K_CHARS;
+    const elSttCost = (voiceTurns * VOICE_STT_SECONDS_PER_TURN / 3600) * EL_STT_USD_PER_HOUR;
+    const elFull   = elTtsCost + elSttCost;
+    const elTtsOnly = elTtsCost;             // hybrid still pays TTS to ElevenLabs
+    const cfg = VOICE_MODES.find(v => v.id === voiceMode)!;
+    const voiceMonthly =
+      voiceMode === "elevenlabs" ? elFull
+    : voiceMode === "hybrid"     ? elTtsOnly + cfg.monthlyFixed
+    :                              cfg.monthlyFixed;
+    const voiceCapex = cfg.capex;
+    // Reference cost for "what if we used ElevenLabs cloud across the board"
+    const voiceCloudReference = elFull;
+
+    const baseTotals = {
       onprem: perAgent.reduce((s, p) => s + p.onpremCost, 0),
       hybrid: perAgent.reduce((s, p) => s + p.hybridCost, 0),
       cloud:  perAgent.reduce((s, p) => s + p.cloudCost,  0),
+    };
+    const totals = {
+      onprem: baseTotals.onprem + voiceMonthly,
+      hybrid: baseTotals.hybrid + voiceMonthly,
+      cloud:  baseTotals.cloud  + voiceCloudReference, // cloud-only always uses EL
       tokensM: perAgent.reduce((s, p) => s + p.tokensM,   0),
       gpus:   perAgent.reduce((s, p) => s + p.gpusNeeded, 0),
       turns:  monthlyTurns,
     };
+
+    // Fold voice CAPEX into provisioning totals (cloud mode = 0 voice capex)
+    capex.onprem += voiceCapex;
+    capex.hybrid += voiceCapex;
 
     const cheapest = (["onprem","hybrid","cloud"] as const).reduce((a, b) => totals[a] < totals[b] ? a : b);
     const costPerTurn = {
@@ -148,8 +188,14 @@ export function CostSimulator() {
       cloud:  totals.cloud  / Math.max(1, monthlyTurns),
     };
 
-    return { perAgent, totals, capex, cheapest, costPerTurn };
-  }, [customers, turnsPerCustomerMonth, enabled]);
+    const voice = {
+      mode: voiceMode, cfg, voiceTurns, voiceMonthly, voiceCapex,
+      elFull, elTtsOnly, voiceCloudReference,
+      savingsVsElevenLabs: Math.max(0, elFull - voiceMonthly),
+    };
+
+    return { perAgent, totals, capex, cheapest, costPerTurn, voice };
+  }, [customers, turnsPerCustomerMonth, enabled, voiceMode, voiceSharePct]);
 
   const handleUnlock = () => {
     if (pwd === "Techurate@9123") { setUnlocked(true); setErr(false); }
@@ -375,6 +421,95 @@ export function CostSimulator() {
         <p className="text-[10px] text-muted-foreground mt-2">
           Assumptions: GPU street price (NVIDIA reseller, Addis landed). Infra uplift = 40% of GPU spend covers DL380/XE servers, NVLink, 100G switching, NVMe storage, HSM/KMS, racks, UPS.
           Setup covers vLLM/Triton install, Keycloak SSO, RAG pipeline, Kafka/Debezium CDC, NBE pen-test and staff training.
+        </p>
+      </div>
+
+      {/* Voice Stack add-on */}
+      <div className="glass rounded-xl p-4">
+        <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+          <div className="flex items-center gap-2">
+            <Mic className="h-4 w-4 text-tesfa-gold" />
+            <p className="text-sm font-semibold text-foreground">Voice Stack add-on (STT + TTS)</p>
+          </div>
+          <span className="text-[10px] text-muted-foreground">
+            {stats.voice.voiceTurns.toFixed(0).toLocaleString()} voice turns/mo · {voiceSharePct}% share
+          </span>
+        </div>
+        <p className="text-[11px] text-muted-foreground mb-3">
+          ElevenLabs is cloud-only and per-character billed — hidden line item not covered by the LLM model above.
+          Whisper (STT) and Piper-Amharic (TTS) run on-prem with negligible per-turn cost; the trade-off is a one-time CAPEX (mostly Piper Amharic voice training).
+        </p>
+
+        {/* Voice share slider */}
+        <div className="mb-3">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[10px] text-muted-foreground">Voice share of conversations</span>
+            <span className="text-[10px] text-foreground font-mono">{voiceSharePct}%</span>
+          </div>
+          <Slider min={0} max={100} step={5} value={[voiceSharePct]} onValueChange={(v) => setVoiceSharePct(v[0])} />
+        </div>
+
+        {/* Voice mode picker */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+          {VOICE_MODES.map(m => {
+            const isSel = voiceMode === m.id;
+            // Compute that mode's monthly cost for display
+            const elTts = (stats.voice.voiceTurns * VOICE_TTS_CHARS_PER_TURN / 1000) * EL_TTS_USD_PER_1K_CHARS;
+            const elStt = (stats.voice.voiceTurns * VOICE_STT_SECONDS_PER_TURN / 3600) * EL_STT_USD_PER_HOUR;
+            const monthly =
+              m.id === "elevenlabs" ? elTts + elStt
+            : m.id === "hybrid"     ? elTts + m.monthlyFixed
+            :                         m.monthlyFixed;
+            return (
+              <button
+                key={m.id}
+                onClick={() => setVoiceMode(m.id)}
+                className={`text-left rounded-lg border p-3 transition-colors ${
+                  isSel ? "border-tesfa-gold/60 bg-tesfa-gold/10" : "border-border/40 bg-background/30 hover:border-border"
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-bold text-foreground">{m.label}</span>
+                  {isSel && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />}
+                </div>
+                <p className="text-[10px] text-muted-foreground mb-2 leading-snug">{m.desc}</p>
+                <div className="flex items-baseline justify-between">
+                  <span className="text-[10px] text-muted-foreground">Monthly</span>
+                  <span className="text-sm font-bold text-foreground">${Math.round(monthly).toLocaleString()}</span>
+                </div>
+                <div className="flex items-baseline justify-between">
+                  <span className="text-[10px] text-muted-foreground">One-time CAPEX</span>
+                  <span className="text-[11px] text-tesfa-gold font-mono">${m.capex.toLocaleString()}</span>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="mt-3 rounded-lg bg-background/40 border border-border/40 p-3 grid grid-cols-1 sm:grid-cols-3 gap-3 text-center">
+          <div>
+            <p className="text-[9px] uppercase tracking-wider text-muted-foreground">Voice OPEX / mo</p>
+            <p className="text-sm font-bold text-foreground font-mono">${Math.round(stats.voice.voiceMonthly).toLocaleString()}</p>
+          </div>
+          <div>
+            <p className="text-[9px] uppercase tracking-wider text-muted-foreground">vs ElevenLabs-only</p>
+            <p className="text-sm font-bold text-emerald-400 font-mono">
+              {stats.voice.savingsVsElevenLabs > 0 ? `−$${Math.round(stats.voice.savingsVsElevenLabs).toLocaleString()}/mo` : "—"}
+            </p>
+          </div>
+          <div>
+            <p className="text-[9px] uppercase tracking-wider text-muted-foreground">Voice CAPEX payback</p>
+            <p className="text-sm font-bold text-amber-400 font-mono">
+              {stats.voice.savingsVsElevenLabs > 0 && stats.voice.voiceCapex > 0
+                ? `${Math.ceil(stats.voice.voiceCapex / stats.voice.savingsVsElevenLabs)} mo`
+                : "—"}
+            </p>
+          </div>
+        </div>
+        <p className="text-[10px] text-muted-foreground mt-2">
+          Engine map — STT: <span className="font-mono">faster-whisper large-v3</span> (Amharic-capable, runs on shared L4) ·
+          TTS on-prem: <span className="font-mono">Piper</span> with custom Amharic voice trained from ~10hr corpus (CPU inference, zero GPU).
+          ElevenLabs pricing: ${EL_TTS_USD_PER_1K_CHARS}/1K chars TTS, ${EL_STT_USD_PER_HOUR}/hr STT. Assumes {VOICE_TTS_CHARS_PER_TURN} chars + {VOICE_STT_SECONDS_PER_TURN}s per voice turn.
         </p>
       </div>
 
