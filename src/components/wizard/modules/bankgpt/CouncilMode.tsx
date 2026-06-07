@@ -425,9 +425,9 @@ export function CouncilMode() {
 }
 
 function SpeakerCard({
-  agent, active, done, text, levels,
+  agent, active, done, text, addressedTo, levels,
 }: {
-  agent: any; active: boolean; done: boolean; text?: string; levels: number[] | null;
+  agent: any; active: boolean; done: boolean; text?: string; addressedTo?: string; levels: number[] | null;
 }) {
   return (
     <div className={`rounded-xl border p-3 transition-all duration-300 ${
@@ -448,6 +448,11 @@ function SpeakerCard({
         {done && !active && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />}
       </div>
       {active && levels && <Waveform levels={levels} color={agent.color} />}
+      {addressedTo && text && (
+        <p className="text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">
+          handoff → {addressedTo}
+        </p>
+      )}
       {text ? (
         <p className={`text-[11px] leading-snug mt-1.5 ${active ? "text-foreground" : "text-muted-foreground"}`}>
           {text}
