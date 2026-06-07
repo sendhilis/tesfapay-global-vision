@@ -37,8 +37,16 @@ type SpeakingState = {
   agentId: string | null;
   addressedTo?: string | null;
   levels: number[]; // 24 bars, 0..1
-  phase: "opening" | "turn" | "synthesis" | null;
+  phase: "opening" | "turn" | "synthesis" | "chair" | "specialist" | null;
 };
+
+type DialogueTurn = {
+  id: string;
+  role: "user" | "chair" | "specialist";
+  agentId?: string;
+  text: string;
+};
+
 
 type CouncilAgentMeta = {
   id: string;
@@ -78,11 +86,20 @@ export function CouncilMode() {
   const [recording, setRecording] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [actionTaken, setActionTaken] = useState(false);
+  const [dialogue, setDialogue] = useState<DialogueTurn[]>([]);
+  const [followupQ, setFollowupQ] = useState("");
+  const [followupBusy, setFollowupBusy] = useState(false);
+  const [followupRec, setFollowupRec] = useState(false);
+  const [currentAction, setCurrentAction] = useState<string>("");
+  const [consensus, setConsensus] = useState(false);
+  const followupRecRef = useRef<{ stop: () => Promise<Blob> } | null>(null);
+  const dialogueScrollRef = useRef<HTMLDivElement | null>(null);
 
   const recRef = useRef<{ stop: () => Promise<Blob> } | null>(null);
   const stopFlag = useRef(false);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const elapsedTimer = useRef<number | null>(null);
+
 
   const allAgents = useMemo<CouncilAgentMeta[]>(() => {
     const base = Object.values(mesh.agents as Record<string, any>)
@@ -96,7 +113,13 @@ export function CouncilMode() {
   const concierge = allAgents.find((a) => a.id === "concierge") ?? (mesh.agents.concierge as CouncilAgentMeta);
   const specialists = allAgents.filter((a) => a.id !== concierge.id);
 
+  useEffect(() => {
+    const el = dialogueScrollRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [dialogue, followupBusy]);
+
   useEffect(() => () => {
+
     stopFlag.current = true;
     audioCtxRef.current?.close().catch(() => {});
     if (elapsedTimer.current) window.clearInterval(elapsedTimer.current);
@@ -118,7 +141,8 @@ export function CouncilMode() {
   async function speakWithWave(
     agentId: string,
     text: string,
-    phase: "opening" | "turn" | "synthesis",
+    phase: "opening" | "turn" | "synthesis" | "chair" | "specialist",
+
     language: "en" | "am",
     addressedTo?: string,
   ): Promise<void> {
@@ -171,7 +195,7 @@ export function CouncilMode() {
     setSpoken((prev) => new Set(prev).add(agentId + (phase === "synthesis" ? ":syn" : phase === "opening" ? ":open" : "")));
   }
 
-  async function simulateSpeech(agentId: string, phase: "opening" | "turn" | "synthesis", addressedTo: string | undefined, text: string) {
+  async function simulateSpeech(agentId: string, phase: "opening" | "turn" | "synthesis" | "chair" | "specialist", addressedTo: string | undefined, text: string) {
     const duration = Math.min(9000, Math.max(2400, text.split(/\s+/).length * (lang === "am" ? 390 : 310)));
     const started = performance.now();
     setSpeaking({ agentId, addressedTo: addressedTo ?? null, levels: Array(24).fill(0), phase });
@@ -198,10 +222,14 @@ export function CouncilMode() {
     setResult(null);
     setSpoken(new Set());
     setActionTaken(false);
+    setDialogue([]);
+    setConsensus(false);
+    setCurrentAction("");
     setElapsed(0);
     setBusy("thinking");
     if (elapsedTimer.current) window.clearInterval(elapsedTimer.current);
     elapsedTimer.current = window.setInterval(() => setElapsed((e) => e + 1), 1000);
+
 
     try {
       const { data, error } = await supabase.functions.invoke("council-deliberate", {
@@ -231,7 +259,14 @@ export function CouncilMode() {
       }
       if (!stopFlag.current && normalized.synthesis) {
         await speakWithWave(normalized.conciergeId, normalized.synthesis, "synthesis", normalized.language);
+        setCurrentAction(normalized.actionLabel);
+        setDialogue([
+          { id: "open-" + Date.now(), role: "chair", agentId: normalized.conciergeId, text: normalized.opening?.opinion ?? "" },
+          ...normalized.turns.map((t, i) => ({ id: `t-${i}`, role: "specialist" as const, agentId: t.agentId, text: t.opinion })),
+          { id: "syn-" + Date.now(), role: "chair", agentId: normalized.conciergeId, text: normalized.synthesis },
+        ]);
       }
+
     } catch (e: any) {
       console.error(e);
       toast({ title: "Council failed", description: e?.message ?? "Try again", variant: "destructive" });
@@ -277,8 +312,81 @@ export function CouncilMode() {
     setScenario("");
     setElapsed(0);
     setActionTaken(false);
+    setDialogue([]);
+    setConsensus(false);
+    setCurrentAction("");
+    setFollowupQ("");
     setSpeaking({ agentId: null, addressedTo: null, levels: Array(24).fill(0), phase: null });
   }
+
+  async function askFollowup(qText?: string) {
+    const q = (qText ?? followupQ).trim();
+    if (!q || !result) return;
+    setFollowupBusy(true);
+    const userTurn: DialogueTurn = { id: "u-" + Date.now(), role: "user", text: q };
+    setDialogue((d) => [...d, userTurn]);
+    setFollowupQ("");
+    try {
+      const { data, error } = await supabase.functions.invoke("council-followup", {
+        body: {
+          scenario,
+          synthesis: result.synthesis,
+          actionLabel: currentAction || result.actionLabel,
+          question: q,
+          history: [...dialogue, userTurn].map(({ role, agentId, text }) => ({ role, agentId, text })),
+          language: lang,
+          bankName: cfg.bank.name,
+          customerName: "Ato Bekele",
+          agents: allAgents.map((a) => ({ id: a.id, name: a.name, tagline: a.tagline, systemPrompt: a.systemPrompt })),
+        },
+      });
+      if (error) throw error;
+      const r = data as {
+        chairId: string; specialistId: string; chairLine: string;
+        specialistReply: string; updatedActionLabel: string; consensusReached: boolean;
+      };
+      setDialogue((d) => [
+        ...d,
+        { id: "c-" + Date.now(), role: "chair", agentId: r.chairId, text: r.chairLine },
+        { id: "s-" + Date.now() + 1, role: "specialist", agentId: r.specialistId, text: r.specialistReply },
+      ]);
+      if (r.updatedActionLabel) setCurrentAction(r.updatedActionLabel);
+      if (r.consensusReached) setConsensus(true);
+      await speakWithWave(r.chairId, r.chairLine, "chair", lang, r.specialistId);
+      await speakWithWave(r.specialistId, r.specialistReply, "specialist", lang);
+    } catch (e: any) {
+      console.error(e);
+      toast({ title: "Follow-up failed", description: e?.message ?? "Try again", variant: "destructive" });
+    } finally {
+      setFollowupBusy(false);
+    }
+  }
+
+  async function toggleFollowupRecord() {
+    if (followupRec) {
+      setFollowupRec(false);
+      setFollowupBusy(true);
+      try {
+        const blob = await followupRecRef.current!.stop();
+        followupRecRef.current = null;
+        const text = await transcribe(blob, lang);
+        if (text) await askFollowup(text);
+        else toast({ title: "Didn't catch that" });
+      } catch (e: any) {
+        toast({ title: "Voice error", description: e?.message, variant: "destructive" });
+      } finally {
+        setFollowupBusy(false);
+      }
+    } else {
+      try {
+        followupRecRef.current = await startRecording();
+        setFollowupRec(true);
+      } catch {
+        toast({ title: "Microphone blocked", variant: "destructive" });
+      }
+    }
+  }
+
 
   const totalAgents = allAgents.length;
   const totalTurns = specialists.length + 2;
@@ -426,13 +534,14 @@ export function CouncilMode() {
               disabled={actionTaken}
               onClick={() => {
                 setActionTaken(true);
+                setConsensus(true);
                 toast({
                   title: lang === "am" ? "ተግባር ተወስዷል ✓" : "Action taken ✓",
-                  description: result.actionLabel,
+                  description: currentAction || result.actionLabel,
                 });
               }}>
               {actionTaken ? <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> : <Send className="h-3.5 w-3.5 mr-1" />}
-              {actionTaken ? (lang === "am" ? "ተፈጸመ" : "Executed") : result.actionLabel}
+              {actionTaken ? (lang === "am" ? "ተፈጸመ" : "Executed") : (currentAction || result.actionLabel)}
             </Button>
             <Button size="sm" variant="outline" onClick={reset}>
               {lang === "am" ? "አዲስ ሁኔታ" : "New scenario"}
@@ -440,6 +549,93 @@ export function CouncilMode() {
           </div>
         )}
       </div>
+
+      {/* Interactive Q&A — user negotiates with council until consensus */}
+      {result?.synthesis && spoken.has(concierge.id + ":syn") && !actionTaken && (
+        <div className="rounded-2xl border border-tesfa-gold/40 bg-background/40 p-4 space-y-3">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <p className="text-sm font-bold text-foreground flex items-center gap-2">
+              <Users className="h-4 w-4 text-tesfa-gold" />
+              {lang === "am" ? "ከምክር ቤቱ ጋር ይነጋገሩ" : "Negotiate with the council"}
+              {consensus && <Badge className="text-[9px] bg-emerald-500/20 text-emerald-600 border-emerald-500/30">{lang === "am" ? "ስምምነት ላይ ተደርሷል" : "Consensus reached"}</Badge>}
+            </p>
+            <p className="text-[10px] text-muted-foreground">
+              {lang === "am" ? "Amara ጥያቄዎን ለትክክለኛው ወኪል ይመራዋል" : "Amara routes your question to the right specialist"}
+            </p>
+          </div>
+
+          <div ref={dialogueScrollRef} className="max-h-72 overflow-y-auto space-y-2 pr-1">
+            {dialogue.filter((t) => t.role === "user" || ["c-","s-","syn-"].some((p) => t.id.startsWith(p))).map((turn) => {
+              const agent = allAgents.find((a) => a.id === turn.agentId);
+              if (turn.role === "user") {
+                return (
+                  <div key={turn.id} className="flex justify-end">
+                    <div className="max-w-[80%] rounded-2xl rounded-br-sm bg-primary text-primary-foreground px-3 py-2 text-xs">
+                      {turn.text}
+                    </div>
+                  </div>
+                );
+              }
+              return (
+                <div key={turn.id} className="flex gap-2 items-start">
+                  <span className="grid h-7 w-7 place-items-center rounded-lg text-[10px] font-bold text-white shrink-0"
+                    style={{ background: agent?.color ?? "#888" }}>
+                    {agent?.avatarStyle === "initial" ? agent?.name?.[0] : (agent?.emoji ?? "•")}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10px] font-semibold text-muted-foreground">
+                      {agent?.name ?? turn.agentId} {turn.role === "chair" && <span className="text-tesfa-gold">· chair</span>}
+                    </p>
+                    <p className="text-xs text-foreground leading-snug">{turn.text}</p>
+                  </div>
+                </div>
+              );
+            })}
+            {followupBusy && (
+              <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                {lang === "am" ? "Amara እያሰበ ነው…" : "Amara is routing…"}
+              </div>
+            )}
+          </div>
+
+          <div className="flex gap-2 flex-wrap">
+            <Button size="sm" variant={followupRec ? "destructive" : "outline"}
+              onClick={toggleFollowupRecord} disabled={followupBusy}>
+              {followupRec ? <Square className="h-3.5 w-3.5" /> : <Mic className="h-3.5 w-3.5" />}
+            </Button>
+            <input
+              value={followupQ}
+              onChange={(e) => setFollowupQ(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); askFollowup(); } }}
+              placeholder={lang === "am" ? "ጥያቄ ይጠይቁ ወይም ይቀይሩ…" : "Ask, push back, or refine (e.g. 'reduce monthly to 6,000')…"}
+              disabled={followupBusy || followupRec}
+              className="flex-1 min-w-[220px] rounded-lg border border-border bg-background/60 px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-tesfa-gold"
+            />
+            <Button size="sm" onClick={() => askFollowup()} disabled={!followupQ.trim() || followupBusy || followupRec}>
+              <Send className="h-3.5 w-3.5 mr-1" />
+              {lang === "am" ? "ላክ" : "Ask"}
+            </Button>
+            <Button size="sm" className="bg-emerald-600 text-white hover:bg-emerald-700"
+              onClick={() => {
+                setActionTaken(true);
+                setConsensus(true);
+                toast({
+                  title: lang === "am" ? "ስምምነት ✓" : "Consensus accepted ✓",
+                  description: currentAction || result.actionLabel,
+                });
+              }}>
+              <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
+              {lang === "am" ? "እቀበላለሁ" : "Accept & execute"}
+            </Button>
+          </div>
+          <p className="text-[10px] text-muted-foreground">
+            {lang === "am" ? "የተግባር አዝራር: " : "Pending action: "}
+            <span className="text-tesfa-gold font-semibold">{currentAction || result.actionLabel}</span>
+          </p>
+        </div>
+      )}
+
 
       <p className="text-[10px] text-muted-foreground text-center">
         Council pipeline: scenario → Lovable AI orchestrator → {totalAgents}-agent structured deliberation → ElevenLabs TTS ({lang === "am" ? "amh" : "eng"}) → live waveform → Concierge synthesis → bank action.
