@@ -198,11 +198,15 @@ export function CostSimulator() {
               <p className="text-[10px] text-muted-foreground mb-3">{m.desc}</p>
               <div className="space-y-1">
                 <div className="flex items-baseline justify-between">
+                  <span className="text-[10px] text-muted-foreground">Upfront CAPEX</span>
+                  <span className="text-sm font-bold text-foreground">${Math.round(stats.capex[m.id]).toLocaleString()}</span>
+                </div>
+                <div className="flex items-baseline justify-between">
                   <span className="text-[10px] text-muted-foreground">Monthly OPEX</span>
                   <span className="text-lg font-bold text-foreground">${Math.round(total).toLocaleString()}</span>
                 </div>
                 <div className="flex items-baseline justify-between">
-                  <span className="text-[10px] text-muted-foreground">ETB equivalent</span>
+                  <span className="text-[10px] text-muted-foreground">ETB OPEX/mo</span>
                   <span className="text-xs text-tesfa-gold font-semibold">ETB {Math.round(total * ETB_PER_USD).toLocaleString()}</span>
                 </div>
                 <div className="flex items-baseline justify-between pt-1 border-t border-border/40">
