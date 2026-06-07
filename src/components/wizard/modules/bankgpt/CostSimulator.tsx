@@ -87,7 +87,8 @@ export function CostSimulator() {
       const tokensPerSecNeeded = (turns * a.avgTokensPerTurn) / (30 * 24 * 3600);
       const gpusNeeded = Math.max(1, Math.ceil(tokensPerSecNeeded / (gpu.tps * 0.6)));
 
-      const capexMonthly = (gpusNeeded * gpu.capex) / DEPRECIATION_MONTHS;
+      const gpuCapex = gpusNeeded * gpu.capex;            // upfront $ for GPUs alone
+      const capexMonthly = gpuCapex / DEPRECIATION_MONTHS;
       const powerKwh = (gpusNeeded * gpu.watts * PUE * 24 * 30) / 1000;
       const powerCost = powerKwh * KWH_PRICE_USD;
       // Ops overhead: 1 SRE per 8 GPUs at $1800/mo Addis salary fully loaded
@@ -97,9 +98,11 @@ export function CostSimulator() {
       const cloudCost = tokensM * a.cloudUsdPerMTok;
 
       // Hybrid: frontier agents (>20B) go cloud, rest on-prem
-      const hybridCost = a.paramsB > 20 ? cloudCost : onpremCost;
+      const isCloudInHybrid = a.paramsB > 20;
+      const hybridCost = isCloudInHybrid ? cloudCost : onpremCost;
+      const hybridCapex = isCloudInHybrid ? 0 : gpuCapex;
 
-      return { agent: a, turns, tokensM, gpusNeeded, capexMonthly, powerCost, opsCost, onpremCost, cloudCost, hybridCost };
+      return { agent: a, turns, tokensM, gpusNeeded, gpuCapex, hybridCapex, capexMonthly, powerCost, opsCost, onpremCost, cloudCost, hybridCost };
     });
 
     const totals = {
