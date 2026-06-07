@@ -37,8 +37,16 @@ type SpeakingState = {
   agentId: string | null;
   addressedTo?: string | null;
   levels: number[]; // 24 bars, 0..1
-  phase: "opening" | "turn" | "synthesis" | null;
+  phase: "opening" | "turn" | "synthesis" | "chair" | "specialist" | null;
 };
+
+type DialogueTurn = {
+  id: string;
+  role: "user" | "chair" | "specialist";
+  agentId?: string;
+  text: string;
+};
+
 
 type CouncilAgentMeta = {
   id: string;
