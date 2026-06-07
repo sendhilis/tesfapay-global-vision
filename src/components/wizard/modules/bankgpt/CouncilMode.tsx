@@ -275,14 +275,14 @@ export function CouncilMode() {
             </h2>
             <p className="text-xs text-muted-foreground">
               {lang === "am"
-                ? "ሁሉም የባንክ ጥበበኞች በ90 ሰከንዶች ውስጥ ይመክራሉ — በድምጽ።"
-                : `All ${totalAgents} specialist agents deliberate live in 90 seconds — voice-first, in-persona, with a final action plan.`}
+                ? "ሁሉም የAI ወኪሎች በ90 ሰከንድ ውስጥ ራሳቸው ይመካከራሉ — ውሳኔ እስኪታወጅ ድረስ ምንም ጣልቃ ገብነት የለም።"
+                : `All ${totalAgents} AI agents deliberate with each other in one autonomous 90-second council — no user intervention until the decision.`}
             </p>
           </div>
           <div className="flex items-center gap-2">
             <div className="inline-flex glass rounded-lg p-0.5">
               {(["en","am"] as const).map((l) => (
-                <button key={l} onClick={() => setLang(l)}
+                <button key={l} onClick={() => setLang(l)} disabled={!!busy || recording}
                   className={`px-3 py-1 rounded-md text-[11px] font-semibold inline-flex items-center gap-1 ${
                     lang === l ? "bg-gradient-gold text-tesfa-dark" : "text-muted-foreground"
                   }`}>
@@ -290,7 +290,7 @@ export function CouncilMode() {
                 </button>
               ))}
             </div>
-            {result && (
+            {result && !busy && (
               <Button size="sm" variant="outline" onClick={reset}>
                 <RotateCcw className="h-3.5 w-3.5 mr-1" /> Reset
               </Button>
@@ -342,7 +342,7 @@ export function CouncilMode() {
               <div className="h-full bg-gradient-gold transition-all"
                 style={{ width: `${Math.min(100, progress * 100)}%` }} />
             </div>
-            <span>{spoken.size} / {totalAgents} {lang === "am" ? "ተናግረዋል" : "spoken"}</span>
+            <span>{spoken.size} / {totalTurns} {lang === "am" ? "የምክር ቤት ተራዎች" : "council turns"}</span>
           </div>
         )}
       </div>
