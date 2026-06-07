@@ -10,17 +10,18 @@ import {
   ResponsiveContainer, LineChart, Line,
 } from "recharts";
 import {
-  Users, TrendingUp, AlertTriangle, Search, Bot, Bell, Zap, ArrowUpRight,
-  ArrowDownRight, RefreshCw, Clock, Activity, Database, ChevronDown,
-  ChevronRight, Wallet, CreditCard, Target, Landmark, Building2,
-  Smartphone, Receipt, DollarSign, PiggyBank, Percent, Globe, MapPin,
+  Users, TrendingUp, AlertTriangle, Search, Bot, RefreshCw, Clock, Activity,
+  Database, ChevronDown, ChevronRight, Wallet, CreditCard, Target, Landmark,
+  Building2, Smartphone, Receipt, DollarSign, PiggyBank, Percent, MapPin,
+  ShieldAlert, MessageSquare, Heart, FileWarning, UserPlus, Sparkles,
+  Compass, Briefcase, BadgeCheck, Inbox,
 } from "lucide-react";
 import {
   generateCustomersForPersona, generateRandomEvent,
-  PERSONA_LABELS, PERSONA_DESCRIPTIONS, cdpStats,
+  PERSONA_LABELS, PERSONA_DESCRIPTIONS, PERSONA_COLORS, cdpStats,
   type AgentPersona, type Customer, type CustomerEvent,
 } from "./ethiopiaCustomers";
-import { SPEND_CATEGORIES, type SpendProfile } from "./spendCategoriesET";
+import { type SpendProfile } from "./spendCategoriesET";
 
 /* ── helpers ─────────────────────────────────────────────── */
 
@@ -58,6 +59,7 @@ const EVENT_ICONS: Record<CustomerEvent['event_type'], string> = {
   salary_credit: '💰', deposit: '🏦', transfer_in: '➡️', interest_credit: '📈',
   loan_debit: '🔻', bill_payment: '📄', merchant_payment: '🛒',
   withdrawal: '💸', transfer_out: '⬅️', airtime_topup: '📱',
+  tbill_buy: '🪙', kyc_step: '🪪', complaint_open: '🛡️',
 };
 
 function timeAgo(d: Date) {
@@ -125,66 +127,106 @@ function CustomerDetail({ c, persona }: { c: Customer; persona: AgentPersona }) 
           <Metric icon={Activity} label="Deposit Growth" value={`${c.depositGrowthRate>=0?'+':''}${c.depositGrowthRate.toFixed(1)}%`} warn={c.depositGrowthRate < 0} />
         </div>
 
-        {(persona === 'savings_coach' || persona === 'financial_advisor') && (
-          <div className="rounded-lg bg-muted/30 border border-border/30 p-3">
-            <div className="flex items-center justify-between text-[11px] mb-1">
-              <span className="text-muted-foreground">Goal: <span className="text-foreground font-medium">{c.savingsGoalName}</span></span>
-              <span className="text-foreground font-medium">{c.goalProgress}%</span>
+        {/* Concierge — 360° engagement & routing */}
+        {persona === 'concierge' && (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
+            <Metric icon={Compass}    label="Top Intent"     value={c.topIntent} />
+            <Metric icon={Bot}        label="Routed To"      value={PERSONA_LABELS[c.routedToAgent].split(' · ')[0]} />
+            <Metric icon={Sparkles}   label="Engagement"     value={`${c.engagementScore}/100`} warn={c.engagementScore < 40} />
+            <Metric icon={Briefcase}  label="Products Held"  value={c.productsHeld} />
+            <Metric icon={Smartphone} label="Channel"        value={c.channelPreference} />
+            <Metric icon={Heart}      label="Lifetime Value" value={fmt(c.lifetimeValue)} />
+          </div>
+        )}
+
+        {/* Onboarding — KYC funnel */}
+        {persona === 'onboarding' && (
+          <>
+            <div className="rounded-lg bg-muted/30 border border-border/30 p-3">
+              <div className="flex items-center justify-between text-[11px] mb-1">
+                <span className="text-muted-foreground">Onboarding progress · <span className="text-foreground font-medium">{c.activationStatus}</span></span>
+                <span className="text-foreground font-medium">{c.onboardingProgress}%</span>
+              </div>
+              <div className="h-2 bg-muted rounded-full overflow-hidden">
+                <div className={`h-full ${c.onboardingProgress<40?'bg-destructive':c.onboardingProgress<80?'bg-warning':'bg-success'}`} style={{ width: `${c.onboardingProgress}%` }} />
+              </div>
+              {c.missingDocuments.length > 0 && (
+                <p className="text-[10px] text-warning mt-2">Missing: {c.missingDocuments.join(' · ')}</p>
+              )}
             </div>
-            <div className="h-2 bg-muted rounded-full overflow-hidden">
-              <div className={`h-full ${c.goalProgress<30?'bg-destructive':c.goalProgress<60?'bg-warning':'bg-success'}`} style={{ width: `${c.goalProgress}%` }} />
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
+              <Metric icon={UserPlus}   label="Days Since Signup" value={`${c.daysSinceSignup}d`} />
+              <Metric icon={BadgeCheck} label="KYC Tier"          value={`Tier ${c.kycTier}`} />
+              <Metric icon={BadgeCheck} label="Fayda ID"          value={c.faydaCaptured ? 'Captured' : 'Pending'} warn={!c.faydaCaptured} />
+              <Metric icon={BadgeCheck} label="Liveness"          value={c.livenessPassed ? 'Passed' : 'Pending'} warn={!c.livenessPassed} />
+              <Metric icon={Activity}   label="Status"            value={c.activationStatus} warn={c.activationStatus === 'Dormant'} />
+              <Metric icon={Smartphone} label="Channel"           value={c.channelPreference} />
             </div>
-            <div className="flex justify-between text-[10px] text-muted-foreground mt-1">
-              <span>{fmt(c.savingsGoalCurrent)}</span><span>{fmt(c.savingsGoalTarget)}</span>
+          </>
+        )}
+
+        {/* Savings */}
+        {persona === 'savings_coach' && (
+          <>
+            <div className="rounded-lg bg-muted/30 border border-border/30 p-3">
+              <div className="flex items-center justify-between text-[11px] mb-1">
+                <span className="text-muted-foreground">Goal: <span className="text-foreground font-medium">{c.savingsGoalName}</span></span>
+                <span className="text-foreground font-medium">{c.goalProgress}%</span>
+              </div>
+              <div className="h-2 bg-muted rounded-full overflow-hidden">
+                <div className={`h-full ${c.goalProgress<30?'bg-destructive':c.goalProgress<60?'bg-warning':'bg-success'}`} style={{ width: `${c.goalProgress}%` }} />
+              </div>
+              <div className="flex justify-between text-[10px] text-muted-foreground mt-1">
+                <span>{fmt(c.savingsGoalCurrent)}</span><span>{fmt(c.savingsGoalTarget)}</span>
+              </div>
             </div>
-          </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
+              <Metric icon={Percent}    label="Savings Rate"     value={`${(c.savingsRate*100).toFixed(1)}%`} warn={c.savingsRate < 0.05} />
+              <Metric icon={PiggyBank}  label="Emergency Fund"   value={`${c.emergencyFundMonths.toFixed(1)} mo`} warn={c.emergencyFundMonths < 1} />
+              <Metric icon={Activity}   label="Equb Member"      value={c.equbMember ? 'Yes' : 'No'} />
+              <Metric icon={Target}     label="Auto-Sweep"       value={c.autoSweepEnabled ? 'On' : 'Off'} warn={!c.autoSweepEnabled} />
+              <Metric icon={Wallet}     label="Balance"          value={fmt(c.balance)} />
+              <Metric icon={CreditCard} label="Monthly Spend"    value={fmt(c.monthlySpend)} />
+            </div>
+            {c.spendProfile && <SpendBreakdown sp={c.spendProfile} />}
+          </>
         )}
 
-        {persona === 'savings_coach' && c.spendProfile && (
-          <SpendBreakdown sp={c.spendProfile} />
-        )}
-
-        {persona === 'collections_copilot' && c.loanAmount > 0 && (
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2">
-            <Metric icon={Landmark}      label="Loan Product"   value={c.loanProduct} />
-            <Metric icon={DollarSign}    label="Loan Amount"    value={fmt(c.loanAmount)} />
-            <Metric icon={Clock}         label="Tenure"         value={`${c.loanTenureMonths} mo`} />
-            <Metric icon={Percent}       label="Interest"       value={`${c.loanInterestRate}%`} />
-            <Metric icon={AlertTriangle} label="Delinquency"    value={`${c.delinquencyDays}d`} warn={c.delinquencyDays > 30} />
-            <Metric icon={Receipt}       label="Missed"         value={c.missedPayments} warn={c.missedPayments >= 2} />
-          </div>
-        )}
-
-        {persona === 'merchant_support' && (
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2">
-            <Metric icon={Receipt}    label="Txn Volume"    value={c.merchantTxnVolume.toLocaleString()} sub="per month" />
-            <Metric icon={DollarSign} label="Avg Txn Value" value={fmt(c.merchantAvgTxnValue)} />
-            <Metric icon={Smartphone} label="Digital Pay"   value={`${c.digitalPaymentAdoption}%`} warn={c.digitalPaymentAdoption < 35} />
-            <Metric icon={Activity}   label="Deposit Growth" value={`${c.depositGrowthRate>=0?'+':''}${c.depositGrowthRate.toFixed(1)}%`} warn={c.depositGrowthRate < 0} />
-            <Metric icon={Globe}      label="FX Cost"       value={`${c.fxTransactionCostPercent.toFixed(1)}%`} />
-            <Metric icon={Wallet}     label="Balance"       value={fmt(c.balance)} />
-          </div>
-        )}
-
-        {persona === 'corporate_liaison' && (
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2">
-            <Metric icon={Building2}  label="Segment"  value={c.segment} />
-            <Metric icon={Clock}      label="DSO"      value={`${c.receivablesDaysOutstanding}d`} warn={c.receivablesDaysOutstanding > 45} />
-            <Metric icon={Globe}      label="FX Cost"  value={`${c.fxTransactionCostPercent.toFixed(1)}%`} warn={c.fxTransactionCostPercent > 2} />
-            <Metric icon={Receipt}    label="Payroll"  value={c.payrollAutomated ? 'Automated' : 'Manual'} warn={!c.payrollAutomated} />
-            <Metric icon={Activity}   label="Growth"   value={`${c.depositGrowthRate>=0?'+':''}${c.depositGrowthRate.toFixed(1)}%`} />
-            <Metric icon={Smartphone} label="Digital"  value={`${c.digitalPaymentAdoption}%`} />
-          </div>
-        )}
-
-        {persona === 'financial_advisor' && (
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2">
+        {/* Investment */}
+        {persona === 'investment_coach' && (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
             <Metric icon={TrendingUp} label="Investment Ratio" value={`${(c.investmentToIncomeRatio*100).toFixed(1)}%`} warn={c.investmentToIncomeRatio < 0.05} />
             <Metric icon={Wallet}     label="Idle Cash"        value={`${c.idleCashPercent.toFixed(0)}%`} warn={c.idleCashPercent > 30} />
-            <Metric icon={Smartphone} label="Digital"          value={`${c.digitalPaymentAdoption}%`} />
-            <Metric icon={Activity}   label="Deposit Growth"   value={`${c.depositGrowthRate>=0?'+':''}${c.depositGrowthRate.toFixed(1)}%`} />
-            <Metric icon={Target}     label="Goal Progress"    value={`${c.goalProgress}%`} />
-            <Metric icon={Wallet}     label="Balance"          value={fmt(c.balance)} />
+            <Metric icon={Landmark}   label="T-Bills"          value={fmt(c.tbillHoldingsETB)} />
+            <Metric icon={Building2}  label="Fixed Deposit"    value={fmt(c.fixedDepositETB)} />
+            <Metric icon={Activity}   label="Risk Appetite"    value={c.riskAppetite} />
+            <Metric icon={TrendingUp} label="Deposit Growth"   value={`${c.depositGrowthRate>=0?'+':''}${c.depositGrowthRate.toFixed(1)}%`} warn={c.depositGrowthRate < 0} />
+          </div>
+        )}
+
+        {/* Loan */}
+        {persona === 'loan_agent' && (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
+            <Metric icon={Landmark}      label="Product"      value={c.loanProduct || '—'} />
+            <Metric icon={DollarSign}    label="Loan Amount"  value={fmt(c.loanAmount)} />
+            <Metric icon={Clock}         label="Tenure"       value={c.loanTenureMonths ? `${c.loanTenureMonths} mo` : '—'} />
+            <Metric icon={Percent}       label="Interest"     value={c.loanInterestRate ? `${c.loanInterestRate}%` : '—'} />
+            <Metric icon={AlertTriangle} label="Delinquency"  value={`${c.delinquencyDays}d`} warn={c.delinquencyDays > 30} />
+            <Metric icon={Receipt}       label="Missed"       value={c.missedPayments} warn={c.missedPayments >= 2} />
+            <Metric icon={Percent}       label="DTI"          value={`${(c.debtToIncomeRatio*100).toFixed(0)}%`} warn={c.debtToIncomeRatio > 0.4} />
+            <Metric icon={BadgeCheck}    label="Pre-approved" value={fmt(c.qualifyingAmount)} />
+          </div>
+        )}
+
+        {/* Service / complaints */}
+        {persona === 'service_agent' && (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
+            <Metric icon={Inbox}        label="Open Tickets"    value={c.openTickets} warn={c.openTickets >= 2} />
+            <Metric icon={MessageSquare} label="Last Category"  value={c.lastTicketCategory} />
+            <Metric icon={Heart}        label="NPS"             value={c.npsScore} warn={c.npsScore < 6} />
+            <Metric icon={FileWarning}  label="SLA Breaches"    value={c.slaBreaches} warn={c.slaBreaches > 0} />
+            <Metric icon={ShieldAlert}  label="Fraud Flags"     value={c.fraudFlags} warn={c.fraudFlags > 0} />
+            <Metric icon={Activity}     label="CSAT Trend"      value={`${c.satisfactionTrend>=0?'+':''}${c.satisfactionTrend}`} warn={c.satisfactionTrend < 0} />
           </div>
         )}
       </div>
