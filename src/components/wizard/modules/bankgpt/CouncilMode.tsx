@@ -189,7 +189,7 @@ export function CouncilMode() {
     setSpoken((prev) => new Set(prev).add(agentId + (phase === "synthesis" ? ":syn" : phase === "opening" ? ":open" : "")));
   }
 
-  async function simulateSpeech(agentId: string, phase: "opening" | "turn" | "synthesis", addressedTo: string | undefined, text: string) {
+  async function simulateSpeech(agentId: string, phase: "opening" | "turn" | "synthesis" | "chair" | "specialist", addressedTo: string | undefined, text: string) {
     const duration = Math.min(9000, Math.max(2400, text.split(/\s+/).length * (lang === "am" ? 390 : 310)));
     const started = performance.now();
     setSpeaking({ agentId, addressedTo: addressedTo ?? null, levels: Array(24).fill(0), phase });
