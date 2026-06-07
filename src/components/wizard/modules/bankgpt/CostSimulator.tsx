@@ -105,6 +105,29 @@ export function CostSimulator() {
       return { agent: a, turns, tokensM, gpusNeeded, gpuCapex, hybridCapex, capexMonthly, powerCost, opsCost, onpremCost, cloudCost, hybridCost };
     });
 
+    // ───── Upfront CAPEX (one-time provisioning) ─────
+    const gpuCapexOnprem = perAgent.reduce((s, p) => s + p.gpuCapex,    0);
+    const gpuCapexHybrid = perAgent.reduce((s, p) => s + p.hybridCapex, 0);
+    // Infra uplift: servers, NVLink, 100G switching, NVMe storage, KMS/HSM, racks, UPS ≈ 40% of GPU spend
+    const INFRA_UPLIFT = 0.40;
+    // One-time software, integration, NBE compliance, pen-test, training
+    const SETUP_ONPREM = 80_000;
+    const SETUP_HYBRID = 40_000;
+    const SETUP_CLOUD  = 15_000;
+
+    const capex = {
+      onprem: gpuCapexOnprem * (1 + INFRA_UPLIFT) + SETUP_ONPREM,
+      hybrid: gpuCapexHybrid * (1 + INFRA_UPLIFT) + SETUP_HYBRID,
+      cloud:  SETUP_CLOUD,
+      gpuOnprem: gpuCapexOnprem,
+      gpuHybrid: gpuCapexHybrid,
+      infraOnprem: gpuCapexOnprem * INFRA_UPLIFT,
+      infraHybrid: gpuCapexHybrid * INFRA_UPLIFT,
+      setupOnprem: SETUP_ONPREM,
+      setupHybrid: SETUP_HYBRID,
+      setupCloud:  SETUP_CLOUD,
+    };
+
     const totals = {
       onprem: perAgent.reduce((s, p) => s + p.onpremCost, 0),
       hybrid: perAgent.reduce((s, p) => s + p.hybridCost, 0),
@@ -121,7 +144,7 @@ export function CostSimulator() {
       cloud:  totals.cloud  / Math.max(1, monthlyTurns),
     };
 
-    return { perAgent, totals, cheapest, costPerTurn };
+    return { perAgent, totals, capex, cheapest, costPerTurn };
   }, [customers, turnsPerCustomerMonth, enabled]);
 
   return (
