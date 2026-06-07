@@ -252,7 +252,14 @@ export function CouncilMode() {
       }
       if (!stopFlag.current && normalized.synthesis) {
         await speakWithWave(normalized.conciergeId, normalized.synthesis, "synthesis", normalized.language);
+        setCurrentAction(normalized.actionLabel);
+        setDialogue([
+          { id: "open-" + Date.now(), role: "chair", agentId: normalized.conciergeId, text: normalized.opening?.opinion ?? "" },
+          ...normalized.turns.map((t, i) => ({ id: `t-${i}`, role: "specialist" as const, agentId: t.agentId, text: t.opinion })),
+          { id: "syn-" + Date.now(), role: "chair", agentId: normalized.conciergeId, text: normalized.synthesis },
+        ]);
       }
+
     } catch (e: any) {
       console.error(e);
       toast({ title: "Council failed", description: e?.message ?? "Try again", variant: "destructive" });
