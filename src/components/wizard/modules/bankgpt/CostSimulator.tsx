@@ -239,6 +239,102 @@ export function CostSimulator() {
         </p>
       </div>
 
+      {/* CAPEX Provisioning Breakdown */}
+      <div className="glass rounded-xl p-4">
+        <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+          <div className="flex items-center gap-2">
+            <DollarSign className="h-4 w-4 text-tesfa-gold" />
+            <p className="text-sm font-semibold text-foreground">Upfront CAPEX — Budget Provisioning</p>
+          </div>
+          <span className="text-[10px] text-muted-foreground">One-time spend before go-live · 36-mo depreciation</span>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {/* On-Prem CAPEX */}
+          <div className="rounded-lg border border-emerald-400/30 bg-emerald-500/5 p-3">
+            <div className="flex items-center gap-2 mb-2">
+              <Server className="h-4 w-4 text-emerald-400" />
+              <span className="text-xs font-bold text-foreground">On-Prem OSS</span>
+            </div>
+            <CapexRow label={`GPUs (${stats.totals.gpus}×)`} value={stats.capex.gpuOnprem} />
+            <CapexRow label="Servers, network, storage, KMS, racks" value={stats.capex.infraOnprem} />
+            <CapexRow label="Setup, integration, NBE pen-test" value={stats.capex.setupOnprem} />
+            <div className="border-t border-border/40 mt-2 pt-2 flex items-baseline justify-between">
+              <span className="text-[11px] font-bold text-foreground">Total CAPEX</span>
+              <div className="text-right">
+                <p className="text-base font-bold text-emerald-400">${Math.round(stats.capex.onprem).toLocaleString()}</p>
+                <p className="text-[10px] text-tesfa-gold font-mono">ETB {Math.round(stats.capex.onprem * ETB_PER_USD).toLocaleString()}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Hybrid CAPEX */}
+          <div className="rounded-lg border border-amber-400/30 bg-amber-500/5 p-3">
+            <div className="flex items-center gap-2 mb-2">
+              <Layers className="h-4 w-4 text-amber-400" />
+              <span className="text-xs font-bold text-foreground">Hybrid</span>
+            </div>
+            <CapexRow label="GPUs (workhorse only)" value={stats.capex.gpuHybrid} />
+            <CapexRow label="Infra uplift (40%)" value={stats.capex.infraHybrid} />
+            <CapexRow label="Setup + cloud onboarding" value={stats.capex.setupHybrid} />
+            <div className="border-t border-border/40 mt-2 pt-2 flex items-baseline justify-between">
+              <span className="text-[11px] font-bold text-foreground">Total CAPEX</span>
+              <div className="text-right">
+                <p className="text-base font-bold text-amber-400">${Math.round(stats.capex.hybrid).toLocaleString()}</p>
+                <p className="text-[10px] text-tesfa-gold font-mono">ETB {Math.round(stats.capex.hybrid * ETB_PER_USD).toLocaleString()}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Cloud CAPEX */}
+          <div className="rounded-lg border border-sky-400/30 bg-sky-500/5 p-3">
+            <div className="flex items-center gap-2 mb-2">
+              <Cloud className="h-4 w-4 text-sky-400" />
+              <span className="text-xs font-bold text-foreground">Cloud Only</span>
+            </div>
+            <CapexRow label="GPUs" value={0} />
+            <CapexRow label="Infra" value={0} />
+            <CapexRow label="Setup + integration" value={stats.capex.setupCloud} />
+            <div className="border-t border-border/40 mt-2 pt-2 flex items-baseline justify-between">
+              <span className="text-[11px] font-bold text-foreground">Total CAPEX</span>
+              <div className="text-right">
+                <p className="text-base font-bold text-sky-400">${Math.round(stats.capex.cloud).toLocaleString()}</p>
+                <p className="text-[10px] text-tesfa-gold font-mono">ETB {Math.round(stats.capex.cloud * ETB_PER_USD).toLocaleString()}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* CAPEX vs OPEX payback */}
+        <div className="mt-3 rounded-lg bg-background/40 border border-border/40 p-3 grid grid-cols-1 sm:grid-cols-3 gap-3 text-center">
+          <div>
+            <p className="text-[9px] uppercase tracking-wider text-muted-foreground">On-Prem payback vs Cloud</p>
+            <p className="text-sm font-bold text-emerald-400 font-mono">
+              {stats.totals.cloud > stats.totals.onprem
+                ? `${Math.ceil(stats.capex.onprem / (stats.totals.cloud - stats.totals.onprem))} months`
+                : "—"}
+            </p>
+          </div>
+          <div>
+            <p className="text-[9px] uppercase tracking-wider text-muted-foreground">Hybrid payback vs Cloud</p>
+            <p className="text-sm font-bold text-amber-400 font-mono">
+              {stats.totals.cloud > stats.totals.hybrid
+                ? `${Math.ceil(stats.capex.hybrid / (stats.totals.cloud - stats.totals.hybrid))} months`
+                : "—"}
+            </p>
+          </div>
+          <div>
+            <p className="text-[9px] uppercase tracking-wider text-muted-foreground">CAPEX delta (On-Prem − Hybrid)</p>
+            <p className="text-sm font-bold text-foreground font-mono">
+              ${Math.round(stats.capex.onprem - stats.capex.hybrid).toLocaleString()}
+            </p>
+          </div>
+        </div>
+        <p className="text-[10px] text-muted-foreground mt-2">
+          Assumptions: GPU street price (NVIDIA reseller, Addis landed). Infra uplift = 40% of GPU spend covers DL380/XE servers, NVLink, 100G switching, NVMe storage, HSM/KMS, racks, UPS.
+          Setup covers vLLM/Triton install, Keycloak SSO, RAG pipeline, Kafka/Debezium CDC, NBE pen-test and staff training.
+        </p>
+      </div>
+
       {/* Agent overlay modules */}
       <div className="glass rounded-xl p-4">
         <div className="flex items-center justify-between mb-3">
