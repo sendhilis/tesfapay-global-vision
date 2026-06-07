@@ -82,6 +82,8 @@ export function CostSimulator() {
   const [customers, setCustomers] = useState(50_000);
   const [turnsPerCustomerMonth, setTurns] = useState(8);
   const [agents, setAgents] = useState(DEFAULT_AGENTS);
+  const [voiceMode, setVoiceMode] = useState<VoiceMode>("hybrid");
+  const [voiceSharePct, setVoiceSharePct] = useState(30); // % of turns that are voice
   const [unlocked, setUnlocked] = useState(false);
   const [pwd, setPwd] = useState("");
   const [err, setErr] = useState(false);
