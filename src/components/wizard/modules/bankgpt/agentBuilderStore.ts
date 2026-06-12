@@ -1,9 +1,17 @@
 /**
- * Agent Builder extended config — persisted to localStorage so it survives
- * reloads in the prototype. Keyed by agent id. Backend-agnostic so a future
- * Spring Boot service can replace the storage layer.
+ * Agent Builder extended config.
+ *
+ * Persistence (two layers, kept in sync):
+ *   1. Browser localStorage — instant, offline, per-device cache.
+ *   2. Lovable Cloud (public.bankgpt_agent_drafts) — durable across browsers
+ *      and devices via the bankgpt-agent-config edge function.
+ *
+ * On first read for an agent we hydrate from the backend (if reachable) and
+ * merge into localStorage. On every update we debounce-write to the backend
+ * so KB uploads, tool toggles, guardrail tweaks etc. survive page reloads.
  */
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 const KEY = "abx.bankgpt.agentbuilder.v2";
 
