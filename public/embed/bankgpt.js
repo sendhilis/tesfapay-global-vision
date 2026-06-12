@@ -410,15 +410,100 @@
     var launcher = el("button", {
       class: "bgpt-launcher",
       "aria-label": "Open " + this.cfg.agentName,
-      onClick: function () { self.toggle(); },
       html: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>',
     });
+    var label = el("div", { class: "bgpt-label" }, ["ABX AI"]);
+    var dock = el("div", { class: "bgpt-dock" }, [launcher, label]);
+    this.dock = dock;
+    this.launcher = launcher;
     this.panel = el("div", { class: "bgpt-panel bgpt-hidden" }, [
       this.headerNode(true), this.bodyNode(), this.inputNode(),
     ]);
     this.shadow.appendChild(this.panel);
-    this.shadow.appendChild(launcher);
+    this.shadow.appendChild(dock);
+    this.restoreDockPosition();
+    this.enableDrag(dock, launcher);
+    this.repositionPanel();
   };
+
+  Widget.prototype.restoreDockPosition = function () {
+    try {
+      var saved = JSON.parse(localStorage.getItem("bgpt_dock_pos_" + this.cfg.agentId) || "null");
+      if (saved && typeof saved.left === "number" && typeof saved.top === "number") {
+        this.setDockPosition(saved.left, saved.top);
+      }
+    } catch (_) {}
+  };
+
+  Widget.prototype.setDockPosition = function (left, top) {
+    var d = this.dock; if (!d) return;
+    var rect = d.getBoundingClientRect();
+    var w = rect.width || 80, h = rect.height || 80;
+    left = Math.max(8, Math.min(window.innerWidth - w - 8, left));
+    top = Math.max(8, Math.min(window.innerHeight - h - 8, top));
+    d.style.left = left + "px";
+    d.style.top = top + "px";
+    d.style.right = "auto";
+    d.style.bottom = "auto";
+    this.dockPos = { left: left, top: top };
+    this.repositionPanel();
+  };
+
+  Widget.prototype.repositionPanel = function () {
+    if (!this.panel || !this.dock) return;
+    var d = this.dock.getBoundingClientRect();
+    var pw = 380, ph = 560;
+    // place panel above the dock, aligned to its right edge
+    var right = Math.max(8, window.innerWidth - d.right);
+    var bottom = Math.max(8, window.innerHeight - d.top + 12);
+    // if not enough vertical room above, place below
+    if (d.top < ph + 20) {
+      bottom = Math.max(8, window.innerHeight - (d.bottom + ph + 12));
+    }
+    this.panel.style.right = right + "px";
+    this.panel.style.bottom = bottom + "px";
+    this.panel.style.left = "auto";
+    this.panel.style.top = "auto";
+  };
+
+  Widget.prototype.enableDrag = function (dock, handle) {
+    var self = this;
+    var dragging = false, moved = false, startX = 0, startY = 0, origLeft = 0, origTop = 0;
+    function onDown(e) {
+      var pt = e.touches ? e.touches[0] : e;
+      dragging = true; moved = false;
+      var r = dock.getBoundingClientRect();
+      origLeft = r.left; origTop = r.top;
+      startX = pt.clientX; startY = pt.clientY;
+      dock.classList.add("bgpt-dragging");
+      if (e.cancelable) e.preventDefault();
+    }
+    function onMove(e) {
+      if (!dragging) return;
+      var pt = e.touches ? e.touches[0] : e;
+      var dx = pt.clientX - startX, dy = pt.clientY - startY;
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) moved = true;
+      self.setDockPosition(origLeft + dx, origTop + dy);
+    }
+    function onUp() {
+      if (!dragging) return;
+      dragging = false;
+      dock.classList.remove("bgpt-dragging");
+      if (moved && self.dockPos) {
+        try { localStorage.setItem("bgpt_dock_pos_" + self.cfg.agentId, JSON.stringify(self.dockPos)); } catch (_) {}
+      } else {
+        self.toggle();
+      }
+    }
+    handle.addEventListener("mousedown", onDown);
+    handle.addEventListener("touchstart", onDown, { passive: false });
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("touchmove", onMove, { passive: false });
+    window.addEventListener("mouseup", onUp);
+    window.addEventListener("touchend", onUp);
+    window.addEventListener("resize", function () { self.repositionPanel(); });
+  };
+
 
   Widget.prototype.renderInline = function () {
     this.panel = el("div", { class: "bgpt-inline" }, [
