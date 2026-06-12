@@ -10,7 +10,7 @@ const KEY = "abx.bankgpt.agentbuilder.v2";
 export type KbDoc = {
   id: string;
   name: string;          // filename or URL
-  type: "pdf" | "docx" | "txt" | "url";
+  type: "pdf" | "docx" | "txt" | "md" | "url";
   size: string;
   status: "pending" | "checking" | "indexing" | "indexed" | "error";
   chunks?: number;
