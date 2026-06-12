@@ -246,11 +246,42 @@ Deno.serve(async (req) => {
 
     const enabledDocs = (kb?.docs ?? []).filter((d) => d.enabled && d.status === "indexed");
 
-    // Fetch any URL-backed KB docs in parallel.
+    // 1) Live URL-backed docs — fetched & extracted on each request.
     const urlDocs = enabledDocs.filter(
       (d) => (d.type === "url") || (d.source && /^https?:\/\//i.test(d.source)),
     );
     const liveSources = await buildLiveSources(urlDocs);
+
+    // 2) Uploaded file docs (PDF/DOCX/MD/TXT) — extracted text was stored at
+    //    ingest time in `bankgpt_kb_contents`. Pull those by doc id.
+    const uploadedDocIds = enabledDocs
+      .filter((d) => !urlDocs.includes(d) && (d as any).id)
+      .map((d) => (d as any).id as string);
+    let uploadedSources: { url: string; name: string; text: string }[] = [];
+    if (uploadedDocIds.length) {
+      try {
+        const supaUrl = Deno.env.get("SUPABASE_URL");
+        const supaKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+        if (supaUrl && supaKey) {
+          const supa = createClient(supaUrl, supaKey, { auth: { persistSession: false } });
+          const { data, error } = await supa
+            .from("bankgpt_kb_contents")
+            .select("doc_id, name, content, char_count")
+            .in("doc_id", uploadedDocIds);
+          if (error) {
+            console.warn("kb contents fetch failed", error.message);
+          } else if (data) {
+            uploadedSources = data
+              .filter((r: any) => r.content && r.char_count > 0)
+              .map((r: any) => ({ url: `kb://${r.doc_id}`, name: r.name, text: r.content as string }));
+          }
+        }
+      } catch (e) {
+        console.warn("kb contents fetch error", e instanceof Error ? e.message : e);
+      }
+    }
+
+    const allSources = [...liveSources, ...uploadedSources];
 
     // Prefer the live KB URL's bank name over the platform's current bank config;
     // otherwise a demo created under Awash Bank keeps answering as Awash.
@@ -258,20 +289,24 @@ Deno.serve(async (req) => {
     const bankName = derivedBank || agent.bankName || "the bank";
 
     let totalChars = 0;
-    const groundingBlocks = liveSources.map((s, i) => {
+    const groundingBlocks = allSources.map((s, i) => {
       const remaining = Math.max(0, MAX_TOTAL_CHARS - totalChars);
       const slice = s.text.slice(0, remaining);
       totalChars += slice.length;
-      return `[Source ${i + 1}] ${s.url}\n${slice}`;
+      const label = s.url.startsWith("kb://") ? `Uploaded: ${s.name}` : s.url;
+      return `[Source ${i + 1}] ${label}\n${slice}`;
     }).filter((b) => b.length > 0);
 
-    const otherDocs = enabledDocs.filter((d) => !urlDocs.includes(d));
+    const ungroundedDocs = enabledDocs.filter(
+      (d) => !urlDocs.includes(d) && !uploadedSources.some((u) => u.name === d.name),
+    );
 
-    const kbBlock = (groundingBlocks.length || otherDocs.length)
+    const kbBlock = (groundingBlocks.length || ungroundedDocs.length)
       ? `KNOWLEDGE BASE — authoritative grounding. Answer ONLY using facts found below. If a specific number, fee, product, or policy is not in these sources, say so plainly and offer to escalate. Do NOT invent product names, fees, limits, or competing-bank info.
 
-${groundingBlocks.join("\n\n---\n\n")}${otherDocs.length ? `\n\nAdditional attached docs (names only): ${otherDocs.map((d) => d.name).join(", ")}` : ""}`
+${groundingBlocks.join("\n\n---\n\n")}${ungroundedDocs.length ? `\n\nAdditional attached docs (names only, no text available): ${ungroundedDocs.map((d) => d.name).join(", ")}` : ""}`
       : `KNOWLEDGE BASE: (none successfully fetched — be transparent that you have no bank-specific source and only offer general guidance).`;
+
 
     const toolBlock = tools?.length
       ? `AVAILABLE ACTIONS (simulate — describe what you would do, do NOT actually execute):
@@ -330,8 +365,8 @@ ${tools.map((t) => `  • ${t.label} [policy: ${t.approval}${t.dailyLimit ? `, d
 
     return new Response(JSON.stringify({
       reply,
-      groundedCitations: liveSources.length,
-      groundedSources: liveSources.map((s) => s.url),
+      groundedCitations: allSources.length,
+      groundedSources: allSources.map((s) => s.url),
       derivedBank: derivedBank,
       language,
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });

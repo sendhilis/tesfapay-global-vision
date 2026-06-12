@@ -28,6 +28,8 @@ export type KbDoc = {
   source?: string;       // original URL or file source label
   checksum?: string;     // simulated content hash
   error?: string;        // error reason if status==="error"
+  storagePath?: string;  // path in `bankgpt-kb` storage bucket (uploaded files)
+  charCount?: number;    // extracted plain-text length (uploaded files)
 };
 
 export type ToolId =
