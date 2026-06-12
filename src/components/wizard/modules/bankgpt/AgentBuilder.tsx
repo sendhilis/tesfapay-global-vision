@@ -818,7 +818,7 @@ function StepWidget({ agentMeta, config, update, logAudit }: any) {
     try {
       const payload = {
         agentId: agentMeta.id,
-        bankName: baseAgent?.bankName || agentMeta.bankName || bankCfg.bankName || "",
+        bankName: baseAgent?.bankName || agentMeta.bankName || (bankCfg as any).name || "",
         name: baseAgent?.name || agentMeta.name,
         tagline: baseAgent?.tagline || agentMeta.tagline || "",
         systemPrompt: baseAgent?.systemPrompt || "",
