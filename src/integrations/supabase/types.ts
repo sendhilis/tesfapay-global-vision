@@ -607,6 +607,27 @@ export type Database = {
         }
         Relationships: []
       }
+      bankgpt_agent_drafts: {
+        Row: {
+          agent_id: string
+          config: Json
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          agent_id: string
+          config?: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          agent_id?: string
+          config?: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       bankgpt_agents: {
         Row: {
           agent_id: string
