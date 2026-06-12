@@ -60,6 +60,8 @@
     // Optional override; normally the server-side registry persona is used.
     systemPromptOverride: ds.systemPrompt || "",
     language: (ds.language || "en").toLowerCase() === "am" ? "am" : "en",
+    voice: (ds.voice || "on").toLowerCase() !== "off",
+    autoSpeak: (ds.autospeak || ds.autoSpeak || "on").toLowerCase() !== "off",
     mount: ds.mount || null,
     primary: ds.primary || "#D4AF37", // gold
     accent: ds.accent || "#0B3D2E", // deep green
