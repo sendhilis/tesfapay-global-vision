@@ -792,10 +792,24 @@ function StepWidget({ agentMeta, config, update, logAudit }: any) {
   ];
   const allGo = checks.every((c) => c.ok);
 
-  const snippet = `<script src="https://cdn.globalpay.et/bankgpt.js"
+  const loaderOrigin =
+    (typeof window !== "undefined" && window.location.origin) ||
+    "https://abxwallet.techurate.world";
+  const supaUrl =
+    (import.meta as any).env?.VITE_SUPABASE_URL ||
+    "https://sgjfidsnyxhjxkevjgje.supabase.co";
+  const supaKey = (import.meta as any).env?.VITE_SUPABASE_PUBLISHABLE_KEY || "<anon-key>";
+  const snippet = `<script async src="${loaderOrigin}/embed/bankgpt.js"
   data-agent="${agentMeta.id}"
+  data-tenant="${(agentMeta.bankName || "abx").toLowerCase().replace(/\s+/g, "-")}"
   data-style="${config.widget.style}"
-  data-surfaces="${config.widget.surfaces.join(",")}"></script>`;
+  data-surfaces="${config.widget.surfaces.join(",")}"
+  data-agent-name="${agentMeta.name}"
+  data-bank-name="${agentMeta.bankName || ""}"
+  data-tagline="${(agentMeta.tagline || "").replace(/"/g, "&quot;")}"
+  data-api="${supaUrl}"
+  data-key="${supaKey}"
+  data-language="en"></script>`;
 
   return (
     <Card title="Widget & Deployment" desc="Where customers meet this agent inside the bank host app.">
