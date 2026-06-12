@@ -781,6 +781,11 @@ function StepSandbox({ agentMeta, config, update, logAudit }: any) {
 
 /* ── 7. Widget & Deploy ── */
 function StepWidget({ agentMeta, config, update, logAudit }: any) {
+  const { config: bankCfg } = useWizard();
+  const baseAgent: any = bankCfg.ai?.mesh?.agents?.[agentMeta.id as keyof typeof bankCfg.ai.mesh.agents];
+  const [publishState, setPublishState] = useState<"idle" | "publishing" | "published" | "error">("idle");
+  const [publishedAt, setPublishedAt] = useState<string | null>(null);
+
   const surfaces = ["home", "wallet", "loans", "cards", "investments"];
   const triggers = ["manual", "idle", "low_balance", "post_txn", "salary_credit"];
   const checks = [
@@ -799,17 +804,55 @@ function StepWidget({ agentMeta, config, update, logAudit }: any) {
     (import.meta as any).env?.VITE_SUPABASE_URL ||
     "https://sgjfidsnyxhjxkevjgje.supabase.co";
   const supaKey = (import.meta as any).env?.VITE_SUPABASE_PUBLISHABLE_KEY || "<anon-key>";
+  // Minimal embed snippet — the loader sends only the agent id; the chat
+  // function resolves persona, KB, and tools from public.bankgpt_agents.
   const snippet = `<script async src="${loaderOrigin}/embed/bankgpt.js"
   data-agent="${agentMeta.id}"
-  data-tenant="${(agentMeta.bankName || "abx").toLowerCase().replace(/\s+/g, "-")}"
   data-style="${config.widget.style}"
-  data-surfaces="${config.widget.surfaces.join(",")}"
-  data-agent-name="${agentMeta.name}"
-  data-bank-name="${agentMeta.bankName || ""}"
-  data-tagline="${(agentMeta.tagline || "").replace(/"/g, "&quot;")}"
   data-api="${supaUrl}"
   data-key="${supaKey}"
   data-language="en"></script>`;
+
+  async function publishToRegistry() {
+    setPublishState("publishing");
+    try {
+      const payload = {
+        agentId: agentMeta.id,
+        bankName: baseAgent?.bankName || agentMeta.bankName || bankCfg.bankName || "",
+        name: baseAgent?.name || agentMeta.name,
+        tagline: baseAgent?.tagline || agentMeta.tagline || "",
+        systemPrompt: baseAgent?.systemPrompt || "",
+        tone: baseAgent?.tone || { formal_casual: 50, terse_verbose: 50, reserved_expressive: 50 },
+        usesEmoji: baseAgent?.usesEmoji ?? true,
+        kb: { docs: config.kb.docs, topK: config.kb.topK },
+        tools: Object.entries(config.tools)
+          .filter(([, p]: any) => p.enabled)
+          .map(([id, p]: any) => ({ id, label: id.replace(/_/g, " "), approval: p.approval, dailyLimit: p.dailyLimit })),
+        widget: { style: config.widget.style, surfaces: config.widget.surfaces },
+        guardrails: config.guardrails,
+        published: true,
+      };
+      const res = await fetch(`${supaUrl}/functions/v1/bankgpt-publish-agent`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: supaKey,
+          Authorization: `Bearer ${supaKey}`,
+        },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
+      setPublishState("published");
+      setPublishedAt(data.agent?.published_at || new Date().toISOString());
+      logAudit("agent.published_to_registry", agentMeta.id, { kbDocs: payload.kb.docs.length, tools: payload.tools.length });
+      toast({ title: "Published for embed", description: `${agentMeta.name} is now resolvable by data-agent="${agentMeta.id}".` });
+    } catch (e: any) {
+      console.error("publish failed", e);
+      setPublishState("error");
+      toast({ title: "Publish failed", description: e?.message || "Could not reach the registry.", variant: "destructive" });
+    }
+  }
 
   return (
     <Card title="Widget & Deployment" desc="Where customers meet this agent inside the bank host app.">
