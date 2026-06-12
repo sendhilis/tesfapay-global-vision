@@ -209,10 +209,63 @@ function hydrate(c: Partial<AgentBuilderConfig> | undefined): AgentBuilderConfig
   };
 }
 
+/* ─── Cloud persistence helpers (debounced upserts via edge function) ─── */
+
+const SAVE_DEBOUNCE_MS = 800;
+const hydratedFromCloud = new Set<string>();
+const saveTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
+async function loadFromCloud(agentId: string): Promise<AgentBuilderConfig | null> {
+  try {
+    const { data, error } = await supabase.functions.invoke("bankgpt-agent-config", {
+      body: { op: "load", agentId },
+    });
+    if (error) { console.warn("[agent-config] load failed", error); return null; }
+    if (!data?.config) return null;
+    return hydrate(data.config as Partial<AgentBuilderConfig>);
+  } catch (e) {
+    console.warn("[agent-config] load error", e);
+    return null;
+  }
+}
+
+function scheduleCloudSave(agentId: string, config: AgentBuilderConfig) {
+  const existing = saveTimers.get(agentId);
+  if (existing) clearTimeout(existing);
+  const t = setTimeout(async () => {
+    saveTimers.delete(agentId);
+    try {
+      await supabase.functions.invoke("bankgpt-agent-config", {
+        body: { op: "save", agentId, config },
+      });
+    } catch (e) {
+      console.warn("[agent-config] save failed", e);
+    }
+  }, SAVE_DEBOUNCE_MS);
+  saveTimers.set(agentId, t);
+}
+
 export function useAgentBuilder(agentId: string) {
   const [store, setStore] = useState<Store>(() => read());
+  const [cloudLoaded, setCloudLoaded] = useState<boolean>(hydratedFromCloud.has(agentId));
 
   useEffect(() => { write(store); }, [store]);
+
+  // One-time hydrate from backend per agentId per session.
+  useEffect(() => {
+    if (hydratedFromCloud.has(agentId)) { setCloudLoaded(true); return; }
+    let cancelled = false;
+    (async () => {
+      const remote = await loadFromCloud(agentId);
+      if (cancelled) return;
+      hydratedFromCloud.add(agentId);
+      if (remote) {
+        setStore((s) => ({ ...s, configs: { ...s.configs, [agentId]: remote } }));
+      }
+      setCloudLoaded(true);
+    })();
+    return () => { cancelled = true; };
+  }, [agentId]);
 
   const config = hydrate(store.configs[agentId]);
 
@@ -220,6 +273,8 @@ export function useAgentBuilder(agentId: string) {
     setStore((s) => {
       const current = hydrate(s.configs[agentId]);
       const next = typeof patch === "function" ? patch(current) : { ...current, ...patch };
+      // Only sync to cloud after initial hydrate to avoid clobbering remote with stale local.
+      if (hydratedFromCloud.has(agentId)) scheduleCloudSave(agentId, next);
       return { ...s, configs: { ...s.configs, [agentId]: next } };
     });
   }, [agentId]);
@@ -234,12 +289,14 @@ export function useAgentBuilder(agentId: string) {
         action, target, details,
       };
       const next: AgentBuilderConfig = { ...current, audit: [entry, ...current.audit].slice(0, 200) };
+      if (hydratedFromCloud.has(agentId)) scheduleCloudSave(agentId, next);
       return { ...s, configs: { ...s.configs, [agentId]: next } };
     });
   }, [agentId]);
 
-  return { config, update, logAudit };
+  return { config, update, logAudit, cloudLoaded };
 }
+
 
 export function useCustomAgents() {
   const [store, setStore] = useState<Store>(() => read());
