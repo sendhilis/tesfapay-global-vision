@@ -210,11 +210,36 @@ Deno.serve(async (req) => {
     }
 
     const body = (await req.json()) as Body;
-    const { agent, kb, tools, messages } = body;
     const language = body.language ?? "en";
+    const messages = body.messages;
 
-    if (!agent?.name || !messages?.length) {
-      return new Response(JSON.stringify({ error: "Missing agent or messages" }), {
+    if (!messages?.length) {
+      return new Response(JSON.stringify({ error: "Missing messages" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Resolve agent/kb/tools — inline body wins; otherwise look up by agentId.
+    let agent = body.agent;
+    let kb = body.kb;
+    let tools = body.tools;
+
+    if ((!agent || !agent.name) && body.agentId) {
+      const resolved = await loadPublishedAgent(body.agentId);
+      if (!resolved) {
+        return new Response(JSON.stringify({
+          error: `Agent "${body.agentId}" is not published. Open the Agent Builder → Widget step and click "Publish for embed".`,
+        }), {
+          status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      agent = resolved.agent;
+      kb = kb ?? resolved.kb;
+      tools = tools ?? resolved.tools;
+    }
+
+    if (!agent?.name) {
+      return new Response(JSON.stringify({ error: "Missing agent (pass `agent` inline or `agentId`)" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
