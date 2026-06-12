@@ -155,7 +155,7 @@
 "@keyframes bgpt-pulse{0%,100%{opacity:1}50%{opacity:.55}}\n" +
 ".bgpt-hdrbtn{background:rgba(255,255,255,.15);color:#fff;border:0;border-radius:6px;padding:3px 8px;cursor:pointer;font-size:11px;font-weight:600;margin-left:6px}\n" +
 ".bgpt-hdrbtn:hover{background:rgba(255,255,255,.25)}\n" +
-".bgpt-hdrbtn.bgpt-active{background:var(--bgpt-primary);color:var(--bgpt-accent)}\n"
+".bgpt-hdrbtn.bgpt-active{background:var(--bgpt-primary);color:var(--bgpt-accent)}\n" +
 ".bgpt-input textarea:focus{border-color:var(--bgpt-accent)}\n" +
 ".bgpt-send{background:var(--bgpt-accent);color:#fff;border:0;border-radius:10px;padding:0 14px;cursor:pointer;font-weight:600;font-size:13px}\n" +
 ".bgpt-send:disabled{opacity:.5;cursor:not-allowed}\n" +
