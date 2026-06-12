@@ -679,6 +679,42 @@ export type Database = {
         }
         Relationships: []
       }
+      bankgpt_kb_contents: {
+        Row: {
+          agent_id: string
+          char_count: number
+          content: string
+          created_at: string
+          doc_id: string
+          mime_type: string | null
+          name: string
+          storage_path: string | null
+          updated_at: string
+        }
+        Insert: {
+          agent_id: string
+          char_count?: number
+          content?: string
+          created_at?: string
+          doc_id: string
+          mime_type?: string | null
+          name: string
+          storage_path?: string | null
+          updated_at?: string
+        }
+        Update: {
+          agent_id?: string
+          char_count?: number
+          content?: string
+          created_at?: string
+          doc_id?: string
+          mime_type?: string | null
+          name?: string
+          storage_path?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       bdp_dim_customers: {
         Row: {
           account_open_date: string | null
