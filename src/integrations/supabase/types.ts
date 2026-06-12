@@ -607,6 +607,57 @@ export type Database = {
         }
         Relationships: []
       }
+      bankgpt_agents: {
+        Row: {
+          agent_id: string
+          bank_name: string | null
+          guardrails: Json
+          kb: Json
+          name: string
+          published: boolean
+          published_at: string
+          system_prompt: string
+          tagline: string | null
+          tone: Json
+          tools: Json
+          updated_at: string
+          uses_emoji: boolean
+          widget: Json
+        }
+        Insert: {
+          agent_id: string
+          bank_name?: string | null
+          guardrails?: Json
+          kb?: Json
+          name: string
+          published?: boolean
+          published_at?: string
+          system_prompt?: string
+          tagline?: string | null
+          tone?: Json
+          tools?: Json
+          updated_at?: string
+          uses_emoji?: boolean
+          widget?: Json
+        }
+        Update: {
+          agent_id?: string
+          bank_name?: string | null
+          guardrails?: Json
+          kb?: Json
+          name?: string
+          published?: boolean
+          published_at?: string
+          system_prompt?: string
+          tagline?: string | null
+          tone?: Json
+          tools?: Json
+          updated_at?: string
+          uses_emoji?: boolean
+          widget?: Json
+        }
+        Relationships: []
+      }
       bdp_dim_customers: {
         Row: {
           account_open_date: string | null
