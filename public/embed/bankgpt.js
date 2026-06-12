@@ -469,7 +469,12 @@
     ]);
     this.bodyEl.appendChild(node);
     this.bodyEl.scrollTop = this.bodyEl.scrollHeight;
-    if (!skipHistory) this.messages.push({ role: "assistant", content: text });
+    if (!skipHistory) {
+      this.messages.push({ role: "assistant", content: text });
+      if (this.cfg.voice && this.cfg.autoSpeak && text && text.indexOf("⚠️") !== 0) {
+        try { this.speak(text); } catch (_) {}
+      }
+    }
   };
 
   Widget.prototype.pushTyping = function () {
