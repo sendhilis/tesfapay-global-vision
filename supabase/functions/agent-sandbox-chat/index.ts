@@ -313,18 +313,33 @@ ${groundingBlocks.join("\n\n---\n\n")}${ungroundedDocs.length ? `\n\nAdditional 
 ${tools.map((t) => `  • ${t.label} [policy: ${t.approval}${t.dailyLimit ? `, daily limit ETB ${t.dailyLimit}` : ""}]`).join("\n")}`
       : "";
 
+    // Built-in wallet capabilities every bank-app agent must always be able to
+    // walk the user through, even when the KB has no specific document for them.
+    // These match the Wallet module surfaces (SendMoney, PayBills, AirtimeTopup,
+    // MerchantPay, CashInOut, SavingsGoals, MicroLoan, RequestMoney, etc.).
+    const standardServicesBlock = `STANDARD WALLET SERVICES (always supported — never refuse these for "lack of KB"):
+  • Pay bills — DSTV / Canal+ / GoTV subscriptions, electricity (EEU), water, internet, school fees, government services. Ask for biller, account/smartcard number, and amount; then simulate confirming the payment.
+  • Buy airtime / data top-up — Ethio Telecom, Safaricom Ethiopia. Ask for mobile number, operator and amount.
+  • Send money — to another wallet user (MSISDN), to a bank account, or to an agent for cash-out. Ask for recipient, amount and a short note.
+  • Request money — generate a payment request the other party can approve.
+  • Merchant pay — scan/enter merchant code (QR / till) and amount.
+  • Cash-in / cash-out at an agent — explain the nearest-agent flow, fee tier and daily limit.
+  • Check balance & recent transactions, manage savings goals, micro-loans, beneficiaries.
+For any of these, walk the user through the steps inside this wallet app, ask only for the fields you actually need, confirm before "submitting", and reply with a short success summary (e.g. "Done — ETB 450 sent to DSTV smartcard 1234567890. Ref TXN-XXXX.").`;
+
     const langLine = language === "am"
-      ? `CRITICAL: Reply ONLY in Amharic (አማርኛ). Keep numbers, currency codes (ETB) and product/brand names (VISA, Mastercard) in Latin script. This is a spoken demo — keep replies under 3 short sentences.`
+      ? `CRITICAL: Reply ONLY in Amharic (አማርኛ). Keep numbers, currency codes (ETB) and product/brand names (VISA, Mastercard, DSTV) in Latin script. This is a spoken demo — keep replies under 3 short sentences.`
       : `Reply in clear, natural, conversational English. This is a spoken demo — keep replies under 3 short sentences.`;
 
     const system = [
       `You are ${agent.name}, an AI specialist agent for ${bankName}.`,
       `Role: ${agent.tagline}`,
       agent.systemPrompt,
-      `You must ground every factual claim in the KNOWLEDGE BASE below (the bank's own published content from ${bankName}). Never name or quote any other bank, even if the platform profile or previous session used another bank name. If the user asks about a product or fee that is not in the KB, reply that you don't have that specific information for ${bankName} and offer to connect them with a human agent.`,
-      `For task requests like apply for card, block card, dispute, replacement or limit change: use AVAILABLE ACTIONS as simulated backend tasks, ask for confirmation when policy says confirm, and never claim a task completed unless it is safe to simulate.`,
+      `Grounding rule: for bank-specific PRODUCT details (fees, interest rates, account-opening requirements, eligibility, branch info) you MUST cite the KNOWLEDGE BASE below; if the answer isn't there, say you don't have that specific info for ${bankName} and offer a human handoff. This rule does NOT apply to STANDARD WALLET SERVICES — those operational flows are always supported by the app itself and you should help the user complete them. Never name or quote a competing bank.`,
+      `For task requests like apply for card, block card, dispute, replacement, limit change, pay bill, buy airtime, send money: walk through the flow as a simulated action, ask for confirmation when policy says confirm, and never claim a task completed unless it is safe to simulate.`,
       describeTone(agent.tone, agent.usesEmoji),
       langLine,
+      standardServicesBlock,
       kbBlock,
       toolBlock,
       `Be concrete, warm, helpful. Never say "as an AI". Never mention OpenAI, Google or Gemini. Never output JSON or code fences.`,
