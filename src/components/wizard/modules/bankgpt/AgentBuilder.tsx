@@ -363,6 +363,7 @@ function inferType(name: string): KbDoc["type"] {
   const n = name.toLowerCase();
   if (n.endsWith(".pdf")) return "pdf";
   if (n.endsWith(".docx") || n.endsWith(".doc")) return "docx";
+  if (n.endsWith(".md") || n.endsWith(".markdown") || n.endsWith(".mdx")) return "md";
   return "txt";
 }
 function fakeChecksum(s: string): string {
