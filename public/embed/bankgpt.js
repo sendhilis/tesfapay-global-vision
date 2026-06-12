@@ -370,6 +370,33 @@
     });
   };
 
+  // Unlock audio playback inside the user-gesture (required by Safari / mobile
+  // browsers when the host page is cross-origin). Call from click handlers.
+  Widget.prototype.unlockAudio = function () {
+    if (this.audioEl && this.audioUnlocked) return;
+    try {
+      if (!this.audioEl) {
+        var a = document.createElement("audio");
+        a.setAttribute("playsinline", "");
+        a.setAttribute("webkit-playsinline", "");
+        a.preload = "auto";
+        a.crossOrigin = "anonymous";
+        this.audioEl = a;
+      }
+      // 1-frame silent mp3 to satisfy the autoplay gesture requirement.
+      var silent = "data:audio/mpeg;base64,/+MYxAAAAANIAAAAAExBTUUzLjk4LjIAAAAAAAAAAAAAACQCQAAAAAAAAAAUgJAUHQQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+      this.audioEl.src = silent;
+      var p = this.audioEl.play();
+      var self = this;
+      if (p && p.then) {
+        p.then(function () { self.audioUnlocked = true; })
+         .catch(function () { /* will retry next gesture */ });
+      } else {
+        this.audioUnlocked = true;
+      }
+    } catch (_) {}
+  };
+
   Widget.prototype.speak = function (text) {
     var self = this;
     if (!text) return;
@@ -384,23 +411,44 @@
       body: JSON.stringify({ text: text, lang: this.cfg.language }),
     }).then(function (r) {
       var ctype = r.headers.get("Content-Type") || "";
-      if (!r.ok || ctype.indexOf("audio") !== 0) return null;
+      if (!r.ok || ctype.indexOf("audio") !== 0) {
+        console.warn("[BankGPT] tts non-audio response", r.status, ctype);
+        return null;
+      }
       return r.arrayBuffer();
     }).then(function (buf) {
       if (!buf) return;
       var blob = new Blob([buf], { type: "audio/mpeg" });
       var url = URL.createObjectURL(blob);
-      var audio = new Audio(url);
-      self.currentAudio = audio;
-      audio.onended = function () { URL.revokeObjectURL(url); };
-      audio.play().catch(function (e) { console.warn("[BankGPT] audio play failed", e); });
+      // Reuse the gesture-unlocked element so Safari / Chrome don't block
+      // playback when the request resolves outside the original click.
+      if (!self.audioEl) {
+        self.audioEl = document.createElement("audio");
+        self.audioEl.setAttribute("playsinline", "");
+        self.audioEl.preload = "auto";
+      }
+      var audio = self.audioEl;
+      if (self.currentUrl) { try { URL.revokeObjectURL(self.currentUrl); } catch (_) {} }
+      self.currentUrl = url;
+      audio.src = url;
+      audio.onended = function () {
+        try { URL.revokeObjectURL(url); } catch (_) {}
+        if (self.currentUrl === url) self.currentUrl = null;
+      };
+      var p = audio.play();
+      if (p && p.catch) p.catch(function (e) {
+        console.warn("[BankGPT] audio play blocked — tap the speaker icon once to enable voice", e);
+      });
     }).catch(function (e) { console.warn("[BankGPT] tts failed", e); });
   };
 
   Widget.prototype.stopAudio = function () {
-    if (this.currentAudio) {
-      try { this.currentAudio.pause(); } catch (_) {}
-      this.currentAudio = null;
+    if (this.audioEl) {
+      try { this.audioEl.pause(); } catch (_) {}
+    }
+    if (this.currentUrl) {
+      try { URL.revokeObjectURL(this.currentUrl); } catch (_) {}
+      this.currentUrl = null;
     }
   };
 
