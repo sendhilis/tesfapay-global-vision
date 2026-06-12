@@ -57,9 +57,8 @@
     bankName: ds.bankName || "Bank",
     agentName: ds.agentName || "BankGPT Assistant",
     tagline: ds.tagline || "How can I help you today?",
-    systemPrompt:
-      ds.systemPrompt ||
-      "You are a friendly, accurate banking assistant. Be concise, never invent product details, and never reveal sensitive account numbers in full.",
+    // Optional override; normally the server-side registry persona is used.
+    systemPromptOverride: ds.systemPrompt || "",
     language: (ds.language || "en").toLowerCase() === "am" ? "am" : "en",
     mount: ds.mount || null,
     primary: ds.primary || "#D4AF37", // gold
