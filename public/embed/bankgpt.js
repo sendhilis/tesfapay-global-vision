@@ -576,6 +576,9 @@
 
   Widget.prototype.toggle = function (force) {
     if (!this.panel) return;
+    // Any open/close click is a user gesture — use it to unlock audio
+    // playback for cross-origin embedded contexts (Safari, mobile Chrome).
+    try { this.unlockAudio(); } catch (_) {}
     if (this.cfg.style === "bubble") {
       var willOpen = typeof force === "boolean" ? force : this.panel.classList.contains("bgpt-hidden");
       if (willOpen && this.repositionPanel) this.repositionPanel();
