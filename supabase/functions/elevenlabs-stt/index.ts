@@ -24,8 +24,25 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Re-materialize the blob so the upstream multipart carries the right
+    // Content-Type + filename. Some browsers (and Deno's formData parsing)
+    // drop the MIME, which makes ElevenLabs reject it as "invalid_audio".
+    const incomingType = (file as File).type || "audio/webm";
+    const buf = await (file as Blob).arrayBuffer();
+    if (buf.byteLength < 1024) {
+      return new Response(JSON.stringify({ error: "audio too short", fallback: true }), {
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const ext = incomingType.includes("mp4") ? "mp4"
+      : incomingType.includes("ogg") ? "ogg"
+      : incomingType.includes("wav") ? "wav"
+      : incomingType.includes("mpeg") ? "mp3"
+      : "webm";
+    const audioBlob = new Blob([buf], { type: incomingType });
+
     const apiForm = new FormData();
-    apiForm.append("file", file, "clip.webm");
+    apiForm.append("file", audioBlob, `clip.${ext}`);
     apiForm.append("model_id", "scribe_v2");
     apiForm.append("language_code", language);
     apiForm.append("tag_audio_events", "false");
@@ -40,8 +57,13 @@ Deno.serve(async (req) => {
     if (!res.ok) {
       const errText = await res.text();
       console.error("ElevenLabs STT error", res.status, errText);
-      return new Response(JSON.stringify({ error: "STT failed", status: res.status, details: errText }), {
-        status: res.status, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      const isInvalidAudio = errText.includes("invalid_audio") || errText.includes("invalid_content");
+      const fallback = res.status >= 500 || isInvalidAudio;
+      return new Response(JSON.stringify({
+        error: "STT failed", status: res.status, details: errText, fallback, text: "",
+      }), {
+        status: fallback ? 200 : res.status,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
