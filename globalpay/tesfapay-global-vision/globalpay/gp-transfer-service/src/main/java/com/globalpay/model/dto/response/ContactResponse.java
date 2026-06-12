@@ -12,5 +12,5 @@ public class ContactResponse {
     private String  phone;
     private String  avatarInitials;
     private boolean isFavorite;
-    private boolean isGlobalPayUser;
+    private boolean isABXUser;
 }

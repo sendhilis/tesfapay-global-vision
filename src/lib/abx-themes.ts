@@ -4,7 +4,7 @@
  * within the safe envelope (accent shift, name, logo, products, AI tone).
  *
  * Each theme is a complete snapshot of brand + ux tokens that drives the
- * full GlobalPay wallet repaint.
+ * full ABX wallet repaint.
  */
 
 export type ThemeId = "emerald" | "indigo" | "onyx" | "coral";

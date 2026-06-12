@@ -1,5 +1,5 @@
 -- V1__create_auth_tables.sql
--- GlobalPay Auth Service Schema
+-- ABX Auth Service Schema
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 

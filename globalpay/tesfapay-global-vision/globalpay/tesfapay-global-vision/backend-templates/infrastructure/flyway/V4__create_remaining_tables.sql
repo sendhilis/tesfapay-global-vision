@@ -1,4 +1,4 @@
--- GlobalPay Flyway Migration V4 — Agents, Merchants, Savings, Loans, Loyalty
+-- ABX Flyway Migration V4 — Agents, Merchants, Savings, Loans, Loyalty
 -- Maps to: DATABASE_SCHEMA.md §6, §7, §8
 
 -- ========== Agents ==========

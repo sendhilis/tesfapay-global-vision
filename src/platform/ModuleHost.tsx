@@ -22,6 +22,8 @@ import { Lock, Sparkles } from "lucide-react";
 import { getModule, type AbxModule } from "./ModuleRegistry";
 import { useBankConfig } from "@/contexts/BankConfigContext";
 import { BankGPTView } from "@/components/wizard/modules/BankGPTView";
+import { EmbedFrame } from "@/platform/EmbedFrame";
+import { resolveIframeUrl } from "@/lib/integrationUrls";
 import type { NisirPortal } from "@/platform/NisirPortalMount";
 
 const NISIR_PORTAL_MAP: Record<string, NisirPortal> = {
@@ -51,22 +53,10 @@ export function ModuleHost({ moduleId, className }: Props) {
   // own origin (e.g. ABX Core Mobile Banking). When `iframeUrl` is set on the
   // module registry entry, it takes precedence over the bundled Nisir portal.
   if (mod.iframeUrl) {
-    return (
-      <iframe
-        title={mod.name}
-        src={mod.iframeUrl}
-        // sandbox keeps the embedded app isolated; allow-same-origin is needed
-        // for cookie-based session/SSO with the Techurate backend.
-        sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-downloads allow-modals"
-        allow="clipboard-read; clipboard-write; camera; microphone; geolocation"
-        referrerPolicy="strict-origin-when-cross-origin"
-        className={
-          "w-full rounded-2xl border border-border bg-card " + (className ?? "")
-        }
-        style={{ height: "calc(100vh - 180px)", minHeight: 640 }}
-      />
-    );
+    const url = resolveIframeUrl(mod.id, mod.iframeUrl);
+    return <EmbedFrame url={url} title={mod.name} className={className} />;
   }
+
 
   // Nisir Digital portals — sandboxed in an iframe so their MemoryRouter
   // doesn't nest inside the ABX BrowserRouter (forbidden in React Router v6).

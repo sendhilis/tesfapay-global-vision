@@ -51,12 +51,20 @@ export default function Launchpad({ skipAutoRedirect = false }: { skipAutoRedire
             </h1>
             <p className="text-sm text-muted-foreground">{cfg.bank.tagline}</p>
           </div>
-          <button
-            onClick={() => navigate("/setup")}
-            className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-xs text-muted-foreground hover:text-foreground"
-          >
-            <Settings2 className="h-3.5 w-3.5" /> Reconfigure
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => navigate("/console/integrations")}
+              className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-xs text-muted-foreground hover:text-foreground"
+            >
+              <Settings2 className="h-3.5 w-3.5" /> Integration URLs
+            </button>
+            <button
+              onClick={() => navigate("/setup")}
+              className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-xs text-muted-foreground hover:text-foreground"
+            >
+              <Settings2 className="h-3.5 w-3.5" /> Reconfigure
+            </button>
+          </div>
         </div>
       </header>
 

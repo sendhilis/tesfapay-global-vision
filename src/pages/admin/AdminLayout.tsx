@@ -50,10 +50,10 @@ const AdminLayout = () => {
       <aside className={`${sidebarOpen ? "w-60" : "w-16"} flex-shrink-0 glass border-r border-border flex flex-col transition-all duration-300 z-40 relative`}>
         {/* Logo */}
         <div className="p-4 border-b border-border flex items-center gap-3 overflow-hidden">
-          <img src={tesfaLogo} alt="GlobalPay" className="w-8 h-8 rounded-lg flex-shrink-0" />
+          <img src={tesfaLogo} alt="ABX" className="w-8 h-8 rounded-lg flex-shrink-0" />
           {sidebarOpen && (
             <div>
-              <p className="font-display font-bold text-sm text-gold">GlobalPay</p>
+              <p className="font-display font-bold text-sm text-gold">ABX</p>
               <p className="text-[10px] text-muted-foreground">Admin Console</p>
             </div>
           )}
@@ -105,7 +105,7 @@ const AdminLayout = () => {
         <header className="h-14 glass border-b border-border flex items-center justify-between px-6 flex-shrink-0">
           <div className="flex items-center gap-3">
             <div>
-              <p className="text-sm font-bold text-foreground">Global Bank Ethiopia — GlobalPay Admin</p>
+              <p className="text-sm font-bold text-foreground">Global Bank Ethiopia — ABX Admin</p>
               <p className="text-xs text-muted-foreground">Operations Dashboard · {new Date().toLocaleDateString("en-ET", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</p>
             </div>
           </div>

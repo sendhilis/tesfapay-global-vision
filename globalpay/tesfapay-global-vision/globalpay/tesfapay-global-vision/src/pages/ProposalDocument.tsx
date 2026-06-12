@@ -27,7 +27,7 @@ const ProposalDocument = () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "GlobalPay_Functional_Product_Document_v4.txt";
+    a.download = "ABX_Functional_Product_Document_v4.txt";
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -62,11 +62,11 @@ const ProposalDocument = () => {
         {/* Cover */}
         <div className="text-center space-y-4 pb-8 border-b border-border">
           <div className="flex justify-center">
-            <img src={tesfaLogo} alt="GlobalPay" className="w-16 h-16 rounded-2xl" />
+            <img src={tesfaLogo} alt="ABX" className="w-16 h-16 rounded-2xl" />
           </div>
           <p className="text-xs text-muted-foreground tracking-[0.3em] uppercase">Confidential</p>
           <h1 className="font-display text-3xl md:text-4xl font-bold bg-gradient-gold bg-clip-text text-transparent">
-            GlobalPay Mobile Money Platform
+            ABX Mobile Money Platform
           </h1>
           <h2 className="text-lg text-muted-foreground font-medium">
             Comprehensive Functional Product Document
@@ -127,10 +127,10 @@ const ProposalDocument = () => {
         ════════════════════════════════════════════════════════════════ */}
         <Section title="1. EXECUTIVE SUMMARY">
           <P>
-            GlobalPay is a next-generation mobile money platform designed and purpose-built for Global Bank Ethiopia S.C. to deliver inclusive financial services to Ethiopia's 120M+ population. The platform enables real-time peer-to-peer transfers, bill payments, merchant QR payments, agent-assisted cash-in/cash-out, micro-lending, savings products, and loyalty programs — all unified under a single, NBE-compliant digital wallet infrastructure.
+            ABX is a next-generation mobile money platform designed and purpose-built for Global Bank Ethiopia S.C. to deliver inclusive financial services to Ethiopia's 120M+ population. The platform enables real-time peer-to-peer transfers, bill payments, merchant QR payments, agent-assisted cash-in/cash-out, micro-lending, savings products, and loyalty programs — all unified under a single, NBE-compliant digital wallet infrastructure.
           </P>
           <P>
-            This document provides an exhaustive, micro-granular breakdown of every functional module, every sub-module, every workflow, every AI-powered capability, and every admin console function within the GlobalPay ecosystem. It is intended to serve as the authoritative reference for Management review, regulatory submission to the National Bank of Ethiopia (NBE), and technical due diligence by the Bank's IT Governance Committee.
+            This document provides an exhaustive, micro-granular breakdown of every functional module, every sub-module, every workflow, every AI-powered capability, and every admin console function within the ABX ecosystem. It is intended to serve as the authoritative reference for Management review, regulatory submission to the National Bank of Ethiopia (NBE), and technical due diligence by the Bank's IT Governance Committee.
           </P>
           <P>
             Key value propositions: (1) Full NBE Directive compliance for mobile money operations; (2) Agent banking network supporting 50,000+ agents nationwide; (3) AI-powered fraud detection, customer insights, and operational intelligence via Global AI; (4) Sub-second transaction processing with 99.95% uptime SLA; (5) Progressive Web App (PWA) with offline-first capabilities for low-bandwidth environments; (6) Comprehensive admin console with real-time monitoring, KYC queue, agent management, and regulatory reporting.
@@ -209,7 +209,7 @@ const ProposalDocument = () => {
             </SubSection>
             <SubSection title="3.1.2 Peer-to-Peer (P2P) Transfers">
               <BulletList items={[
-                "FUNC-CW-020: Instant P2P transfer to any GlobalPay wallet via mobile number",
+                "FUNC-CW-020: Instant P2P transfer to any ABX wallet via mobile number",
                 "FUNC-CW-021: Transfer to non-registered users with SMS notification and 72-hour claim window",
                 "FUNC-CW-022: Scheduled/recurring transfers with configurable frequency (daily, weekly, monthly)",
                 "FUNC-CW-023: Transfer with purpose/note attachment (max 140 characters)",
@@ -731,7 +731,7 @@ const ProposalDocument = () => {
             4. DETAILED WORKFLOW SPECIFICATIONS
         ════════════════════════════════════════════════════════════════ */}
         <Section title="4. DETAILED WORKFLOW SPECIFICATIONS">
-          <P>This section describes end-to-end process flows for every major operation in the GlobalPay platform.</P>
+          <P>This section describes end-to-end process flows for every major operation in the ABX platform.</P>
 
           <SubSection title="4.1 Customer Registration Workflow">
             <WorkflowSteps steps={[
@@ -979,7 +979,7 @@ const ProposalDocument = () => {
         ════════════════════════════════════════════════════════════════ */}
         <Section title="5. GLOBAL AI COPILOT — COMPREHENSIVE SPECIFICATIONS">
           <SubSection title="5.1 Overview">
-            <P>Global AI is an intelligent conversational assistant embedded across all GlobalPay touchpoints — customer wallet, agent portal, merchant dashboard, and admin console. It combines large language model (LLM) capabilities with domain-specific financial services knowledge to provide contextual, actionable, and compliant assistance.</P>
+            <P>Global AI is an intelligent conversational assistant embedded across all ABX touchpoints — customer wallet, agent portal, merchant dashboard, and admin console. It combines large language model (LLM) capabilities with domain-specific financial services knowledge to provide contextual, actionable, and compliant assistance.</P>
           </SubSection>
 
           <SubSection title="5.2 Customer-Facing AI Features">
@@ -1232,7 +1232,7 @@ const ProposalDocument = () => {
         ════════════════════════════════════════════════════════════════ */}
         <Section title="7. TECHNICAL ARCHITECTURE & SPECIFICATIONS">
           <SubSection title="7.1 Architecture Overview">
-            <P>GlobalPay employs a modern, cloud-native, microservices-based architecture optimized for the Ethiopian operating environment. The system is designed for horizontal scalability, fault tolerance, and operation in low-bandwidth conditions.</P>
+            <P>ABX employs a modern, cloud-native, microservices-based architecture optimized for the Ethiopian operating environment. The system is designed for horizontal scalability, fault tolerance, and operation in low-bandwidth conditions.</P>
             <div className="glass rounded-xl p-4 my-4 font-mono text-xs leading-relaxed text-muted-foreground">
               <pre>{`
 ┌─────────────────────────────────────────────────────────┐

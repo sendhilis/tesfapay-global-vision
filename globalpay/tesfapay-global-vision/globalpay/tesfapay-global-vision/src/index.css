@@ -2,14 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
-/* GlobalPay Design System — Global Bank Ethiopia */
+/* ABX Design System — Global Bank Ethiopia */
 /* Ethiopian-inspired glassmorphic fintech aesthetic */
 
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Sora:wght@400;600;700;800&display=swap');
 
 @layer base {
   :root {
-    /* ── GlobalPay Core Palette ── */
+    /* ── ABX Core Palette ── */
     --tesfa-green:          168 70% 22%;   /* Deep Ethiopian forest green */
     --tesfa-green-mid:      162 55% 32%;
     --tesfa-green-light:    158 46% 48%;

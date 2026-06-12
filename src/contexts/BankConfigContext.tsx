@@ -296,8 +296,8 @@ export const defaultBankConfig: BankConfig = {
   enabledModules: ["wallet", "mobile-banking", "aml-compliance"],
   moduleSettings: defaultModuleSettingsMap(),
   bank: {
-    name: "GlobalPay Bank",
-    shortName: "GlobalPay",
+    name: "ABX Bank",
+    shortName: "ABX",
     tagline: "Your Trust. Your Wallet.",
     country: "ET",
     currency: "ETB",
@@ -515,7 +515,7 @@ function applyBrandTokens(cfg: BankConfig) {
   root.style.setProperty("--ring", primaryHsl);
   root.style.setProperty("--radius", `${theme.tokens.radiusPx}px`);
 
-  // ── Legacy GlobalPay wallet tokens (drive .text-gold, gradient utilities) ──
+  // ── Legacy ABX wallet tokens (drive .text-gold, gradient utilities) ──
   root.style.setProperty("--tesfa-gold", primaryHsl);
   root.style.setProperty("--tesfa-gold-light", primaryHsl);
   root.style.setProperty("--tesfa-green", secondaryHsl);
@@ -622,7 +622,27 @@ export function WizardProvider({ children }: { children: ReactNode }) {
           .maybeSingle();
         if (cancelled) return;
         if (!error && data?.config) {
-          setConfig({ ...defaultBankConfig, ...(data.config as Partial<BankConfig>) });
+          const remote = data.config as Partial<BankConfig>;
+          // Merge in any unsaved local changes so wizard toggles that
+          // failed to reach the DB (e.g. RLS-blocked saves) survive a
+          // reload. We take the UNION of enabledModules.
+          let localUnsaved: Partial<BankConfig> | null = null;
+          try {
+            const raw = typeof window !== "undefined" ? window.localStorage.getItem(STORAGE_KEY) : null;
+            if (raw) {
+              const parsed = JSON.parse(raw);
+              if (parsed?.config) localUnsaved = parsed.config as Partial<BankConfig>;
+            }
+          } catch { /* ignore */ }
+          const mergedEnabled = Array.from(new Set([
+            ...((remote.enabledModules as string[] | undefined) ?? []),
+            ...((localUnsaved?.enabledModules as string[] | undefined) ?? []),
+          ]));
+          setConfig({
+            ...defaultBankConfig,
+            ...remote,
+            ...(mergedEnabled.length ? { enabledModules: mergedEnabled } : {}),
+          });
           setPublished(!!data.is_published);
           setLastSyncedAt(new Date(data.updated_at).getTime());
         } else {

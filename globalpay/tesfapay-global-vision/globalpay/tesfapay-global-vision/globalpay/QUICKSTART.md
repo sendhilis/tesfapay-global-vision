@@ -1,9 +1,9 @@
-# GlobalPay Backend — Quick Start
+# ABX Backend — Quick Start
 
 ## Run in 3 commands
 
 ```bash
-cd globalpay
+cd abx
 cp .env.example .env
 docker-compose up --build
 ```

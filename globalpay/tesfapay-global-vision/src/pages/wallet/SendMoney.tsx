@@ -221,7 +221,7 @@ const SendMoney = () => {
 
           <div className="glass-gold rounded-2xl p-3 mb-4">
             <p className="text-xs text-muted-foreground">
-              🔒 This transaction is protected by 256-bit encryption and GlobalPay fraud monitoring.
+              🔒 This transaction is protected by 256-bit encryption and ABX fraud monitoring.
             </p>
           </div>
 

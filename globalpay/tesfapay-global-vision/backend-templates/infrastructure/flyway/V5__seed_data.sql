@@ -1,4 +1,4 @@
--- GlobalPay Flyway Migration V5 — Seed Data
+-- ABX Flyway Migration V5 — Seed Data
 -- Maps to: DATABASE_SCHEMA.md §13 (Seed Data)
 
 -- Billers

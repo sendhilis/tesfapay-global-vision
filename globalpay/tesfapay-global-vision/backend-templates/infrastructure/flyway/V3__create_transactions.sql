@@ -1,4 +1,4 @@
--- GlobalPay Flyway Migration V3 — Transactions
+-- ABX Flyway Migration V3 — Transactions
 -- Service: transfer-service
 -- Database: globalpay_transfer
 -- Maps to: DATABASE_SCHEMA.md §4 (Transaction Tables)

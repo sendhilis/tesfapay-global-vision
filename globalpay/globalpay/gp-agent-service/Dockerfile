@@ -7,8 +7,8 @@ RUN mvn clean package -DskipTests -q
 
 FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
-RUN addgroup -S globalpay && adduser -S globalpay -G globalpay
-USER globalpay
+RUN addgroup -S abx && adduser -S abx -G abx
+USER abx
 COPY --from=build /app/target/gp-agent-service-1.0.0.jar app.jar
 ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:+UseG1GC -Djava.security.egd=file:/dev/./urandom"
 EXPOSE 8089

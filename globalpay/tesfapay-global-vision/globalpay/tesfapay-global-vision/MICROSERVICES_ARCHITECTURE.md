@@ -1,4 +1,4 @@
-# GlobalPay — Microservices Architecture Guide
+# ABX — Microservices Architecture Guide
 
 > **Audience:** Java / Spring Boot architects and DevOps engineers  
 > **Version:** 1.0.0  
@@ -967,7 +967,7 @@ gp-wallet-service/
 
 ```json
 {
-  "namespace": "et.globalpay.events",
+  "namespace": "et.abx.events",
   "type": "record",
   "name": "TransferCompletedEvent",
   "fields": [
@@ -1503,4 +1503,4 @@ Complete mapping of every React page to the microservice(s) it depends on:
 
 ---
 
-*Document generated for the GlobalPay architecture team. Cross-reference with `API_CONTRACT.md`, `DATABASE_SCHEMA.md`, and `POSTMAN_COLLECTION.json` for implementation details.*
+*Document generated for the ABX architecture team. Cross-reference with `API_CONTRACT.md`, `DATABASE_SCHEMA.md`, and `POSTMAN_COLLECTION.json` for implementation details.*

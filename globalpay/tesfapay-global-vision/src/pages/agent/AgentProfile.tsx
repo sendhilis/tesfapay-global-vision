@@ -101,7 +101,7 @@ const AgentProfile = () => {
         <LogOut className="w-4 h-4" /> Sign Out
       </button>
 
-      <p className="text-xs text-muted-foreground text-center pb-2">GlobalPay Agent v2.1.0 · Global Bank Ethiopia · NBE Licensed</p>
+      <p className="text-xs text-muted-foreground text-center pb-2">ABX Agent v2.1.0 · Global Bank Ethiopia · NBE Licensed</p>
     </div>
   );
 };

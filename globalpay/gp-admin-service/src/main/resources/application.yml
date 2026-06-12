@@ -5,7 +5,7 @@ spring:
     name: gp-admin-service
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/admin_db}
-    username: ${SPRING_DATASOURCE_USERNAME:globalpay}
+    username: ${SPRING_DATASOURCE_USERNAME:abx}
     password: ${SPRING_DATASOURCE_PASSWORD:devpass}
     driver-class-name: org.postgresql.Driver
   jpa:
@@ -34,7 +34,7 @@ eureka:
   instance:
     prefer-ip-address: true
 jwt:
-  secret: ${JWT_SECRET:SuperSecretKeyForGlobalPayJWT2024MustBe256BitsLongEnough!}
+  secret: ${JWT_SECRET:SuperSecretKeyForABXJWT2024MustBe256BitsLongEnough!}
 management:
   endpoints:
     web:

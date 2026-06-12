@@ -1,4 +1,4 @@
--- GlobalPay: Create all per-service databases
+-- ABX: Create all per-service databases
 CREATE DATABASE auth_db;
 CREATE DATABASE user_db;
 CREATE DATABASE wallet_db;

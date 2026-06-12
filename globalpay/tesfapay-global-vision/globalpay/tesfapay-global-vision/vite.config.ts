@@ -21,8 +21,8 @@ export default defineConfig(({ mode }) => ({
         navigateFallbackDenylist: [/^\/~oauth/],
       },
       manifest: {
-        name: "GlobalPay — Global Bank Ethiopia",
-        short_name: "GlobalPay",
+        name: "ABX — Global Bank Ethiopia",
+        short_name: "ABX",
         description: "Ethiopia's premier mobile e-wallet by Global Bank Ethiopia",
         theme_color: "#1a6645",
         background_color: "#0d1520",

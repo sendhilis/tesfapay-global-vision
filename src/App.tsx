@@ -8,6 +8,7 @@ import Setup from "./pages/Setup";
 import RootGate from "./components/RootGate";
 import PlatformModule from "./pages/PlatformModule";
 import Launchpad from "./pages/Launchpad";
+import IntegrationUrls from "./pages/console/IntegrationUrls";
 
 const LaunchpadRoute = () => <Launchpad skipAutoRedirect />;
 import { BrowserRouter, Routes, Route } from "react-router-dom";
@@ -101,6 +102,7 @@ const App = () => {
           <Route path="/install" element={<InstallPage />} />
           <Route path="/proposal" element={<ProposalDocument />} />
           <Route path="/showcase" element={<ProductShowcase />} />
+          <Route path="/console/integrations" element={<IntegrationUrls />} />
 
           {/* Wallet App Routes */}
           <Route path="/wallet" element={<WalletLayout />}>

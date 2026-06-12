@@ -846,7 +846,7 @@ export function W36_Review() {
     <div>
       <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-[var(--teal-deep)]"><Rocket className="w-3 h-3" /> W36 · Validation</div>
       <h1 className="mt-3 font-serif text-5xl text-balance">You're ready to go live.</h1>
-      <p className="mt-3 max-w-xl text-[15px] text-[var(--ink-soft)]">Final completeness check. When the score reads 100% we publish your BankConfig and the GlobalPay runtime renders your bank to customers.</p>
+      <p className="mt-3 max-w-xl text-[15px] text-[var(--ink-soft)]">Final completeness check. When the score reads 100% we publish your BankConfig and the ABX runtime renders your bank to customers.</p>
       <div className="mt-8 grid md:grid-cols-3 gap-6">
         <div className="md:col-span-1 p-6 bg-[var(--ink)] text-[var(--cream)] rounded-2xl">
           <div className="text-[10px] uppercase tracking-widest text-[var(--teal)]">Completeness</div>

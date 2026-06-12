@@ -24,8 +24,10 @@ import {
   CreditCard,
   Network,
   BrainCircuit,
+  Banknote,
   type LucideIcon,
 } from "lucide-react";
+
 
 export type ModuleStatus = "live" | "beta" | "stub" | "planned";
 export type ModuleCategory = "channels" | "operations" | "compliance" | "analytics";
@@ -103,7 +105,7 @@ export function defaultModuleSettingsMap(): Record<string, Record<string, unknow
 export const ABX_MODULES: AbxModule[] = [
   {
     id: "wallet",
-    name: "GlobalPay Wallet",
+    name: "ABX Wallet",
     category: "channels",
     description: "Consumer mobile wallet — the ABX flagship app.",
     icon: Wallet,
@@ -141,10 +143,12 @@ export const ABX_MODULES: AbxModule[] = [
     status: "live",
     defaultEnabled: true,
     route: "/platform/mobile-banking",
-    // Techurate ABX Core Mobile Banking — set VITE_ABX_MB_URL to the hosted app
-    // URL (e.g. https://abx-mb.techurate.example/) to replace the Nisir retail
-    // portal with the live Techurate app. When unset, falls back to Nisir.
-    iframeUrl: import.meta.env.VITE_ABX_MB_URL as string | undefined,
+    // Techurate ABX Core Mobile Banking — hosted at abxmobilebanking.techurate.world.
+    // Override per environment by setting VITE_ABX_MB_URL.
+    iframeUrl:
+      (import.meta.env.VITE_ABX_MB_URL as string | undefined) ??
+      "https://abxmobilebanking.techurate.world",
+
     settings: {
       fields: [
         { key: "sessionTimeoutMin", label: "Session timeout (minutes)", type: "number", default: 5, min: 1, max: 30 },
@@ -299,6 +303,57 @@ export const ABX_MODULES: AbxModule[] = [
         { key: "virtualCards",   label: "Virtual cards",     type: "toggle", default: true },
         { key: "contactless",    label: "Contactless / NFC", type: "toggle", default: true },
         { key: "tokenization",   label: "Apple/Google Pay tokenization", type: "toggle", default: false },
+      ],
+    },
+  },
+  {
+    id: "abx-lending",
+    name: "ABX Lending",
+    category: "operations",
+    description: "Digital loan origination, underwriting and servicing for retail and SME borrowers.",
+    icon: Banknote,
+    status: "beta",
+    route: "/platform/abx-lending",
+    // Techurate ABX Lending — hosted at abxlending.techurate.world.
+    // Override per environment by setting VITE_ABX_LENDING_URL.
+    iframeUrl:
+      (import.meta.env.VITE_ABX_LENDING_URL as string | undefined) ??
+      "https://abxlending.techurate.world",
+    settings: {
+      sections: [
+        {
+          title: "Products",
+          fields: [
+            { key: "products", label: "Loan products", type: "multiselect",
+              default: ["personal", "sme", "micro"],
+              options: [
+                { value: "personal", label: "Personal loans" },
+                { value: "sme",      label: "SME loans" },
+                { value: "micro",    label: "Microloans" },
+                { value: "mortgage", label: "Mortgage" },
+                { value: "auto",     label: "Auto loans" },
+              ] },
+            { key: "baseCurrency", label: "Base currency", type: "text", default: "ETB" },
+          ],
+        },
+        {
+          title: "Limits & Pricing",
+          fields: [
+            { key: "minTicket",       label: "Min ticket size (ETB)",   type: "number", default: 5000,    step: 500 },
+            { key: "maxTicket",       label: "Max ticket size (ETB)",   type: "number", default: 2000000, step: 10000 },
+            { key: "maxTenorMonths",  label: "Max tenor (months)",      type: "number", default: 60,      min: 1, max: 360 },
+            { key: "baseAprPct",      label: "Base APR (%)",            type: "number", default: 14,      min: 0, max: 60, step: 0.1 },
+          ],
+        },
+        {
+          title: "Underwriting",
+          fields: [
+            { key: "autoDecisionThreshold", label: "Auto-decision score threshold", type: "number", default: 700, min: 300, max: 850 },
+            { key: "bureauCheck",     label: "Credit bureau check",     type: "toggle", default: true },
+            { key: "incomeVerification", label: "Income verification",  type: "toggle", default: true },
+            { key: "collateralRequired", label: "Require collateral above (ETB)", type: "number", default: 500000, step: 10000 },
+          ],
+        },
       ],
     },
   },

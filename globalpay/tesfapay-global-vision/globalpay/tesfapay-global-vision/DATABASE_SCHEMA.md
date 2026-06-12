@@ -1,4 +1,4 @@
-# GlobalPay — Database Schema
+# ABX — Database Schema
 
 > **For:** Spring Boot backend development team
 > **Database:** PostgreSQL 15+
@@ -1161,4 +1161,4 @@ INSERT INTO system_config (key, value, description) VALUES
 
 ---
 
-*Document generated for GlobalPay Spring Boot backend development. All tables derived from front-end data models, API contract, and regulatory requirements.*
+*Document generated for ABX Spring Boot backend development. All tables derived from front-end data models, API contract, and regulatory requirements.*

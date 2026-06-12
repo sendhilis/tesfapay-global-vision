@@ -1,4 +1,4 @@
-# GlobalPay — REST API Contract
+# ABX — REST API Contract
 
 > **For:** Spring Boot backend development team
 > **Version:** 1.0.0
@@ -229,7 +229,7 @@ Get user's contacts/favorites (from `SendMoney.tsx`, `RequestMoney.tsx`)
       "phone": "+251911234567",
       "avatarInitials": "TA",
       "isFavorite": true,
-      "isGlobalPayUser": true
+      "isABXUser": true
     }
   ]
 }
@@ -1511,7 +1511,7 @@ public enum AppRole { USER, AGENT, ADMIN }
 
 ```
 com.globalpay/
-├── GlobalPayApplication.java
+├── ABXApplication.java
 ├── config/
 │   ├── SecurityConfig.java          // Spring Security + JWT
 │   ├── CorsConfig.java
@@ -1584,4 +1584,4 @@ com.globalpay/
 
 ---
 
-*Document generated for GlobalPay Spring Boot backend development. All endpoints derived from front-end data models and user flows.*
+*Document generated for ABX Spring Boot backend development. All endpoints derived from front-end data models and user flows.*

@@ -13,7 +13,7 @@
     <groupId>com.globalpay</groupId>
     <artifactId>gp-transfer-service</artifactId>
     <version>1.0.0</version>
-    <description>GlobalPay P2P Transfer Microservice</description>
+    <description>ABX P2P Transfer Microservice</description>
 
     <properties>
         <java.version>17</java.version>

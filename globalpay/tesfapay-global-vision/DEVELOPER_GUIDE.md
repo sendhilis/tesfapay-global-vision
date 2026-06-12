@@ -1,4 +1,4 @@
-# GlobalPay — Developer Handoff Guide
+# ABX — Developer Handoff Guide
 
 > **Audience:** Java / Spring Boot developers picking up a React + TypeScript front-end.
 > This guide maps every key concept in this project to its Spring Boot equivalent so you can navigate the codebase quickly.
@@ -308,4 +308,4 @@ const { data: stats, isLoading } = useQuery({
 
 ---
 
-*Document generated for the GlobalPay development team handoff.*
+*Document generated for the ABX development team handoff.*

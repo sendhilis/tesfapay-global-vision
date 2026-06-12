@@ -1,4 +1,4 @@
-# GlobalPay — Spring Boot Starter Guide
+# ABX — Spring Boot Starter Guide
 
 > **Audience:** Java developers setting up the first microservice (Auth Service) from scratch.
 > **Goal:** Go from zero to a running, testable Auth Service in under 30 minutes.
@@ -192,8 +192,8 @@ Replace the generated `pom.xml` contents with:
     <groupId>com.globalpay</groupId>
     <artifactId>auth-service</artifactId>
     <version>1.0.0</version>
-    <name>GlobalPay Auth Service</name>
-    <description>Authentication, registration, and user management for GlobalPay</description>
+    <name>ABX Auth Service</name>
+    <description>Authentication, registration, and user management for ABX</description>
 
     <properties>
         <java.version>21</java.version>
@@ -362,7 +362,7 @@ Create `src/main/resources/application.yml`:
 
 ```yaml
 # ================================================================
-# GlobalPay Auth Service Configuration
+# ABX Auth Service Configuration
 # ================================================================
 # Maps to: MICROSERVICES_ARCHITECTURE.md §3.1 (Auth Service, Port 8081)
 # React equivalent: vite.config.ts + .env files
@@ -2019,7 +2019,7 @@ import java.util.*;
 /**
  * Maps to: API_CONTRACT.md §17 (Error Handling)
  *
- * Converts all exceptions to the standard GlobalPay error format:
+ * Converts all exceptions to the standard ABX error format:
  * { timestamp, status, error, code, message, path }
  */
 @RestControllerAdvice
@@ -2282,4 +2282,4 @@ public void onTransferCompleted(TransferEvent event) {
 
 ---
 
-*Generated for the GlobalPay development team. This guide gets the Auth Service from zero to running in ~30 minutes.*
+*Generated for the ABX development team. This guide gets the Auth Service from zero to running in ~30 minutes.*

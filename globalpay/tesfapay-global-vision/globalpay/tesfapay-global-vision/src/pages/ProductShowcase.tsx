@@ -50,7 +50,7 @@ const ProductShowcase = () => {
       const contentWidth = 794; // A4 width in px at 96dpi
       const opt = {
         margin: [0, 0, 0, 0],
-        filename: "GlobalPay-Product-Showcase-TechMonk.pdf",
+        filename: "ABX-Product-Showcase-TechMonk.pdf",
         image: { type: "jpeg", quality: 0.95 },
         html2canvas: {
           scale: 2,
@@ -85,7 +85,7 @@ const ProductShowcase = () => {
           <div className="flex items-center gap-3">
             <img src={techmonkLogo} alt="TechMonk" className="h-7" />
             <span className="text-xs text-muted-foreground">×</span>
-            <img src={tesfaLogo} alt="GlobalPay" className="h-7 rounded" />
+            <img src={tesfaLogo} alt="ABX" className="h-7 rounded" />
           </div>
           <Button size="sm" onClick={handleExportPDF} disabled={exporting} className="bg-gradient-gold text-foreground font-bold hover:opacity-90">
             {exporting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
@@ -347,7 +347,7 @@ const ProductShowcase = () => {
         {/* ═══════ ADMIN CONSOLE ═══════ */}
         <section className="pdf-page pdf-page-padded min-h-[1120px] py-20 px-8" style={{ background: "hsl(220 30% 7%)" }}>
           <div className="max-w-5xl mx-auto">
-            <SectionHeader icon={BarChart3} title="Enterprise Admin Console" subtitle="Complete operational command center for GlobalPay" number="04" />
+            <SectionHeader icon={BarChart3} title="Enterprise Admin Console" subtitle="Complete operational command center for ABX" number="04" />
             <div className="flex justify-center mt-8 mb-12">
               <img src={adminConsole} alt="Admin Console" className="section-img w-full max-w-2xl drop-shadow-2xl" />
             </div>
@@ -499,10 +499,10 @@ const ProductShowcase = () => {
           </div>
         </section>
 
-        {/* ═══════ WHY GLOBALPAY ═══════ */}
+        {/* ═══════ WHY ABX ═══════ */}
         <section className="pdf-page pdf-page-padded min-h-[1120px] py-20 px-8">
           <div className="max-w-5xl mx-auto">
-            <SectionHeader icon={Star} title="Why GlobalPay?" subtitle="The competitive advantage for your financial institution" number="07" />
+            <SectionHeader icon={Star} title="Why ABX?" subtitle="The competitive advantage for your financial institution" number="07" />
 
             <div className="grid md:grid-cols-2 gap-8 mt-12">
               {[
@@ -511,7 +511,7 @@ const ProductShowcase = () => {
                 { icon: Globe, title: "Financial Inclusion", desc: "Agent network extends banking to millions of unbanked citizens. USSD fallback ensures feature phone compatibility across any market." },
                 { icon: HeartHandshake, title: "Customer Stickiness", desc: "Gamified savings, loyalty rewards, and AI-personalized experiences drive 3.5x higher retention than competitors." },
                 { icon: Landmark, title: "Regulatory Ready", desc: "Pre-mapped to central bank directives with automated compliance reporting. Reduces regulatory risk and audit preparation time by 70%." },
-                { icon: Network, title: "Ecosystem Play", desc: "Open API architecture enables third-party integrations, creating a platform economy around GlobalPay." },
+                { icon: Network, title: "Ecosystem Play", desc: "Open API architecture enables third-party integrations, creating a platform economy around ABX." },
               ].map(v => (
                 <div key={v.title} className="glass rounded-2xl p-6 border border-border flex gap-4">
                   <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
@@ -559,7 +559,7 @@ const ProductShowcase = () => {
               <span className="text-primary">Your Digital Finance?</span>
             </h2>
             <p className="text-muted-foreground text-lg mb-12">
-              GlobalPay is more than a product — it's a platform for financial inclusion, powered by AI and built for scale in any market.
+              ABX is more than a product — it's a platform for financial inclusion, powered by AI and built for scale in any market.
             </p>
 
             <div className="glass rounded-2xl p-8 border border-primary/20 mb-12">
@@ -579,7 +579,7 @@ const ProductShowcase = () => {
             <div className="flex items-center justify-center gap-6 mb-8">
               <img src={techmonkLogo} alt="TechMonk" className="h-8" />
               <span className="text-muted-foreground">×</span>
-              <img src={tesfaLogo} alt="GlobalPay" className="h-8 rounded" />
+              <img src={tesfaLogo} alt="ABX" className="h-8 rounded" />
             </div>
             <p className="text-[10px] text-muted-foreground/50">
               CONFIDENTIAL — This document contains proprietary information of TechMonk Technologies.

@@ -1,8 +1,8 @@
 {
 	"info": {
 		"_postman_id": "globalpay-api-v1",
-		"name": "GlobalPay API v1.0",
-		"description": "Complete REST API collection for GlobalPay mobile wallet backend.\n\nBase URL: {{baseUrl}}\nAuth: Bearer JWT in Authorization header\nCurrency: ETB (Ethiopian Birr)\n\nImport this collection and set the 'baseUrl' variable to your Spring Boot server (e.g., http://localhost:8080/v1).",
+		"name": "ABX API v1.0",
+		"description": "Complete REST API collection for ABX mobile wallet backend.\n\nBase URL: {{baseUrl}}\nAuth: Bearer JWT in Authorization header\nCurrency: ETB (Ethiopian Birr)\n\nImport this collection and set the 'baseUrl' variable to your Spring Boot server (e.g., http://localhost:8080/v1).",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"variable": [
