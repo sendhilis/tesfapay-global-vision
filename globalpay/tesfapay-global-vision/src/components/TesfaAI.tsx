@@ -35,7 +35,7 @@ interface Message {
 const TesfaAI = () => {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
-    { from: "bot", text: "Hi! I'm **Global AI** 🤖 Your intelligent financial assistant for GlobalPay. I speak Amharic and English. How can I help you today?", time: "Now" },
+    { from: "bot", text: "Hi! I'm **Global AI** 🤖 Your intelligent financial assistant for ABX. I speak Amharic and English. How can I help you today?", time: "Now" },
   ]);
   const [input, setInput] = useState("");
   const [typing, setTyping] = useState(false);

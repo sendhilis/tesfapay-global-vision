@@ -13,7 +13,7 @@ services:
       - ./init-databases.sql:/docker-entrypoint-initdb.d/init.sql
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U globalpay"]
+      test: ["CMD-SHELL", "pg_isready -U abx"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -88,11 +88,11 @@ services:
       redis: { condition: service_healthy }
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/auth_db
-      SPRING_DATASOURCE_USERNAME: globalpay
+      SPRING_DATASOURCE_USERNAME: abx
       SPRING_DATASOURCE_PASSWORD: devpass
       SPRING_REDIS_HOST: redis
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://gp-discovery:8761/eureka/
-      JWT_SECRET: ${JWT_SECRET:-SuperSecretKeyForGlobalPayJWT2024!}
+      JWT_SECRET: ${JWT_SECRET:-SuperSecretKeyForABXJWT2024!}
       JWT_EXPIRY_MS: 900000
       JWT_REFRESH_EXPIRY_MS: 604800000
 
@@ -104,7 +104,7 @@ services:
       postgres: { condition: service_healthy }
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/user_db
-      SPRING_DATASOURCE_USERNAME: globalpay
+      SPRING_DATASOURCE_USERNAME: abx
       SPRING_DATASOURCE_PASSWORD: devpass
       MINIO_URL: http://minio:9000
       MINIO_ACCESS_KEY: minioadmin
@@ -120,7 +120,7 @@ services:
       kafka: { condition: service_started }
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/wallet_db
-      SPRING_DATASOURCE_USERNAME: globalpay
+      SPRING_DATASOURCE_USERNAME: abx
       SPRING_DATASOURCE_PASSWORD: devpass
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://gp-discovery:8761/eureka/
@@ -134,7 +134,7 @@ services:
       kafka: { condition: service_started }
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/transfer_db
-      SPRING_DATASOURCE_USERNAME: globalpay
+      SPRING_DATASOURCE_USERNAME: abx
       SPRING_DATASOURCE_PASSWORD: devpass
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://gp-discovery:8761/eureka/
@@ -147,7 +147,7 @@ services:
       postgres: { condition: service_healthy }
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/payment_db
-      SPRING_DATASOURCE_USERNAME: globalpay
+      SPRING_DATASOURCE_USERNAME: abx
       SPRING_DATASOURCE_PASSWORD: devpass
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://gp-discovery:8761/eureka/
 
@@ -159,7 +159,7 @@ services:
       postgres: { condition: service_healthy }
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/savings_db
-      SPRING_DATASOURCE_USERNAME: globalpay
+      SPRING_DATASOURCE_USERNAME: abx
       SPRING_DATASOURCE_PASSWORD: devpass
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://gp-discovery:8761/eureka/
 
@@ -171,7 +171,7 @@ services:
       postgres: { condition: service_healthy }
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/loan_db
-      SPRING_DATASOURCE_USERNAME: globalpay
+      SPRING_DATASOURCE_USERNAME: abx
       SPRING_DATASOURCE_PASSWORD: devpass
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://gp-discovery:8761/eureka/
 
@@ -183,7 +183,7 @@ services:
       postgres: { condition: service_healthy }
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/loyalty_db
-      SPRING_DATASOURCE_USERNAME: globalpay
+      SPRING_DATASOURCE_USERNAME: abx
       SPRING_DATASOURCE_PASSWORD: devpass
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://gp-discovery:8761/eureka/
 
@@ -195,7 +195,7 @@ services:
       postgres: { condition: service_healthy }
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/agent_db
-      SPRING_DATASOURCE_USERNAME: globalpay
+      SPRING_DATASOURCE_USERNAME: abx
       SPRING_DATASOURCE_PASSWORD: devpass
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://gp-discovery:8761/eureka/
 
@@ -207,7 +207,7 @@ services:
       postgres: { condition: service_healthy }
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/admin_db
-      SPRING_DATASOURCE_USERNAME: globalpay
+      SPRING_DATASOURCE_USERNAME: abx
       SPRING_DATASOURCE_PASSWORD: devpass
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://gp-discovery:8761/eureka/
 
@@ -220,7 +220,7 @@ services:
       kafka: { condition: service_started }
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/notification_db
-      SPRING_DATASOURCE_USERNAME: globalpay
+      SPRING_DATASOURCE_USERNAME: abx
       SPRING_DATASOURCE_PASSWORD: devpass
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://gp-discovery:8761/eureka/

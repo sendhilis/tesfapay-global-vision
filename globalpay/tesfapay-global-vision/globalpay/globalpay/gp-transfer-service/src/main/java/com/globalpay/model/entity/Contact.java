@@ -30,7 +30,7 @@ public class Contact {
     private boolean favorite = false;
 
     @Column(name = "is_globalpay_user", nullable = false)
-    private boolean globalpayUser = false;
+    private boolean abxUser = false;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();

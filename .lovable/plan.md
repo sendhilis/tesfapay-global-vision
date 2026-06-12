@@ -7,7 +7,7 @@ This is a sizable port: **61 page files across 4 portals**, **31 SQL migrations*
 ```text
 ABX Wizard (existing)
 └── Platform Modules Registry
-    ├── bankgpt, smart-branch, globalpay, ...   (existing)
+    ├── bankgpt, smart-branch, abx, ...   (existing)
     └── nisir-retail | nisir-ib | nisir-agency | nisir-merchant   (NEW)
             │
             ▼
@@ -75,7 +75,7 @@ New ABX-side files (small):
 
 - Not porting Nisir's `/admin/*` console — ABX already has admin and you didn't include it.
 - Not porting LandingPage / AuthPage / ProductShowcase — those are app shell, not portal modules.
-- Not touching existing ABX modules (BankGPT, GlobalPay, Smart Branch, etc.).
+- Not touching existing ABX modules (BankGPT, ABX, Smart Branch, etc.).
 
 ## Estimated size
 

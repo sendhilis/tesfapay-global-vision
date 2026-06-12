@@ -1,6 +1,6 @@
-# GlobalPay — Spring Boot Backend Templates
+# ABX — Spring Boot Backend Templates
 
-> **Copy-paste ready** Java source files for the GlobalPay microservices backend.
+> **Copy-paste ready** Java source files for the ABX microservices backend.
 > These are **reference templates**, not a runnable project — use Spring Initializr to scaffold each service, then paste these files in.
 
 ---

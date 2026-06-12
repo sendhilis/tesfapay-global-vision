@@ -110,7 +110,7 @@ const UserProfile = () => {
         <LogOut className="w-4 h-4" /> Sign Out
       </button>
 
-      <p className="text-xs text-muted-foreground text-center mt-4">GlobalPay v2.1.0 · Global Bank Ethiopia · Licensed by NBE</p>
+      <p className="text-xs text-muted-foreground text-center mt-4">ABX v2.1.0 · Global Bank Ethiopia · Licensed by NBE</p>
     </div>
   );
 };

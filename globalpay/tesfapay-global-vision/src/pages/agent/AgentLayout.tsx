@@ -36,9 +36,9 @@ const AgentLayout = () => {
       {/* Top bar */}
       <div className="flex items-center justify-between px-5 py-3 pt-safe glass border-b border-border">
         <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/")}>
-          <img src={tesfaLogo} alt="GlobalPay" className="w-7 h-7 rounded-lg" />
+          <img src={tesfaLogo} alt="ABX" className="w-7 h-7 rounded-lg" />
           <div>
-            <span className="font-display font-bold text-xs text-primary block leading-none">GlobalPay</span>
+            <span className="font-display font-bold text-xs text-primary block leading-none">ABX</span>
             <span className="text-[9px] text-muted-foreground uppercase tracking-wider">Agent Portal</span>
           </div>
         </div>

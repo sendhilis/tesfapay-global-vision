@@ -174,7 +174,7 @@ const PROFILES: Record<string, CustomerProfile> = {
       { id: "SG-2", name: "Emergency fund (3 mo)",   target: 45_000, saved: 12_500, dueDate: "2026-12-31" },
     ],
     recentTransactions: [
-      { id: "T1", date: "2026-05-23", merchant: "Salary — GlobalPay Bank",  category: "salary",    amount:  18_500 },
+      { id: "T1", date: "2026-05-23", merchant: "Salary — ABX Bank",  category: "salary",    amount:  18_500 },
       { id: "T2", date: "2026-05-23", merchant: "Mercato Wholesale",        category: "groceries", amount:  -1_240 },
       { id: "T3", date: "2026-05-22", merchant: "Ride — Feres",             category: "transport", amount:    -185 },
       { id: "T4", date: "2026-05-21", merchant: "EthioTelecom airtime",     category: "bills",     amount:    -300 },

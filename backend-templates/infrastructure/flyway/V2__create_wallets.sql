@@ -1,4 +1,4 @@
--- GlobalPay Flyway Migration V2 — Wallets
+-- ABX Flyway Migration V2 — Wallets
 -- Service: wallet-service
 -- Database: globalpay_wallet
 -- Maps to: DATABASE_SCHEMA.md §3 (Wallet & Financial Tables)

@@ -314,14 +314,14 @@ public class TransferService {
     private void upsertContact(UUID ownerId, UserDto recipient) {
         contactRepository.findByOwnerUserIdAndContactPhone(ownerId, recipient.getPhone())
                 .ifPresentOrElse(c -> {
-                    c.setGlobalpayUser(true);
+                    c.setAbxUser(true);
                     contactRepository.save(c);
                 }, () -> contactRepository.save(Contact.builder()
                         .ownerUserId(ownerId)
                         .contactUserId(UUID.fromString(recipient.getId()))
                         .contactName(recipient.getFullName())
                         .contactPhone(recipient.getPhone())
-                        .globalpayUser(true)
+                        .abxUser(true)
                         .favorite(false)
                         .build())
                 );
@@ -332,7 +332,7 @@ public class TransferService {
             var r = userClient.findById(senderUserId.toString());
             if (r != null && r.hasBody() && r.getBody() != null) return r.getBody().getFullName();
         } catch (Exception ignored) {}
-        return "GlobalPay User";
+        return "ABX User";
     }
 
     private void publishTransferEvent(Transfer t, UserDto recipient) {
@@ -421,7 +421,7 @@ public class TransferService {
                 .phone(c.getContactPhone())
                 .avatarInitials(initials(first, last))
                 .isFavorite(c.isFavorite())
-                .isGlobalPayUser(c.isGlobalpayUser())
+                .isABXUser(c.isAbxUser())
                 .build();
     }
 }

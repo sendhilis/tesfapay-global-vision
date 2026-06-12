@@ -1,6 +1,6 @@
-# GlobalPay Backend — Spring Boot Microservices
+# ABX Backend — Spring Boot Microservices
 
-> Production-ready backend for **TesfaPay / GlobalPay** wallet app.  
+> Production-ready backend for **TesfaPay / ABX** wallet app.  
 > Built to match the API contract in `API_CONTRACT.md` and the architecture in `MICROSERVICES_ARCHITECTURE.md`.
 
 ---
@@ -34,7 +34,7 @@
 ```bash
 # 1. Clone and enter the project
 git clone https://github.com/sendhilis/tesfapay-global-vision
-cd globalpay
+cd abx
 
 # 2. Copy and configure environment
 cp .env.example .env
@@ -61,7 +61,7 @@ curl http://localhost:8080/v1/auth/register \
 docker-compose up postgres redis kafka zookeeper minio -d
 
 # 2. Create all databases
-psql -U globalpay -h localhost -f init-databases.sql
+psql -U abx -h localhost -f init-databases.sql
 
 # 3. Run a specific service (e.g. auth)
 cd gp-auth-service

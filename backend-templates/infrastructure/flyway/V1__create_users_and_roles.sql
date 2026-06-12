@@ -1,4 +1,4 @@
--- GlobalPay Flyway Migration V1 — Core Users & Roles
+-- ABX Flyway Migration V1 — Core Users & Roles
 -- Service: auth-service
 -- Database: globalpay_auth
 -- Maps to: DATABASE_SCHEMA.md §2 (Core Tables)

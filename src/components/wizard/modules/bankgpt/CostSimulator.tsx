@@ -15,13 +15,15 @@
  * NVIDIA reseller list prices, and Hugging Face / vLLM throughput benchmarks
  * (2025). Adjust the constants block to recalibrate.
  */
-import { useMemo, useState } from "react";
+import { useMemo, useState, useCallback } from "react";
 import { Slider } from "@/components/ui/slider";
 import {
   Cpu, Cloud, Server, TrendingUp, Zap, DollarSign, Users,
   MessageSquare, Plus, Minus, AlertTriangle, CheckCircle2, Layers,
   Lock, KeyRound, Mic,
 } from "lucide-react";
+import { Framework360, type Mode as F360Mode } from "./cost/Framework360";
+import { PerformanceScorecard } from "./cost/PerformanceScorecard";
 
 // ───────── Voice Stack constants ─────────
 // Avg per voice turn: ~250 TTS chars (≈ 18 sec spoken Amharic/English) + ~5 sec STT.
@@ -87,6 +89,14 @@ export function CostSimulator() {
   const [unlocked, setUnlocked] = useState(false);
   const [pwd, setPwd] = useState("");
   const [err, setErr] = useState(false);
+  const [f360, setF360] = useState<{ monthly: Record<F360Mode, number>; capex: Record<F360Mode, number> }>({
+    monthly: { onprem: 0, hybrid: 0, cloud: 0 },
+    capex:   { onprem: 0, hybrid: 0, cloud: 0 },
+  });
+  const handleF360 = useCallback(
+    (d: { monthly: Record<F360Mode, number>; capex: Record<F360Mode, number> }) => setF360(d),
+    []
+  );
 
   const toggleAgent = (id: string) =>
     setAgents(a => a.map(x => x.id === id && !x.required ? { ...x, enabled: !x.enabled } : x));
@@ -197,6 +207,31 @@ export function CostSimulator() {
     return { perAgent, totals, capex, cheapest, costPerTurn, voice };
   }, [customers, turnsPerCustomerMonth, enabled, voiceMode, voiceSharePct]);
 
+  // Fold 360°-framework deltas into the effective headline numbers so every
+  // downstream card (totals, payback, savings) reflects the true bank TCO.
+  const eff = useMemo(() => {
+    const monthly = {
+      onprem: stats.totals.onprem + f360.monthly.onprem,
+      hybrid: stats.totals.hybrid + f360.monthly.hybrid,
+      cloud:  stats.totals.cloud  + f360.monthly.cloud,
+    };
+    const capex = {
+      onprem: stats.capex.onprem + f360.capex.onprem,
+      hybrid: stats.capex.hybrid + f360.capex.hybrid,
+      cloud:  stats.capex.cloud  + f360.capex.cloud,
+    };
+    const cheapest = (["onprem","hybrid","cloud"] as const).reduce((a, b) =>
+      monthly[a] < monthly[b] ? a : b
+    );
+    const turns = Math.max(1, stats.totals.turns);
+    const costPerTurn = {
+      onprem: monthly.onprem / turns,
+      hybrid: monthly.hybrid / turns,
+      cloud:  monthly.cloud  / turns,
+    };
+    return { monthly, capex, cheapest, costPerTurn };
+  }, [stats, f360]);
+
   const handleUnlock = () => {
     if (pwd === "Techurate@9123") { setUnlocked(true); setErr(false); }
     else { setErr(true); }
@@ -267,9 +302,9 @@ export function CostSimulator() {
       {/* Three-mode totals */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {MODES.map(m => {
-          const total = stats.totals[m.id];
-          const perTurn = stats.costPerTurn[m.id];
-          const isCheapest = stats.cheapest === m.id;
+          const total = eff.monthly[m.id];
+          const perTurn = eff.costPerTurn[m.id];
+          const isCheapest = eff.cheapest === m.id;
           const Icon = m.icon;
           return (
             <div key={m.id} className={`glass rounded-xl p-4 border ${isCheapest ? "border-emerald-400/40" : "border-transparent"}`}>
@@ -287,16 +322,20 @@ export function CostSimulator() {
               <p className="text-[10px] text-muted-foreground mb-3">{m.desc}</p>
               <div className="space-y-1">
                 <div className="flex items-baseline justify-between">
-                  <span className="text-[10px] text-muted-foreground">Upfront CAPEX</span>
-                  <span className="text-sm font-bold text-foreground">${Math.round(stats.capex[m.id]).toLocaleString()}</span>
+                  <span className="text-[10px] text-muted-foreground">Upfront CAPEX (all-in)</span>
+                  <span className="text-sm font-bold text-foreground">${Math.round(eff.capex[m.id]).toLocaleString()}</span>
                 </div>
                 <div className="flex items-baseline justify-between">
-                  <span className="text-[10px] text-muted-foreground">Monthly OPEX</span>
+                  <span className="text-[10px] text-muted-foreground">Monthly OPEX (all-in)</span>
                   <span className="text-lg font-bold text-foreground">${Math.round(total).toLocaleString()}</span>
                 </div>
                 <div className="flex items-baseline justify-between">
                   <span className="text-[10px] text-muted-foreground">ETB OPEX/mo</span>
                   <span className="text-xs text-tesfa-gold font-semibold">ETB {Math.round(total * ETB_PER_USD).toLocaleString()}</span>
+                </div>
+                <div className="flex items-baseline justify-between">
+                  <span className="text-[9px] text-muted-foreground italic">incl. 360° layers</span>
+                  <span className="text-[10px] text-muted-foreground font-mono">+${Math.round(f360.monthly[m.id]).toLocaleString()}/mo</span>
                 </div>
                 <div className="flex items-baseline justify-between pt-1 border-t border-border/40">
                   <span className="text-[10px] text-muted-foreground">Cost per turn</span>
@@ -314,17 +353,60 @@ export function CostSimulator() {
         <p className="text-xs text-muted-foreground">
           <span className="text-foreground font-semibold">On-Prem saves </span>
           <span className="text-emerald-400 font-bold">
-            ${Math.round(stats.totals.cloud - stats.totals.onprem).toLocaleString()}/mo
+            ${Math.round(eff.monthly.cloud - eff.monthly.onprem).toLocaleString()}/mo
           </span>
           <span> vs Cloud · </span>
           <span className="text-foreground font-semibold">Hybrid saves </span>
           <span className="text-amber-400 font-bold">
-            ${Math.round(stats.totals.cloud - stats.totals.hybrid).toLocaleString()}/mo
+            ${Math.round(eff.monthly.cloud - eff.monthly.hybrid).toLocaleString()}/mo
           </span>
           <span> · Annual on-prem savings: </span>
           <span className="text-tesfa-gold font-bold">
-            ETB {Math.round((stats.totals.cloud - stats.totals.onprem) * 12 * ETB_PER_USD).toLocaleString()}
+            ETB {Math.round((eff.monthly.cloud - eff.monthly.onprem) * 12 * ETB_PER_USD).toLocaleString()}
           </span>
+        </p>
+      </div>
+
+      {/* Minimum-viable CAPEX — Selam-only OSS floor */}
+      <MinViableCapex customers={customers} turnsPerCustomerMonth={turnsPerCustomerMonth} voiceCapex={stats.voice.voiceCapex} />
+
+
+
+
+      {/* CAPEX vs OPEX — Definitions legend */}
+      <div className="glass rounded-xl p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <AlertTriangle className="h-4 w-4 text-tesfa-gold" />
+          <p className="text-sm font-semibold text-foreground">How to read this: CAPEX vs OPEX</p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="rounded-lg border border-border/40 bg-background/30 p-3">
+            <p className="text-xs font-bold text-tesfa-gold mb-1">CAPEX — one-time, before go-live</p>
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              Spent <span className="text-foreground font-semibold">once</span> to stand the platform up; depreciated over {DEPRECIATION_MONTHS} months for accounting.
+              Covers: <span className="text-foreground">GPUs</span> (NVIDIA street price, Addis-landed) ·
+              <span className="text-foreground"> Infra uplift</span> (servers, NVLink, 100G switching, NVMe, racks, UPS — ~40% of GPU spend) ·
+              <span className="text-foreground"> Setup &amp; integration</span> (vLLM/Triton, Keycloak SSO, RAG, Kafka CDC) ·
+              <span className="text-foreground"> NBE pen-test &amp; staff training</span> ·
+              <span className="text-foreground"> 360° compliance buildout</span> (HSM, SIEM bootstrap, DR site, insurance binders).
+            </p>
+          </div>
+          <div className="rounded-lg border border-border/40 bg-background/30 p-3">
+            <p className="text-xs font-bold text-tesfa-gold mb-1">OPEX — recurring, every month</p>
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              Spent <span className="text-foreground font-semibold">every month</span> to keep the platform live.
+              Covers: <span className="text-foreground">GPU depreciation</span> (CAPEX ÷ {DEPRECIATION_MONTHS}mo) ·
+              <span className="text-foreground"> Power</span> (Addis industrial ${KWH_PRICE_USD}/kWh, PUE {PUE}) ·
+              <span className="text-foreground"> SRE / Ops staff</span> ·
+              <span className="text-foreground"> Cloud token bills</span> (hybrid/cloud modes) ·
+              <span className="text-foreground"> Voice STT/TTS</span> ·
+              <span className="text-foreground"> 360° run costs</span> (SOC, SIEM seats, vendor support, leased lines, DR drills, insurance premiums).
+            </p>
+          </div>
+        </div>
+        <p className="text-[10px] text-muted-foreground mt-3">
+          The headline cards at the top show <span className="text-foreground font-semibold">all-in</span> numbers
+          (compute + 360° layers). The breakdown below splits the same total into its two pieces so every dollar is accounted for.
         </p>
       </div>
 
@@ -344,14 +426,21 @@ export function CostSimulator() {
               <Server className="h-4 w-4 text-emerald-400" />
               <span className="text-xs font-bold text-foreground">On-Prem OSS</span>
             </div>
+            <p className="text-[9px] uppercase tracking-wider text-muted-foreground mt-1 mb-1">Compute &amp; integration</p>
             <CapexRow label={`GPUs (${stats.totals.gpus}×)`} value={stats.capex.gpuOnprem} />
             <CapexRow label="Servers, network, storage, KMS, racks" value={stats.capex.infraOnprem} />
             <CapexRow label="Setup, integration, NBE pen-test" value={stats.capex.setupOnprem} />
+            <div className="mt-1 flex items-baseline justify-between text-[10px] text-muted-foreground">
+              <span>Subtotal — compute</span>
+              <span className="font-mono">${Math.round(stats.capex.onprem).toLocaleString()}</span>
+            </div>
+            <p className="text-[9px] uppercase tracking-wider text-muted-foreground mt-2 mb-1">360° compliance &amp; ops buildout</p>
+            <CapexRow label="HSM, SIEM bootstrap, DR site, insurance" value={f360.capex.onprem} />
             <div className="border-t border-border/40 mt-2 pt-2 flex items-baseline justify-between">
-              <span className="text-[11px] font-bold text-foreground">Total CAPEX</span>
+              <span className="text-[11px] font-bold text-foreground">Total CAPEX (all-in)</span>
               <div className="text-right">
-                <p className="text-base font-bold text-emerald-400">${Math.round(stats.capex.onprem).toLocaleString()}</p>
-                <p className="text-[10px] text-tesfa-gold font-mono">ETB {Math.round(stats.capex.onprem * ETB_PER_USD).toLocaleString()}</p>
+                <p className="text-base font-bold text-emerald-400">${Math.round(eff.capex.onprem).toLocaleString()}</p>
+                <p className="text-[10px] text-tesfa-gold font-mono">ETB {Math.round(eff.capex.onprem * ETB_PER_USD).toLocaleString()}</p>
               </div>
             </div>
           </div>
@@ -362,14 +451,21 @@ export function CostSimulator() {
               <Layers className="h-4 w-4 text-amber-400" />
               <span className="text-xs font-bold text-foreground">Hybrid</span>
             </div>
+            <p className="text-[9px] uppercase tracking-wider text-muted-foreground mt-1 mb-1">Compute &amp; integration</p>
             <CapexRow label="GPUs (workhorse only)" value={stats.capex.gpuHybrid} />
             <CapexRow label="Infra uplift (40%)" value={stats.capex.infraHybrid} />
             <CapexRow label="Setup + cloud onboarding" value={stats.capex.setupHybrid} />
+            <div className="mt-1 flex items-baseline justify-between text-[10px] text-muted-foreground">
+              <span>Subtotal — compute</span>
+              <span className="font-mono">${Math.round(stats.capex.hybrid).toLocaleString()}</span>
+            </div>
+            <p className="text-[9px] uppercase tracking-wider text-muted-foreground mt-2 mb-1">360° compliance &amp; ops buildout</p>
+            <CapexRow label="HSM, SIEM bootstrap, DR site, insurance" value={f360.capex.hybrid} />
             <div className="border-t border-border/40 mt-2 pt-2 flex items-baseline justify-between">
-              <span className="text-[11px] font-bold text-foreground">Total CAPEX</span>
+              <span className="text-[11px] font-bold text-foreground">Total CAPEX (all-in)</span>
               <div className="text-right">
-                <p className="text-base font-bold text-amber-400">${Math.round(stats.capex.hybrid).toLocaleString()}</p>
-                <p className="text-[10px] text-tesfa-gold font-mono">ETB {Math.round(stats.capex.hybrid * ETB_PER_USD).toLocaleString()}</p>
+                <p className="text-base font-bold text-amber-400">${Math.round(eff.capex.hybrid).toLocaleString()}</p>
+                <p className="text-[10px] text-tesfa-gold font-mono">ETB {Math.round(eff.capex.hybrid * ETB_PER_USD).toLocaleString()}</p>
               </div>
             </div>
           </div>
@@ -380,14 +476,21 @@ export function CostSimulator() {
               <Cloud className="h-4 w-4 text-sky-400" />
               <span className="text-xs font-bold text-foreground">Cloud Only</span>
             </div>
+            <p className="text-[9px] uppercase tracking-wider text-muted-foreground mt-1 mb-1">Compute &amp; integration</p>
             <CapexRow label="GPUs" value={0} />
             <CapexRow label="Infra" value={0} />
             <CapexRow label="Setup + integration" value={stats.capex.setupCloud} />
+            <div className="mt-1 flex items-baseline justify-between text-[10px] text-muted-foreground">
+              <span>Subtotal — compute</span>
+              <span className="font-mono">${Math.round(stats.capex.cloud).toLocaleString()}</span>
+            </div>
+            <p className="text-[9px] uppercase tracking-wider text-muted-foreground mt-2 mb-1">360° compliance &amp; ops buildout</p>
+            <CapexRow label="Sovereignty, app-layer pen-test" value={f360.capex.cloud} />
             <div className="border-t border-border/40 mt-2 pt-2 flex items-baseline justify-between">
-              <span className="text-[11px] font-bold text-foreground">Total CAPEX</span>
+              <span className="text-[11px] font-bold text-foreground">Total CAPEX (all-in)</span>
               <div className="text-right">
-                <p className="text-base font-bold text-sky-400">${Math.round(stats.capex.cloud).toLocaleString()}</p>
-                <p className="text-[10px] text-tesfa-gold font-mono">ETB {Math.round(stats.capex.cloud * ETB_PER_USD).toLocaleString()}</p>
+                <p className="text-base font-bold text-sky-400">${Math.round(eff.capex.cloud).toLocaleString()}</p>
+                <p className="text-[10px] text-tesfa-gold font-mono">ETB {Math.round(eff.capex.cloud * ETB_PER_USD).toLocaleString()}</p>
               </div>
             </div>
           </div>
@@ -398,31 +501,136 @@ export function CostSimulator() {
           <div>
             <p className="text-[9px] uppercase tracking-wider text-muted-foreground">On-Prem payback vs Cloud</p>
             <p className="text-sm font-bold text-emerald-400 font-mono">
-              {stats.totals.cloud > stats.totals.onprem
-                ? `${Math.ceil(stats.capex.onprem / (stats.totals.cloud - stats.totals.onprem))} months`
+              {eff.monthly.cloud > eff.monthly.onprem
+                ? `${Math.ceil(eff.capex.onprem / (eff.monthly.cloud - eff.monthly.onprem))} months`
                 : "—"}
             </p>
           </div>
           <div>
             <p className="text-[9px] uppercase tracking-wider text-muted-foreground">Hybrid payback vs Cloud</p>
             <p className="text-sm font-bold text-amber-400 font-mono">
-              {stats.totals.cloud > stats.totals.hybrid
-                ? `${Math.ceil(stats.capex.hybrid / (stats.totals.cloud - stats.totals.hybrid))} months`
+              {eff.monthly.cloud > eff.monthly.hybrid
+                ? `${Math.ceil(eff.capex.hybrid / (eff.monthly.cloud - eff.monthly.hybrid))} months`
                 : "—"}
             </p>
           </div>
           <div>
             <p className="text-[9px] uppercase tracking-wider text-muted-foreground">CAPEX delta (On-Prem − Hybrid)</p>
             <p className="text-sm font-bold text-foreground font-mono">
-              ${Math.round(stats.capex.onprem - stats.capex.hybrid).toLocaleString()}
+              ${Math.round(eff.capex.onprem - eff.capex.hybrid).toLocaleString()}
             </p>
           </div>
         </div>
         <p className="text-[10px] text-muted-foreground mt-2">
-          Assumptions: GPU street price (NVIDIA reseller, Addis landed). Infra uplift = 40% of GPU spend covers DL380/XE servers, NVLink, 100G switching, NVMe storage, HSM/KMS, racks, UPS.
+          Reconciles to the headline cards: <span className="text-foreground font-mono">Compute &amp; integration</span> +
+          <span className="text-foreground font-mono"> 360° buildout</span> =
+          <span className="text-foreground font-mono"> Total CAPEX (all-in)</span>.
+          Assumptions: GPU street price (NVIDIA reseller, Addis-landed). Infra uplift = 40% of GPU spend covers DL380/XE servers, NVLink, 100G switching, NVMe storage, HSM/KMS, racks, UPS.
           Setup covers vLLM/Triton install, Keycloak SSO, RAG pipeline, Kafka/Debezium CDC, NBE pen-test and staff training.
         </p>
       </div>
+
+      {/* OPEX Monthly Run-Cost Breakdown */}
+      {(() => {
+        const dep    = stats.perAgent.reduce((s, p) => s + p.capexMonthly, 0);
+        const power  = stats.perAgent.reduce((s, p) => s + p.powerCost,    0);
+        const ops    = stats.perAgent.reduce((s, p) => s + p.opsCost,      0);
+        const depHy  = stats.perAgent.reduce((s, p) => s + (p.agent.paramsB > 20 ? 0 : p.capexMonthly), 0);
+        const powHy  = stats.perAgent.reduce((s, p) => s + (p.agent.paramsB > 20 ? 0 : p.powerCost),    0);
+        const opsHy  = stats.perAgent.reduce((s, p) => s + (p.agent.paramsB > 20 ? 0 : p.opsCost),      0);
+        const tokHy  = stats.perAgent.reduce((s, p) => s + (p.agent.paramsB > 20 ? p.cloudCost : 0),    0);
+        const tokCl  = stats.perAgent.reduce((s, p) => s + p.cloudCost, 0);
+        const vMo    = stats.voice.voiceMonthly;
+        const vClRef = stats.voice.voiceCloudReference;
+
+        const rows: { label: string; sub: string; on: number; hy: number; cl: number }[] = [
+          { label: "GPU depreciation",       sub: `GPU CAPEX ÷ ${DEPRECIATION_MONTHS} mo`,            on: dep,   hy: depHy, cl: 0 },
+          { label: "Power & cooling",        sub: `Addis $${KWH_PRICE_USD}/kWh · PUE ${PUE}`,         on: power, hy: powHy, cl: 0 },
+          { label: "SRE / Ops staff",        sub: "1 SRE per 8 GPUs @ $1,800/mo loaded",              on: ops,   hy: opsHy, cl: 0 },
+          { label: "Cloud token bills",      sub: "Frontier (>20B) in hybrid · all tokens in cloud",  on: 0,     hy: tokHy, cl: tokCl },
+          { label: "Voice STT / TTS",        sub: `${voiceSharePct}% voice share · ${stats.voice.cfg.label}`, on: vMo, hy: vMo, cl: vClRef },
+          { label: "360° run costs",         sub: "SOC, SIEM seats, vendor support, leased lines, DR, insurance", on: f360.monthly.onprem, hy: f360.monthly.hybrid, cl: f360.monthly.cloud },
+        ];
+        const tot = {
+          on: rows.reduce((s, r) => s + r.on, 0),
+          hy: rows.reduce((s, r) => s + r.hy, 0),
+          cl: rows.reduce((s, r) => s + r.cl, 0),
+        };
+        const pct = (v: number, t: number) => t > 0 ? `${Math.round((v / t) * 100)}%` : "0%";
+
+        return (
+          <div className="glass rounded-xl p-4">
+            <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-tesfa-gold" />
+                <p className="text-sm font-semibold text-foreground">Monthly OPEX — Run-Cost Breakdown</p>
+              </div>
+              <span className="text-[10px] text-muted-foreground">
+                Every recurring dollar, split by line item · reconciles to headline OPEX
+              </span>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[11px]">
+                <thead>
+                  <tr className="text-muted-foreground border-b border-border/40">
+                    <th className="text-left py-2 pr-3">Line item</th>
+                    <th className="text-right py-2 px-2 text-emerald-400">On-Prem</th>
+                    <th className="text-right py-2 px-2 text-emerald-400/70 font-normal">%</th>
+                    <th className="text-right py-2 px-2 text-amber-400">Hybrid</th>
+                    <th className="text-right py-2 px-2 text-amber-400/70 font-normal">%</th>
+                    <th className="text-right py-2 px-2 text-sky-400">Cloud</th>
+                    <th className="text-right py-2 px-2 text-sky-400/70 font-normal">%</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((r) => (
+                    <tr key={r.label} className="border-b border-border/20">
+                      <td className="py-2 pr-3">
+                        <p className="text-foreground font-semibold">{r.label}</p>
+                        <p className="text-[10px] text-muted-foreground">{r.sub}</p>
+                      </td>
+                      <td className="text-right py-2 px-2 font-mono text-foreground">${Math.round(r.on).toLocaleString()}</td>
+                      <td className="text-right py-2 px-2 font-mono text-[10px] text-muted-foreground">{pct(r.on, tot.on)}</td>
+                      <td className="text-right py-2 px-2 font-mono text-foreground">${Math.round(r.hy).toLocaleString()}</td>
+                      <td className="text-right py-2 px-2 font-mono text-[10px] text-muted-foreground">{pct(r.hy, tot.hy)}</td>
+                      <td className="text-right py-2 px-2 font-mono text-foreground">${Math.round(r.cl).toLocaleString()}</td>
+                      <td className="text-right py-2 px-2 font-mono text-[10px] text-muted-foreground">{pct(r.cl, tot.cl)}</td>
+                    </tr>
+                  ))}
+                  <tr className="border-t-2 border-border/60">
+                    <td className="py-2 pr-3 text-[11px] font-bold text-foreground">Total monthly OPEX (all-in)</td>
+                    <td className="text-right py-2 px-2 font-mono font-bold text-emerald-400">${Math.round(tot.on).toLocaleString()}</td>
+                    <td></td>
+                    <td className="text-right py-2 px-2 font-mono font-bold text-amber-400">${Math.round(tot.hy).toLocaleString()}</td>
+                    <td></td>
+                    <td className="text-right py-2 px-2 font-mono font-bold text-sky-400">${Math.round(tot.cl).toLocaleString()}</td>
+                    <td></td>
+                  </tr>
+                  <tr>
+                    <td className="py-1 pr-3 text-[10px] text-muted-foreground">in ETB / mo</td>
+                    <td className="text-right py-1 px-2 font-mono text-[10px] text-tesfa-gold">ETB {Math.round(tot.on * ETB_PER_USD).toLocaleString()}</td>
+                    <td></td>
+                    <td className="text-right py-1 px-2 font-mono text-[10px] text-tesfa-gold">ETB {Math.round(tot.hy * ETB_PER_USD).toLocaleString()}</td>
+                    <td></td>
+                    <td className="text-right py-1 px-2 font-mono text-[10px] text-tesfa-gold">ETB {Math.round(tot.cl * ETB_PER_USD).toLocaleString()}</td>
+                    <td></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-3">
+              <span className="text-foreground font-semibold">How to read:</span> the first three rows (GPU depreciation, power, SRE) are
+              the <span className="text-foreground">infrastructure</span> portion — non-existent in pure cloud because you rent compute by the token.
+              <span className="text-foreground"> Cloud token bills</span> dominate cloud mode and appear in hybrid only for frontier (&gt;20B) reasoning.
+              <span className="text-foreground"> Voice</span> is a separate stack (STT+TTS) that bypasses the LLM bill.
+              <span className="text-foreground"> 360° run costs</span> are the regulated-bank overhead (SOC, SIEM, DR drills, insurance, vendor support) layered on top.
+              Toggle agents, voice mode, or 360° layers above and every row recomputes.
+            </p>
+          </div>
+        );
+      })()}
+
+
 
       {/* Voice Stack add-on */}
       <div className="glass rounded-xl p-4">
@@ -615,8 +823,20 @@ export function CostSimulator() {
         </div>
       )}
 
+      {/* 360° operating framework — every layer beyond raw compute */}
+      <Framework360
+        customers={customers}
+        gpuCount={stats.totals.gpus}
+        baseMonthly={stats.totals}
+        baseCapex={stats.capex}
+        onChange={handleF360}
+      />
+
+      {/* OSS vs Commercial performance & fit scorecard */}
+      <PerformanceScorecard />
+
       {/* Ethiopia price-sensitivity advisor */}
-      <PricingAdvisor customers={customers} totalOnprem={stats.totals.onprem} totalCloud={stats.totals.cloud} agentCount={enabled.length} capexOnprem={stats.capex.onprem} />
+      <PricingAdvisor customers={customers} totalOnprem={eff.monthly.onprem} totalCloud={eff.monthly.cloud} agentCount={enabled.length} capexOnprem={eff.capex.onprem} />
     </>)}
     </div>
   );
@@ -692,6 +912,128 @@ function Metric({ label, value }: { label: string; value: string }) {
     <div className="rounded-lg bg-background/40 border border-border/40 p-2">
       <p className="text-[9px] uppercase tracking-wider text-muted-foreground">{label}</p>
       <p className="text-xs font-bold text-foreground font-mono">{value}</p>
+    </div>
+  );
+}
+
+/**
+ * MinViableCapex — answers the bank's literal question:
+ * "If I run ONLY Selam-Bot (the mandatory retail concierge) on OSS for N customers,
+ *  what is the floor CAPEX I must budget?"
+ *
+ * Computed independently of the agent toggles so the floor never disappears when
+ * the user experiments. Three tiers: Bare-metal MVP, Lean production, Full 360°.
+ */
+function MinViableCapex({
+  customers, turnsPerCustomerMonth, voiceCapex,
+}: { customers: number; turnsPerCustomerMonth: number; voiceCapex: number }) {
+  const monthlyTurns = customers * turnsPerCustomerMonth;
+  const gpu = GPUS.L40S;
+  const tokensPerSec = (monthlyTurns * 600) / (30 * 24 * 3600);
+  const gpusNeeded = Math.max(1, Math.ceil(tokensPerSec / (gpu.tps * 0.6)));
+  const gpuCapex   = gpusNeeded * gpu.capex;
+  const infra      = gpuCapex * 0.40;
+  const setup      = 80_000;
+  const bareMetal  = gpuCapex + infra + setup + voiceCapex;
+
+  const leanFloor  = 65_000 + 45_000 + 22_000 + 12_000; // DR + SecOps + Backup + Observability
+  const leanProd   = bareMetal + leanFloor;
+
+  const full360add = 8_000 + 65_000 + 45_000 + 12_000 + 22_000 + 28_000 + 35_000;
+  const full360    = bareMetal + full360add;
+
+  const tiers = [
+    {
+      key: "mvp", label: "Bare-metal MVP",
+      tone: "border-sky-400/30 bg-sky-500/5",
+      pill: "Lab / pilot only", pillTone: "bg-sky-500/20 text-sky-300",
+      total: bareMetal,
+      desc: "Just enough hardware to serve Selam. Not NBE-certifiable on its own.",
+      rows: [
+        [`${gpusNeeded}× ${gpu.name}`, gpuCapex],
+        ["Infra uplift (servers, NVLink, 100G, NVMe, racks, UPS — 40% of GPU)", infra],
+        ["Setup, integration, NBE pen-test, training", setup],
+        ["Voice stack one-time", voiceCapex],
+      ] as [string, number][],
+    },
+    {
+      key: "lean", label: "Lean production (NBE-ready)",
+      tone: "border-emerald-400/30 bg-emerald-500/5",
+      pill: "Recommended floor", pillTone: "bg-emerald-500/20 text-emerald-300",
+      total: leanProd,
+      desc: "Adds the four layers NBE will insist on: warm DR, SOC + SIEM + HSM, 7-yr backups, observability.",
+      rows: [
+        ["Bare-metal MVP (above)", bareMetal],
+        ["Warm DR site", 65_000],
+        ["SecOps bootstrap (SOC + SIEM + HSM + pen-test)", 45_000],
+        ["Backup & 7-yr retention", 22_000],
+        ["Observability + SRE on-call", 12_000],
+      ] as [string, number][],
+    },
+    {
+      key: "full", label: "Full 360° (everything)",
+      tone: "border-tesfa-gold/30 bg-tesfa-gold/5",
+      pill: "Headline simulator number", pillTone: "bg-tesfa-gold/20 text-tesfa-gold",
+      total: full360,
+      desc: "Adds connectivity buildout, model lifecycle (fine-tune + labelling), and change-management training.",
+      rows: [
+        ["Lean production (above)", leanProd],
+        ["Connectivity & egress buildout", 8_000],
+        ["Model lifecycle (fine-tune + labelling)", 28_000],
+        ["Change mgmt & staff training", 35_000],
+      ] as [string, number][],
+    },
+  ];
+
+  return (
+    <div className="glass rounded-xl p-4 border border-tesfa-gold/30">
+      <div className="flex items-start gap-3 mb-3 flex-wrap">
+        <Server className="h-5 w-5 text-tesfa-gold mt-0.5 shrink-0" />
+        <div className="flex-1 min-w-[240px]">
+          <p className="text-sm font-semibold text-foreground">
+            Minimum-viable CAPEX — <span className="text-tesfa-gold">Selam-only OSS</span> @ {customers.toLocaleString()} customers
+          </p>
+          <p className="text-[11px] text-muted-foreground">
+            Direct answer to "cheapest OSS on-prem CAPEX if I run only Selam". Independent of the agent toggles below.
+            Sizing: {monthlyTurns.toLocaleString()} turns/mo ≈ {tokensPerSec.toFixed(0)} tok/s sustained → <span className="text-foreground font-mono">{gpusNeeded}× {gpu.name}</span> at 60% utilisation ceiling.
+          </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        {tiers.map((t) => (
+          <div key={t.key} className={`rounded-lg border ${t.tone} p-3`}>
+            <div className="flex items-center justify-between gap-2 mb-1 flex-wrap">
+              <span className="text-xs font-bold text-foreground">{t.label}</span>
+              <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold ${t.pillTone}`}>{t.pill}</span>
+            </div>
+            <p className="text-[10px] text-muted-foreground leading-snug mb-2">{t.desc}</p>
+            <div className="space-y-0.5 mb-2">
+              {t.rows.map(([label, v]) => (
+                <div key={label} className="flex items-baseline justify-between gap-2">
+                  <span className="text-[10px] text-muted-foreground truncate">{label}</span>
+                  <span className="text-[10px] text-foreground font-mono shrink-0">${Math.round(v).toLocaleString()}</span>
+                </div>
+              ))}
+            </div>
+            <div className="border-t border-border/40 pt-2 flex items-baseline justify-between">
+              <span className="text-[11px] font-bold text-foreground">Total CAPEX</span>
+              <div className="text-right">
+                <p className="text-base font-bold text-foreground">${Math.round(t.total).toLocaleString()}</p>
+                <p className="text-[10px] text-tesfa-gold font-mono">ETB {Math.round(t.total * ETB_PER_USD).toLocaleString()}</p>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <p className="text-[10px] text-muted-foreground mt-3">
+        <span className="text-foreground font-semibold">How to read this:</span> the absolute floor for a single-agent (Selam) OSS deployment at {customers.toLocaleString()} customers is
+        <span className="text-sky-400 font-mono"> ${Math.round(bareMetal).toLocaleString()}</span> in hardware + integration, but no NBE-regulated bank can go live on that.
+        The realistic minimum is <span className="text-emerald-400 font-semibold">Lean production</span> at
+        <span className="text-emerald-400 font-mono"> ${Math.round(leanProd).toLocaleString()}</span>.
+        The headline cards reflect the <span className="text-tesfa-gold font-semibold">Full 360°</span> number; tune it down by switching off optional 360° layers below.
+      </p>
     </div>
   );
 }

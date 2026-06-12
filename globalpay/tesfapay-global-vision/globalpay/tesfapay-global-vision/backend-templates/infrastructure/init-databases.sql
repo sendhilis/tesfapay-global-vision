@@ -1,4 +1,4 @@
--- GlobalPay — Database Initialization Script
+-- ABX — Database Initialization Script
 -- Creates separate databases for each microservice (database-per-service pattern)
 -- Run automatically by Docker Compose on first start
 

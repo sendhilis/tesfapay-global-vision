@@ -4,12 +4,12 @@
 @tailwind components;
 @tailwind utilities;
 
-/* GlobalPay Design System — Global Bank Ethiopia */
+/* ABX Design System — Global Bank Ethiopia */
 /* Ethiopian-inspired glassmorphic fintech aesthetic */
 
 @layer base {
   :root {
-    /* ── GlobalPay Core Palette ── */
+    /* ── ABX Core Palette ── */
     --tesfa-green:          168 70% 22%;   /* Deep Ethiopian forest green */
     --tesfa-green-mid:      162 55% 32%;
     --tesfa-green-light:    158 46% 48%;
@@ -238,7 +238,7 @@
   }
 }
 
-/* ── ABX Wizard scope (isolated tokens; do not leak to GlobalPay shell) ── */
+/* ── ABX Wizard scope (isolated tokens; do not leak to ABX shell) ── */
 .abx-scope {
   --background: #F7F4ED;
   --ivory: #FBF8F1;

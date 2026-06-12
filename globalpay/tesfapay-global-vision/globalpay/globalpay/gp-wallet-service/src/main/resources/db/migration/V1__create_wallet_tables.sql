@@ -1,5 +1,5 @@
 -- V1__create_wallet_tables.sql
--- GlobalPay Wallet Service Schema
+-- ABX Wallet Service Schema
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 

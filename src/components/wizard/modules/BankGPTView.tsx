@@ -4,7 +4,7 @@
  * and Analytics dashboard inside /platform/bankgpt.
  */
 import { useState } from "react";
-import { MessageSquare, BarChart3, SlidersHorizontal, Sparkles, ShieldCheck, Users, Database, Calculator } from "lucide-react";
+import { MessageSquare, BarChart3, SlidersHorizontal, Sparkles, ShieldCheck, Users, Database, Calculator, Rocket } from "lucide-react";
 import { BankGPTMesh } from "./BankGPTMesh";
 import { BankGPTSettings } from "./BankGPTSettings";
 import { AgentBuilder } from "./bankgpt/AgentBuilder";
@@ -12,8 +12,9 @@ import { CouncilMode } from "./bankgpt/CouncilMode";
 import { CDPDashboard } from "./bankgpt/cdp/CDPDashboard";
 import { CostSimulator } from "./bankgpt/CostSimulator";
 import AdminBankGPTAnalytics from "@/pages/admin/AdminBankGPTAnalytics";
+import { PromotionWizard } from "@/components/bankgpt/promotion/PromotionWizard";
 
-type Tab = "mesh" | "council" | "cdp" | "configure" | "builder" | "cost" | "analytics";
+type Tab = "mesh" | "council" | "cdp" | "configure" | "builder" | "cost" | "analytics" | "launch";
 
 export function BankGPTView() {
   const [tab, setTab] = useState<Tab>("mesh");
@@ -27,6 +28,7 @@ export function BankGPTView() {
         <TabButton active={tab === "configure"} onClick={() => setTab("configure")} icon={SlidersHorizontal} label="Configure" />
         <TabButton active={tab === "builder"}   onClick={() => setTab("builder")}   icon={Sparkles}          label="Agent Builder" />
         <TabButton active={tab === "cost"}      onClick={() => setTab("cost")}      icon={Calculator}        label="Cost Simulator" />
+        <TabButton active={tab === "launch"}    onClick={() => setTab("launch")}    icon={Rocket}            label="Launch Console" />
         <TabButton active={tab === "analytics"} onClick={() => setTab("analytics")} icon={BarChart3}         label="Analytics" />
       </div>
 
@@ -41,6 +43,7 @@ export function BankGPTView() {
       )}
       {tab === "builder" && <AgentBuilder />}
       {tab === "cost" && <CostSimulator />}
+      {tab === "launch" && <PromotionWizard />}
       {tab === "analytics" && (
         <div className="-mx-6">
           <AdminBankGPTAnalytics />

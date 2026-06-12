@@ -62,7 +62,7 @@ const Onboarding = () => {
               <ArrowLeft className="w-4 h-4" />
             </button>
           )}
-          <img src={tesfaLogo} alt="GlobalPay" className="w-8 h-8 rounded-lg" />
+          <img src={tesfaLogo} alt="ABX" className="w-8 h-8 rounded-lg" />
           <div>
             <p className="text-xs text-muted-foreground">Step {step} of {steps.length}</p>
             <p className="font-display font-bold text-sm text-gold">{steps[step - 1].title}</p>
@@ -82,7 +82,7 @@ const Onboarding = () => {
         {step === 1 && (
           <div className="animate-slide-up">
             <h2 className="font-display font-bold text-2xl text-foreground mb-2">
-              ወደ GlobalPay ይቀላቀሉ
+              ወደ ABX ይቀላቀሉ
             </h2>
             <p className="text-muted-foreground text-sm mb-6">Join millions of Ethiopians managing money smarter</p>
 
@@ -284,7 +284,7 @@ const Onboarding = () => {
             <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-green flex items-center justify-center animate-glow-gold">
               <Check className="w-10 h-10 text-foreground" />
             </div>
-            <h2 className="font-display font-bold text-2xl text-gold mb-2">Welcome to GlobalPay! 🎉</h2>
+            <h2 className="font-display font-bold text-2xl text-gold mb-2">Welcome to ABX! 🎉</h2>
             <p className="text-foreground font-semibold mb-1">Abebe Girma</p>
             <p className="text-muted-foreground text-sm mb-6">Your KYC Level 1 wallet is activated</p>
 

@@ -1,5 +1,5 @@
 -- =============================================================================
--- GLOBALPAY / TESFAPAY — MASTER DATABASE SCHEMA
+-- ABX / TESFAPAY — MASTER DATABASE SCHEMA
 -- =============================================================================
 -- Database:   PostgreSQL 15+
 -- Currency:   All DECIMAL(18,2) columns in Ethiopian Birr (ETB)
@@ -333,7 +333,7 @@ CREATE TABLE money_requests (
     responded_at    TIMESTAMPTZ
 );
 
--- Contacts with GlobalPay membership flag
+-- Contacts with ABX membership flag
 CREATE TABLE contacts (
     id                UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
     owner_user_id     UUID         NOT NULL,

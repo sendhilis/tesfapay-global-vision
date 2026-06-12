@@ -148,7 +148,7 @@ const RequestMoney = () => {
         <p className="text-xs text-gold font-semibold mb-1">Your Payment Link</p>
         <p className="text-xs text-muted-foreground mb-3">Share this link to receive money from anyone</p>
         <div className="flex items-center gap-2 bg-muted rounded-xl px-3 py-2">
-          <span className="text-xs text-foreground flex-1 font-mono truncate">globalpay.app/pay/abebe001</span>
+          <span className="text-xs text-foreground flex-1 font-mono truncate">abx.app/pay/abebe001</span>
           <button className="text-gold"><Copy className="w-4 h-4" /></button>
         </div>
         <div className="flex gap-2 mt-3">
@@ -167,7 +167,7 @@ const RequestMoney = () => {
         />
       </div>
 
-      <p className="text-xs text-muted-foreground mb-2 font-semibold uppercase tracking-wide">GlobalPay Contacts</p>
+      <p className="text-xs text-muted-foreground mb-2 font-semibold uppercase tracking-wide">ABX Contacts</p>
       <div className="space-y-2">
         {filtered.map((c) => (
           <button key={c.phone} onClick={() => setSelected(c)} className="w-full glass rounded-2xl p-3.5 flex items-center gap-3 hover-lift text-left">

@@ -4,7 +4,7 @@
  * @route /install
  * @module Public
  *
- * @description Step-by-step guide for installing GlobalPay as a Progressive
+ * @description Step-by-step guide for installing ABX as a Progressive
  * Web App on iOS (Safari), Android (Chrome), and desktop browsers.
  * Detects platform and shows relevant instructions.
  *
@@ -77,7 +77,7 @@ const InstallPage = () => {
           <ArrowLeft className="w-4 h-4 text-foreground" />
         </button>
         <div>
-          <h1 className="font-display font-bold text-base text-foreground">Install GlobalPay</h1>
+          <h1 className="font-display font-bold text-base text-foreground">Install ABX</h1>
           <p className="text-xs text-muted-foreground">Add to your home screen</p>
         </div>
       </div>
@@ -85,8 +85,8 @@ const InstallPage = () => {
       <div className="flex-1 px-5 py-6 space-y-6">
         {/* App Card */}
         <div className="glass rounded-3xl p-6 flex flex-col items-center text-center">
-          <img src={tesfaLogo} alt="GlobalPay" className="w-20 h-20 rounded-2xl shadow-gold mb-4" />
-          <h2 className="font-display font-bold text-xl text-gold mb-1">GlobalPay</h2>
+          <img src={tesfaLogo} alt="ABX" className="w-20 h-20 rounded-2xl shadow-gold mb-4" />
+          <h2 className="font-display font-bold text-xl text-gold mb-1">ABX</h2>
           <p className="text-xs text-muted-foreground mb-4">Global Bank Ethiopia · Free</p>
           <div className="flex items-center gap-1 mb-4">
             {[1,2,3,4,5].map(i => <span key={i} className="text-gold text-sm">★</span>)}

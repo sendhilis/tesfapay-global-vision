@@ -15,8 +15,8 @@ FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
 
 # Security: non-root user
-RUN addgroup -S globalpay && adduser -S globalpay -G globalpay
-USER globalpay
+RUN addgroup -S abx && adduser -S abx -G abx
+USER abx
 
 # Copy jar
 COPY --from=build /app/target/gp-auth-service-1.0.0.jar app.jar

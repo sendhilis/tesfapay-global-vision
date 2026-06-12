@@ -102,7 +102,7 @@ public class OtpService {
     private void sendSms(String phone, String code) {
         // TODO: Integrate Africa's Talking or Twilio
         // AfricasTalkingGateway gateway = new AfricasTalkingGateway(apiKey, username);
-        // gateway.sendMessage(phone, "Your GlobalPay OTP is: " + code + ". Valid for 5 mins.");
+        // gateway.sendMessage(phone, "Your ABX OTP is: " + code + ". Valid for 5 mins.");
         log.info("SMS to {} with OTP: {}", phone, code);
     }
 }
