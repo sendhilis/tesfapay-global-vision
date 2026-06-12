@@ -399,23 +399,84 @@ function StepKB({ config, update, logAudit }: { config: AgentBuilderConfig; upda
     }, 1200);
   }
 
+  async function uploadAndIngest(doc: KbDoc, file: File) {
+    try {
+      const buf = await file.arrayBuffer();
+      // base64-encode in chunks to avoid call-stack blowups on large files
+      const bytes = new Uint8Array(buf);
+      let bin = "";
+      const CHUNK = 0x8000;
+      for (let i = 0; i < bytes.length; i += CHUNK) {
+        bin += String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + CHUNK)));
+      }
+      const dataBase64 = btoa(bin);
+
+      const { data, error } = await supabase.functions.invoke("bankgpt-kb-ingest", {
+        body: {
+          agentId: agentMeta.id,
+          docId: doc.id,
+          name: doc.name,
+          mimeType: file.type || undefined,
+          dataBase64,
+        },
+      });
+      if (error) throw error;
+      const charCount: number = data?.charCount ?? 0;
+
+      update((c: AgentBuilderConfig) => ({
+        ...c,
+        kb: {
+          ...c.kb,
+          docs: c.kb.docs.map((d) => d.id === doc.id ? {
+            ...d,
+            status: charCount > 0 ? "indexed" as const : "error" as const,
+            error: charCount > 0 ? undefined : "No extractable text found",
+            storagePath: data?.storagePath,
+            charCount,
+            chunks: charCount > 0 ? Math.max(1, Math.ceil(charCount / (c.kb.chunkSize || 800))) : 0,
+            tokens: Math.ceil(charCount / 4), // rough est.
+            indexedAt: new Date().toISOString(),
+          } : d),
+          lastIndexedAt: new Date().toISOString(),
+        },
+        goLive: { ...c.goLive, kbIndexed: true },
+      }));
+      logAudit("kb.doc.ingested", doc.id, { name: doc.name, charCount, storagePath: data?.storagePath });
+      if (charCount === 0) {
+        toast({ title: "No text extracted", description: `${doc.name} stored but had no readable text.`, variant: "destructive" as any });
+      }
+    } catch (e: any) {
+      console.error("ingest failed", e);
+      update((c: AgentBuilderConfig) => ({
+        ...c,
+        kb: { ...c.kb, docs: c.kb.docs.map((d) => d.id === doc.id ? { ...d, status: "error" as const, error: e?.message || "Upload failed" } : d) },
+      }));
+      logAudit("kb.doc.ingest_failed", doc.id, { name: doc.name, error: e?.message });
+      toast({ title: "Upload failed", description: `${doc.name}: ${e?.message || "unknown error"}`, variant: "destructive" as any });
+    }
+  }
+
   function addFiles(files: FileList | null) {
     if (!files || !files.length) return;
-    const newDocs: KbDoc[] = Array.from(files).map((f) => ({
-      id: `doc-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-      name: f.name, type: inferType(f.name),
-      size: `${(f.size / 1024).toFixed(0)} KB`,
-      status: "pending", enabled: true,
-      source: "upload", checksum: fakeChecksum(f.name + f.size),
-    }));
-    update({ kb: { ...config.kb, docs: [...config.kb.docs, ...newDocs] } });
-    newDocs.forEach((d) => {
-      logAudit("kb.doc.added", d.id, { name: d.name, type: d.type, source: "upload", checksum: d.checksum });
-      indexDoc(d.id);
+    const pairs = Array.from(files).map((f) => {
+      const doc: KbDoc = {
+        id: `doc-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        name: f.name, type: inferType(f.name),
+        size: `${(f.size / 1024).toFixed(0)} KB`,
+        status: "indexing", enabled: true,
+        source: "upload", checksum: fakeChecksum(f.name + f.size),
+      };
+      return { doc, file: f };
     });
-    toast({ title: `${newDocs.length} document${newDocs.length > 1 ? "s" : ""} added`, description: "Indexing started…" });
+    update({ kb: { ...config.kb, docs: [...config.kb.docs, ...pairs.map((p) => p.doc)] } });
+    pairs.forEach(({ doc, file }) => {
+      logAudit("kb.doc.added", doc.id, { name: doc.name, type: doc.type, source: "upload", size: file.size });
+      uploadAndIngest(doc, file);
+    });
+    toast({ title: `${pairs.length} document${pairs.length > 1 ? "s" : ""} uploading`, description: "Storing & extracting text…" });
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
+
 
   function addUrl() {
     const v = urlValue.trim();
