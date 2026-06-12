@@ -117,9 +117,12 @@
   var CSS = "\n" +
 "*,*::before,*::after{box-sizing:border-box}\n" +
 ":host{all:initial;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;color:#0f172a}\n" +
-".bgpt-launcher{position:fixed;right:20px;bottom:20px;width:60px;height:60px;border-radius:9999px;background:var(--bgpt-accent);color:var(--bgpt-primary);box-shadow:0 10px 30px rgba(0,0,0,.25);display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:2147483646;border:2px solid var(--bgpt-primary);transition:transform .15s ease}\n" +
+".bgpt-dock{position:fixed;right:20px;bottom:20px;z-index:2147483646;display:flex;flex-direction:column;align-items:center;gap:6px;touch-action:none;user-select:none;-webkit-user-select:none}\n" +
+".bgpt-dock.bgpt-dragging .bgpt-launcher{cursor:grabbing;transform:scale(1.08)}\n" +
+".bgpt-launcher{width:60px;height:60px;border-radius:9999px;background:var(--bgpt-accent);color:var(--bgpt-primary);box-shadow:0 10px 30px rgba(0,0,0,.25);display:flex;align-items:center;justify-content:center;cursor:grab;border:2px solid var(--bgpt-primary);transition:transform .15s ease}\n" +
 ".bgpt-launcher:hover{transform:scale(1.05)}\n" +
-".bgpt-launcher svg{width:28px;height:28px}\n" +
+".bgpt-launcher svg{width:28px;height:28px;pointer-events:none}\n" +
+".bgpt-label{font-size:11px;font-weight:700;letter-spacing:.06em;color:#fff;background:var(--bgpt-accent);padding:3px 8px;border-radius:9999px;border:1px solid var(--bgpt-primary);box-shadow:0 4px 12px rgba(0,0,0,.2);white-space:nowrap;pointer-events:none}\n" +
 ".bgpt-panel{position:fixed;right:20px;bottom:92px;width:380px;max-width:calc(100vw - 32px);height:560px;max-height:calc(100vh - 120px);background:#fff;border-radius:18px;box-shadow:0 24px 60px rgba(0,0,0,.28);display:flex;flex-direction:column;overflow:hidden;z-index:2147483646;border:1px solid rgba(0,0,0,.06)}\n" +
 ".bgpt-panel.bgpt-hidden{display:none}\n" +
 ".bgpt-inline{width:100%;height:100%;min-height:480px;background:#fff;border-radius:14px;display:flex;flex-direction:column;overflow:hidden;border:1px solid rgba(0,0,0,.08)}\n" +
