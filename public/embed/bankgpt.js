@@ -350,20 +350,24 @@
     this.sendBtn.disabled = true;
     var typingEl = this.pushTyping();
 
+    // Server-side resolution: backend looks up persona / KB / tools from
+    // public.bankgpt_agents using agentId. Inline overrides allowed for
+    // host-specific tagline tweaks (rare).
     var body = {
-      agent: {
-        name: this.cfg.agentName,
-        tagline: this.cfg.tagline,
-        systemPrompt: this.cfg.systemPrompt,
-        tone: { formal_casual: 40, terse_verbose: 40, reserved_expressive: 50 },
-        usesEmoji: false,
-        bankName: this.cfg.bankName,
-      },
-      kb: { docs: [], topK: 3 },
-      tools: [],
+      agentId: this.cfg.agentId,
       messages: this.messages.slice(-12),
       language: this.cfg.language,
     };
+    if (this.cfg.systemPromptOverride) {
+      body.agent = {
+        name: this.cfg.agentName,
+        tagline: this.cfg.tagline,
+        systemPrompt: this.cfg.systemPromptOverride,
+        tone: { formal_casual: 40, terse_verbose: 40, reserved_expressive: 50 },
+        usesEmoji: false,
+        bankName: this.cfg.bankName,
+      };
+    }
 
     var headers = {
       "Content-Type": "application/json",
