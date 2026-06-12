@@ -381,9 +381,7 @@
       body: JSON.stringify({ text: text, lang: this.cfg.language }),
     }).then(function (r) {
       var ctype = r.headers.get("Content-Type") || "";
-      if (!r.ok || !ctype.indexOf("audio") === 0 && ctype.indexOf("audio") !== 0) {
-        return null;
-      }
+      if (!r.ok || ctype.indexOf("audio") !== 0) return null;
       return r.arrayBuffer();
     }).then(function (buf) {
       if (!buf) return;
