@@ -207,18 +207,43 @@
     var initials = (this.cfg.agentName || "AI")
       .split(/\s+/).slice(0, 2).map(function (w) { return w[0]; }).join("").toUpperCase();
     var self = this;
+
+    // language toggle
+    this.langBtn = el("button", {
+      class: "bgpt-hdrbtn",
+      type: "button",
+      title: "Toggle language",
+      onClick: function () { self.toggleLanguage(); },
+    }, [self.cfg.language === "am" ? "አማ" : "EN"]);
+
+    // speaker toggle (TTS auto-play)
+    this.speakerBtn = this.cfg.voice ? el("button", {
+      class: "bgpt-hdrbtn" + (self.cfg.autoSpeak ? " bgpt-active" : ""),
+      type: "button",
+      title: "Toggle voice replies",
+      onClick: function () { self.toggleSpeaker(); },
+      html: self.cfg.autoSpeak
+        ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>'
+        : '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>',
+    }) : null;
+
     var closeBtn = withClose
       ? el("button", { class: "bgpt-close", "aria-label": "Close",
           onClick: function () { self.toggle(false); },
           html: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>' })
       : null;
+
+    var controls = el("div", { style: { marginLeft: "auto", display: "flex", alignItems: "center" } }, [
+      this.langBtn, this.speakerBtn, closeBtn,
+    ]);
+
     return el("div", { class: "bgpt-header" }, [
       el("div", { class: "bgpt-avatar" }, [initials]),
       el("div", {}, [
         el("div", { class: "bgpt-title" }, [this.cfg.agentName]),
         el("div", { class: "bgpt-sub" }, [this.cfg.tagline]),
       ]),
-      closeBtn,
+      controls,
     ]);
   };
 
@@ -244,6 +269,15 @@
         e.target.style.height = Math.min(e.target.scrollHeight, 120) + "px";
       },
     });
+
+    this.micBtn = this.cfg.voice ? el("button", {
+      class: "bgpt-iconbtn",
+      type: "button",
+      title: "Hold to talk",
+      onClick: function () { self.toggleMic(); },
+      html: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>',
+    }) : null;
+
     this.sendBtn = el("button", {
       class: "bgpt-send",
       type: "button",
@@ -251,12 +285,124 @@
     }, [self.cfg.language === "am" ? "ላክ" : "Send"]);
 
     return el("div", {}, [
-      el("div", { class: "bgpt-input" }, [this.textareaEl, this.sendBtn]),
+      el("div", { class: "bgpt-input" }, [this.textareaEl, this.micBtn, this.sendBtn]),
       el("div", { class: "bgpt-foot" }, [
         "Powered by BankGPT · " + escapeHtml(this.cfg.bankName),
       ]),
     ]);
   };
+
+  Widget.prototype.toggleLanguage = function () {
+    this.cfg.language = this.cfg.language === "am" ? "en" : "am";
+    if (this.langBtn) this.langBtn.textContent = this.cfg.language === "am" ? "አማ" : "EN";
+    if (this.textareaEl) this.textareaEl.placeholder = this.cfg.language === "am" ? "መልዕክት ይጻፉ…" : "Type a message…";
+    if (this.sendBtn) this.sendBtn.textContent = this.cfg.language === "am" ? "ላክ" : "Send";
+  };
+
+  Widget.prototype.toggleSpeaker = function () {
+    this.cfg.autoSpeak = !this.cfg.autoSpeak;
+    if (this.speakerBtn) {
+      this.speakerBtn.classList.toggle("bgpt-active", this.cfg.autoSpeak);
+      this.speakerBtn.innerHTML = this.cfg.autoSpeak
+        ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>'
+        : '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>';
+    }
+    if (!this.cfg.autoSpeak) this.stopAudio();
+  };
+
+  Widget.prototype.toggleMic = function () {
+    var self = this;
+    if (this.recording) { this.stopMic(); return; }
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      this.pushBot("⚠️ Microphone not supported in this browser.");
+      return;
+    }
+    navigator.mediaDevices.getUserMedia({ audio: true }).then(function (stream) {
+      var mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+        ? "audio/webm;codecs=opus" : "audio/webm";
+      var rec = new MediaRecorder(stream, { mimeType: mimeType });
+      var chunks = [];
+      rec.ondataavailable = function (e) { if (e.data.size) chunks.push(e.data); };
+      rec.onstop = function () {
+        stream.getTracks().forEach(function (t) { t.stop(); });
+        var blob = new Blob(chunks, { type: "audio/webm" });
+        self.recording = false;
+        if (self.micBtn) self.micBtn.classList.remove("bgpt-rec");
+        self.transcribeAndSend(blob);
+      };
+      self.recorder = rec;
+      self.recording = true;
+      if (self.micBtn) self.micBtn.classList.add("bgpt-rec");
+      rec.start();
+    }).catch(function (err) {
+      console.warn("[BankGPT] mic error", err);
+      self.pushBot("⚠️ Microphone permission denied.");
+    });
+  };
+
+  Widget.prototype.stopMic = function () {
+    try { this.recorder && this.recorder.stop(); } catch (_) {}
+  };
+
+  Widget.prototype.transcribeAndSend = function (blob) {
+    var self = this;
+    var typingEl = this.pushTyping();
+    var form = new FormData();
+    form.append("audio", blob, "clip.webm");
+    form.append("language", this.cfg.language === "am" ? "amh" : "eng");
+    fetch(this.cfg.api + "/functions/v1/elevenlabs-stt", {
+      method: "POST",
+      headers: { apikey: this.cfg.key, Authorization: "Bearer " + (this.cfg.token || this.cfg.key) },
+      body: form,
+    }).then(function (r) { return r.json(); }).then(function (j) {
+      if (typingEl && typingEl.parentNode) typingEl.parentNode.removeChild(typingEl);
+      var text = (j && j.text || "").trim();
+      if (!text) { self.pushBot(self.cfg.language === "am" ? "ምንም አልሰማሁም።" : "Didn't catch that — please try again."); return; }
+      self.textareaEl.value = text;
+      self.send();
+    }).catch(function (err) {
+      if (typingEl && typingEl.parentNode) typingEl.parentNode.removeChild(typingEl);
+      console.warn("[BankGPT] stt failed", err);
+      self.pushBot("⚠️ Voice transcription failed.");
+    });
+  };
+
+  Widget.prototype.speak = function (text) {
+    var self = this;
+    if (!text) return;
+    this.stopAudio();
+    fetch(this.cfg.api + "/functions/v1/elevenlabs-tts", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: this.cfg.key,
+        Authorization: "Bearer " + (this.cfg.token || this.cfg.key),
+      },
+      body: JSON.stringify({ text: text, lang: this.cfg.language }),
+    }).then(function (r) {
+      var ctype = r.headers.get("Content-Type") || "";
+      if (!r.ok || !ctype.indexOf("audio") === 0 && ctype.indexOf("audio") !== 0) {
+        return null;
+      }
+      return r.arrayBuffer();
+    }).then(function (buf) {
+      if (!buf) return;
+      var blob = new Blob([buf], { type: "audio/mpeg" });
+      var url = URL.createObjectURL(blob);
+      var audio = new Audio(url);
+      self.currentAudio = audio;
+      audio.onended = function () { URL.revokeObjectURL(url); };
+      audio.play().catch(function (e) { console.warn("[BankGPT] audio play failed", e); });
+    }).catch(function (e) { console.warn("[BankGPT] tts failed", e); });
+  };
+
+  Widget.prototype.stopAudio = function () {
+    if (this.currentAudio) {
+      try { this.currentAudio.pause(); } catch (_) {}
+      this.currentAudio = null;
+    }
+  };
+
 
   Widget.prototype.renderBubble = function () {
     var self = this;
