@@ -365,8 +365,8 @@ ${tools.map((t) => `  • ${t.label} [policy: ${t.approval}${t.dailyLimit ? `, d
 
     return new Response(JSON.stringify({
       reply,
-      groundedCitations: liveSources.length,
-      groundedSources: liveSources.map((s) => s.url),
+      groundedCitations: allSources.length,
+      groundedSources: allSources.map((s) => s.url),
       derivedBank: derivedBank,
       language,
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
