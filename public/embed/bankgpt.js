@@ -530,6 +530,7 @@
     if (!this.panel) return;
     if (this.cfg.style === "bubble") {
       var willOpen = typeof force === "boolean" ? force : this.panel.classList.contains("bgpt-hidden");
+      if (willOpen && this.repositionPanel) this.repositionPanel();
       this.panel.classList.toggle("bgpt-hidden", !willOpen);
       if (willOpen) setTimeout(this.focusInput.bind(this), 50);
     } else if (this.cfg.style === "fullscreen") {
