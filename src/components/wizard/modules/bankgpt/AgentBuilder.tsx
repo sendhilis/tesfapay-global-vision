@@ -372,7 +372,7 @@ function fakeChecksum(s: string): string {
   return Math.abs(h).toString(16).padStart(8, "0").slice(0, 8);
 }
 
-function StepKB({ config, update, logAudit }: { config: AgentBuilderConfig; update: (p: any) => void; logAudit: (a: string, t?: string, d?: any) => void }) {
+function StepKB({ agentMeta, config, update, logAudit }: { agentMeta: { id: string }; config: AgentBuilderConfig; update: (p: any) => void; logAudit: (a: string, t?: string, d?: any) => void }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [urlValue, setUrlValue] = useState("");
   const [urlError, setUrlError] = useState<string | null>(null);
