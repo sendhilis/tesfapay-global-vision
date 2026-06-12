@@ -236,7 +236,7 @@ function StepRenderer({ step, agentId, agentMeta }: {
   switch (step) {
     case "persona":    return <StepPersona agentMeta={agentMeta} config={config} update={update} logAudit={logAudit} />;
     case "intents":    return <StepIntents config={config} update={update} logAudit={logAudit} />;
-    case "kb":         return <StepKB config={config} update={update} logAudit={logAudit} />;
+    case "kb":         return <StepKB agentMeta={agentMeta} config={config} update={update} logAudit={logAudit} />;
     case "tools":      return <StepTools config={config} update={update} logAudit={logAudit} />;
     case "guardrails": return <StepGuardrails config={config} update={update} logAudit={logAudit} />;
     case "sandbox":    return <StepSandbox agentMeta={agentMeta} config={config} update={update} logAudit={logAudit} />;
