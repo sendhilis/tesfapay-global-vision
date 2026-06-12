@@ -377,12 +377,18 @@
     fetch(this.cfg.api + "/functions/v1/agent-sandbox-chat", {
       method: "POST", headers: headers, body: JSON.stringify(body),
     })
-      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+      .then(function (r) {
+        return r.text().then(function (txt) {
+          var j = {}; try { j = txt ? JSON.parse(txt) : {}; } catch (_) { j = { error: txt }; }
+          return { ok: r.ok, status: r.status, j: j };
+        });
+      })
       .then(function (res) {
         if (typingEl && typingEl.parentNode) typingEl.parentNode.removeChild(typingEl);
         if (!res.ok || res.j.error) {
-          self.pushBot("Sorry — I'm having trouble reaching the backend right now.");
-          console.warn("[BankGPT] backend error", res.j);
+          var detail = res.j && (res.j.error || res.j.message) ? (res.j.error || res.j.message) : ("HTTP " + res.status);
+          self.pushBot("⚠️ " + detail);
+          console.warn("[BankGPT] backend error", res.status, res.j);
         } else {
           self.pushBot(res.j.reply || "(no response)");
         }
