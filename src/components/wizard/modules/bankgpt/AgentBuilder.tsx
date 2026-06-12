@@ -464,8 +464,8 @@ function StepKB({ config, update, logAudit }: { config: AgentBuilderConfig; upda
         <div className="rounded-lg border border-dashed border-border p-4 text-center">
           <Upload className="h-5 w-5 mx-auto text-muted-foreground mb-2" />
           <p className="text-xs font-semibold text-foreground">Upload documents</p>
-          <p className="text-[10px] text-muted-foreground mb-3">PDF · DOCX · TXT · max 20 MB</p>
-          <input ref={fileInputRef} type="file" multiple accept=".pdf,.docx,.doc,.txt"
+          <p className="text-[10px] text-muted-foreground mb-3">PDF · DOCX · TXT · MD · max 20 MB</p>
+          <input ref={fileInputRef} type="file" multiple accept=".pdf,.docx,.doc,.txt,.md,.markdown,.mdx,text/markdown"
             className="hidden" onChange={(e) => addFiles(e.target.files)} />
           <Button size="sm" variant="outline" onClick={() => fileInputRef.current?.click()}>
             <Plus className="h-3.5 w-3.5 mr-1" /> Choose files
