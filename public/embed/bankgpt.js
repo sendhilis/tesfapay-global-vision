@@ -284,7 +284,7 @@
     this.sendBtn = el("button", {
       class: "bgpt-send",
       type: "button",
-      onClick: function () { self.send(); },
+      onClick: function () { self.unlockAudio(); self.send(); },
     }, [self.cfg.language === "am" ? "ላክ" : "Send"]);
 
     return el("div", {}, [
