@@ -21,6 +21,7 @@ import {
   useAgentBuilder, useCustomAgents,
   type AgentBuilderConfig, type ToolId, type KbDoc,
 } from "./agentBuilderStore";
+import { supabase } from "@/integrations/supabase/client";
 import { VoiceSandbox } from "./VoiceSandbox";
 import { speak } from "./voiceUtils";
 import {
