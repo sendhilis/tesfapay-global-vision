@@ -57,8 +57,13 @@ Deno.serve(async (req) => {
     if (!res.ok) {
       const errText = await res.text();
       console.error("ElevenLabs STT error", res.status, errText);
-      return new Response(JSON.stringify({ error: "STT failed", status: res.status, details: errText }), {
-        status: res.status, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      const isInvalidAudio = errText.includes("invalid_audio") || errText.includes("invalid_content");
+      const fallback = res.status >= 500 || isInvalidAudio;
+      return new Response(JSON.stringify({
+        error: "STT failed", status: res.status, details: errText, fallback, text: "",
+      }), {
+        status: fallback ? 200 : res.status,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
