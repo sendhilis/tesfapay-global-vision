@@ -917,6 +917,32 @@ function StepWidget({ agentMeta, config, update, logAudit }: any) {
             </ul>
           </div>
 
+          <div className="rounded-lg border border-border p-3 bg-background/30 space-y-2">
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Publish for embed</p>
+              {publishState === "published" && publishedAt && (
+                <span className="text-[10px] text-emerald-400 inline-flex items-center gap-1">
+                  <Check className="h-3 w-3" /> {new Date(publishedAt).toLocaleTimeString()}
+                </span>
+              )}
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              Publishes persona, KB ({config.kb.docs.length} doc{config.kb.docs.length === 1 ? "" : "s"}),
+              tools, and guardrails so the embedded widget resolves <code className="px-1 rounded bg-muted">{agentMeta.id}</code> server-side.
+            </p>
+            <Button
+              size="sm"
+              variant={publishState === "published" ? "outline" : "default"}
+              className="w-full"
+              disabled={publishState === "publishing"}
+              onClick={publishToRegistry}
+            >
+              {publishState === "publishing" ? (<><RotateCw className="h-3.5 w-3.5 mr-1 animate-spin" /> Publishing…</>)
+                : publishState === "published" ? (<><Check className="h-3.5 w-3.5 mr-1" /> Re-publish</>)
+                : (<><Upload className="h-3.5 w-3.5 mr-1" /> Publish to registry</>)}
+            </Button>
+          </div>
+
           <div className="rounded-lg border border-border p-3">
             <div className="flex items-center justify-between mb-2">
               <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Embed snippet</p>
@@ -926,6 +952,11 @@ function StepWidget({ agentMeta, config, update, logAudit }: any) {
               </button>
             </div>
             <pre className="text-[10px] leading-relaxed text-muted-foreground whitespace-pre-wrap break-all">{snippet}</pre>
+            {publishState !== "published" && (
+              <p className="mt-2 text-[10px] text-amber-400/90">
+                Click "Publish to registry" first — otherwise the widget will respond with a "not published" error.
+              </p>
+            )}
           </div>
 
           <Button className="w-full" disabled={!allGo}
@@ -937,6 +968,7 @@ function StepWidget({ agentMeta, config, update, logAudit }: any) {
             <ShieldCheck className="h-4 w-4 mr-1" />
             {allGo ? "Activate agent" : "Complete checklist to activate"}
           </Button>
+
         </div>
       </div>
     </Card>
