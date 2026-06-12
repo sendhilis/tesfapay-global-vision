@@ -6,27 +6,65 @@
 // same-site card/product URLs, then injects those pages as authoritative
 // grounding context. Fetched pages are cached in-memory per isolate.
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
 type Tone = { formal_casual: number; terse_verbose: number; reserved_expressive: number };
 type KbDoc = { name: string; type: string; status: string; enabled: boolean; source?: string };
 type Tool = { id: string; label: string; approval: string; dailyLimit?: number };
 type Page = { url: string; finalUrl: string; html: string; text: string };
 
+type AgentDef = {
+  name: string;
+  tagline: string;
+  systemPrompt: string;
+  tone: Tone;
+  usesEmoji: boolean;
+  bankName?: string;
+};
+
 type Body = {
-  agent: {
-    name: string;
-    tagline: string;
-    systemPrompt: string;
-    tone: Tone;
-    usesEmoji: boolean;
-    bankName?: string;
-  };
-  kb: { docs: KbDoc[]; topK: number };
-  tools: Tool[];
+  // EITHER: inline (sandbox preview from the wizard)
+  agent?: AgentDef;
+  kb?: { docs: KbDoc[]; topK: number };
+  tools?: Tool[];
+  // OR: just an agentId — config is loaded server-side from public.bankgpt_agents
+  // (used by the embedded /embed/bankgpt.js loader on the bank's host app).
+  agentId?: string;
   messages: { role: "user" | "assistant"; content: string }[];
   language?: "en" | "am";
   model?: string;
 };
+
+async function loadPublishedAgent(agentId: string): Promise<
+  { agent: AgentDef; kb: { docs: KbDoc[]; topK: number }; tools: Tool[] } | null
+> {
+  const url = Deno.env.get("SUPABASE_URL");
+  const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!url || !key) return null;
+  const supa = createClient(url, key, { auth: { persistSession: false } });
+  const { data, error } = await supa
+    .from("bankgpt_agents")
+    .select("agent_id, bank_name, name, tagline, system_prompt, tone, uses_emoji, kb, tools, published")
+    .eq("agent_id", agentId)
+    .eq("published", true)
+    .maybeSingle();
+  if (error || !data) {
+    if (error) console.warn("loadPublishedAgent error", error.message);
+    return null;
+  }
+  return {
+    agent: {
+      name: data.name,
+      tagline: data.tagline ?? "",
+      systemPrompt: data.system_prompt ?? "",
+      tone: data.tone as Tone,
+      usesEmoji: !!data.uses_emoji,
+      bankName: data.bank_name ?? undefined,
+    },
+    kb: { docs: (data.kb?.docs ?? []) as KbDoc[], topK: data.kb?.topK ?? 4 },
+    tools: (data.tools ?? []) as Tool[],
+  };
+}
 
 function describeTone(t: Tone, usesEmoji: boolean) {
   const reg = t.formal_casual < 33 ? "formal" : t.formal_casual > 66 ? "casual" : "neutral";
@@ -172,11 +210,36 @@ Deno.serve(async (req) => {
     }
 
     const body = (await req.json()) as Body;
-    const { agent, kb, tools, messages } = body;
     const language = body.language ?? "en";
+    const messages = body.messages;
 
-    if (!agent?.name || !messages?.length) {
-      return new Response(JSON.stringify({ error: "Missing agent or messages" }), {
+    if (!messages?.length) {
+      return new Response(JSON.stringify({ error: "Missing messages" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Resolve agent/kb/tools — inline body wins; otherwise look up by agentId.
+    let agent = body.agent;
+    let kb = body.kb;
+    let tools = body.tools;
+
+    if ((!agent || !agent.name) && body.agentId) {
+      const resolved = await loadPublishedAgent(body.agentId);
+      if (!resolved) {
+        return new Response(JSON.stringify({
+          error: `Agent "${body.agentId}" is not published. Open the Agent Builder → Widget step and click "Publish for embed".`,
+        }), {
+          status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      agent = resolved.agent;
+      kb = kb ?? resolved.kb;
+      tools = tools ?? resolved.tools;
+    }
+
+    if (!agent?.name) {
+      return new Response(JSON.stringify({ error: "Missing agent (pass `agent` inline or `agentId`)" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
