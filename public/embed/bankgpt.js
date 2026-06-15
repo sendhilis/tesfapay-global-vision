@@ -490,7 +490,7 @@
     var dock = el("div", { class: "bgpt-dock" }, [launcher, label]);
     this.dock = dock;
     this.launcher = launcher;
-    this.panel = el("div", { class: "bgpt-panel bgpt-hidden", style: { position: "fixed" } }, [
+    this.panel = el("div", { class: "bgpt-panel bgpt-hidden" }, [
       this.headerNode(true), this.auditNode(), this.bodyNode(), this.inputNode(),
     ]);
     this.shadow.appendChild(this.panel);
