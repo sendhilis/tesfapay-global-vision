@@ -163,7 +163,21 @@
 ".bgpt-send{background:var(--bgpt-accent);color:#fff;border:0;border-radius:10px;padding:0 14px;cursor:pointer;font-weight:600;font-size:13px}\n" +
 ".bgpt-send:disabled{opacity:.5;cursor:not-allowed}\n" +
 ".bgpt-foot{padding:6px 12px 8px;font-size:10px;text-align:center;color:#94a3b8;background:#fff;border-top:1px solid rgba(0,0,0,.04)}\n" +
-"@media (max-width:480px){.bgpt-panel{right:8px;left:8px;width:auto;bottom:84px;height:70vh}}\n";
+".bgpt-audit{position:absolute;top:56px;right:8px;width:300px;max-height:340px;overflow-y:auto;background:#0f172a;color:#e2e8f0;border-radius:10px;box-shadow:0 12px 32px rgba(0,0,0,.35);padding:10px;z-index:10;font-size:11px}\n" +
+".bgpt-audit.bgpt-hidden{display:none}\n" +
+".bgpt-audit h4{margin:0 0 6px;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8}\n" +
+".bgpt-audit-row{display:flex;justify-content:space-between;gap:8px;padding:3px 0;border-bottom:1px solid rgba(255,255,255,.06)}\n" +
+".bgpt-audit-row:last-child{border-bottom:0}\n" +
+".bgpt-audit-row .k{color:#94a3b8}\n" +
+".bgpt-audit-row .v{color:#fbbf24;font-weight:600;text-align:right}\n" +
+".bgpt-audit-row .v.on{color:#34d399}\n" +
+".bgpt-audit-row .v.off{color:#64748b}\n" +
+".bgpt-audit-evt{display:flex;align-items:flex-start;gap:6px;padding:6px;margin-top:4px;border-radius:6px;background:rgba(220,38,38,.18);border-left:3px solid #ef4444}\n" +
+".bgpt-audit-evt.ok{background:rgba(16,185,129,.14);border-left-color:#10b981}\n" +
+".bgpt-audit-evt .t{font-size:9px;color:#94a3b8;margin-bottom:2px}\n" +
+".bgpt-audit-dot{position:absolute;top:6px;right:6px;width:8px;height:8px;border-radius:50%;background:#ef4444;border:2px solid var(--bgpt-accent)}\n" +
+".bgpt-audit-empty{color:#64748b;font-style:italic;padding:4px 0}\n" +
+"@media (max-width:480px){.bgpt-panel{right:8px;left:8px;width:auto;bottom:84px;height:70vh}.bgpt-audit{width:calc(100% - 16px);right:8px}}\n";
 
   // ─── Widget class ────────────────────────────────────────────────────────
   function Widget(cfg) {
@@ -230,6 +244,18 @@
         : '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>',
     }) : null;
 
+    // audit / guardrail status toggle
+    this.auditBtn = el("button", {
+      class: "bgpt-hdrbtn",
+      type: "button",
+      title: "Guardrail audit",
+      style: { position: "relative" },
+      onClick: function () { self.toggleAudit(); },
+      html: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 4v6c0 5-3.5 9-8 10-4.5-1-8-5-8-10V6l8-4z"/></svg>',
+    });
+    this.auditDot = el("span", { class: "bgpt-audit-dot", style: { display: "none" } });
+    this.auditBtn.appendChild(this.auditDot);
+
     var closeBtn = withClose
       ? el("button", { class: "bgpt-close", "aria-label": "Close",
           onClick: function () { self.toggle(false); },
@@ -237,7 +263,7 @@
       : null;
 
     var controls = el("div", { style: { marginLeft: "auto", display: "flex", alignItems: "center" } }, [
-      this.langBtn, this.speakerBtn, closeBtn,
+      this.langBtn, this.speakerBtn, this.auditBtn, closeBtn,
     ]);
 
     return el("div", { class: "bgpt-header" }, [
@@ -248,6 +274,64 @@
       ]),
       controls,
     ]);
+  };
+
+  Widget.prototype.auditNode = function () {
+    this.auditEvents = this.auditEvents || [];
+    this.auditPanel = el("div", { class: "bgpt-audit bgpt-hidden", role: "region", "aria-label": "Guardrail audit" });
+    this.renderAudit();
+    return this.auditPanel;
+  };
+
+  Widget.prototype.toggleAudit = function (force) {
+    if (!this.auditPanel) return;
+    var show = typeof force === "boolean" ? force : this.auditPanel.classList.contains("bgpt-hidden");
+    this.auditPanel.classList[show ? "remove" : "add"]("bgpt-hidden");
+    if (show && this.auditDot) this.auditDot.style.display = "none";
+  };
+
+  Widget.prototype.logGuardrail = function (evt) {
+    this.auditEvents = this.auditEvents || [];
+    this.auditEvents.unshift({ ts: new Date(), kind: evt.kind, detail: evt.detail || "", level: evt.level || "warn" });
+    this.auditEvents = this.auditEvents.slice(0, 20);
+    if (this.auditPanel && this.auditPanel.classList.contains("bgpt-hidden") && evt.level !== "ok" && this.auditDot) {
+      this.auditDot.style.display = "block";
+    }
+    this.renderAudit();
+  };
+
+  Widget.prototype.renderAudit = function () {
+    if (!this.auditPanel) return;
+    var g = this.enforcedGuardrails || {};
+    var rows = [
+      ["PII redaction",       g.piiRedaction],
+      ["Profanity filter",    g.profanityFilter],
+      ["Jailbreak detection", g.jailbreakDetection],
+      ["Blocked topics",      typeof g.blockedTopics === "number" ? g.blockedTopics : "—"],
+      ["Allowed languages",   Array.isArray(g.allowedLanguages) && g.allowedLanguages.length ? g.allowedLanguages.join(", ") : "any"],
+      ["Max tokens / reply",  g.maxTokensPerReply || "—"],
+      ["Max turns / session", g.maxTurnsPerSession || "—"],
+      ["Rate limit / min",    g.rateLimitPerMinute || "—"],
+    ];
+    var html = '<h4>Enforced guardrails</h4>';
+    rows.forEach(function (r) {
+      var v = r[1];
+      var cls = v === true ? "on" : v === false ? "off" : "";
+      var disp = v === true ? "ON" : v === false ? "OFF" : String(v);
+      html += '<div class="bgpt-audit-row"><span class="k">' + r[0] + '</span><span class="v ' + cls + '">' + disp + "</span></div>";
+    });
+    html += '<h4 style="margin-top:10px">Recent events</h4>';
+    if (!this.auditEvents || !this.auditEvents.length) {
+      html += '<div class="bgpt-audit-empty">No guardrail activity yet.</div>';
+    } else {
+      this.auditEvents.forEach(function (e) {
+        var t = e.ts.toLocaleTimeString();
+        var safe = String(e.detail || "").replace(/[<>&]/g, function (c) { return { "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c]; });
+        html += '<div class="bgpt-audit-evt ' + (e.level === "ok" ? "ok" : "") + '">' +
+          '<div><div class="t">' + t + '</div><div><b>' + e.kind + '</b>' + (safe ? ' — ' + safe : "") + '</div></div></div>';
+      });
+    }
+    this.auditPanel.innerHTML = html;
   };
 
   Widget.prototype.bodyNode = function () {
@@ -465,7 +549,7 @@
     this.dock = dock;
     this.launcher = launcher;
     this.panel = el("div", { class: "bgpt-panel bgpt-hidden" }, [
-      this.headerNode(true), this.bodyNode(), this.inputNode(),
+      this.headerNode(true), this.auditNode(), this.bodyNode(), this.inputNode(),
     ]);
     this.shadow.appendChild(this.panel);
     this.shadow.appendChild(dock);
@@ -554,8 +638,8 @@
 
 
   Widget.prototype.renderInline = function () {
-    this.panel = el("div", { class: "bgpt-inline" }, [
-      this.headerNode(false), this.bodyNode(), this.inputNode(),
+    this.panel = el("div", { class: "bgpt-inline", style: { position: "relative" } }, [
+      this.headerNode(false), this.auditNode(), this.bodyNode(), this.inputNode(),
     ]);
     this.shadow.appendChild(this.panel);
   };
@@ -566,8 +650,8 @@
       class: "bgpt-fullscreen",
       onClick: function (e) { if (e.target === backdrop) self.toggle(false); },
     }, [
-      el("div", { class: "bgpt-panel" }, [
-        this.headerNode(true), this.bodyNode(), this.inputNode(),
+      el("div", { class: "bgpt-panel", style: { position: "relative" } }, [
+        this.headerNode(true), this.auditNode(), this.bodyNode(), this.inputNode(),
       ]),
     ]);
     this.panel = backdrop;
@@ -700,12 +784,28 @@
       })
       .then(function (res) {
         if (typingEl && typingEl.parentNode) typingEl.parentNode.removeChild(typingEl);
-        if (!res.ok || res.j.error) {
-          var detail = res.j && (res.j.error || res.j.message) ? (res.j.error || res.j.message) : ("HTTP " + res.status);
+        var j = res.j || {};
+        if (j.enforcedGuardrails) {
+          self.enforcedGuardrails = j.enforcedGuardrails;
+          self.renderAudit();
+        }
+        if (j.blockedBy) {
+          var kind = String(j.blockedBy).split(":")[0];
+          var labelMap = { profanity: "Profanity blocked", jailbreak: "Jailbreak attempt blocked",
+            blocked_topic: "Blocked topic", language: "Language not allowed",
+            rate_limit: "Rate limit hit", max_turns: "Max turns reached" };
+          self.logGuardrail({ kind: labelMap[kind] || "Refused", detail: j.blockedBy, level: "warn" });
+        } else if (j.enforcedGuardrails && j.enforcedGuardrails.piiRedaction && /\[REDACTED_/.test(j.reply || "")) {
+          self.logGuardrail({ kind: "PII redacted", detail: "Output scrubbed before reply", level: "warn" });
+        } else if (res.ok && !j.error) {
+          self.logGuardrail({ kind: "Reply OK", detail: (j.groundedCitations || 0) + " grounding source(s)", level: "ok" });
+        }
+        if (!res.ok || j.error) {
+          var detail = j.error || j.message || ("HTTP " + res.status);
           self.pushBot("⚠️ " + detail);
-          console.warn("[BankGPT] backend error", res.status, res.j);
+          console.warn("[BankGPT] backend error", res.status, j);
         } else {
-          self.pushBot(res.j.reply || "(no response)");
+          self.pushBot(j.reply || "(no response)");
         }
       })
       .catch(function (err) {
