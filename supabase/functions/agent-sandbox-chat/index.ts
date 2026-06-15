@@ -13,6 +13,21 @@ type KbDoc = { name: string; type: string; status: string; enabled: boolean; sou
 type Tool = { id: string; label: string; approval: string; dailyLimit?: number };
 type Page = { url: string; finalUrl: string; html: string; text: string };
 
+type Guardrails = {
+  piiRedaction?: boolean;
+  profanityFilter?: boolean;
+  jailbreakDetection?: boolean;
+  requireGroundedAnswers?: boolean;
+  blockedTopics?: string[];
+  allowedLanguages?: string[];
+  refusalMessage?: string;
+  maxTokensPerReply?: number;
+  maxTurnsPerSession?: number;
+  rateLimitPerMinute?: number;
+  minGroundingSimilarity?: number;
+  humanHandoffOnLowConfidence?: boolean;
+};
+
 type AgentDef = {
   name: string;
   tagline: string;
@@ -23,17 +38,46 @@ type AgentDef = {
 };
 
 type Body = {
-  // EITHER: inline (sandbox preview from the wizard)
   agent?: AgentDef;
   kb?: { docs: KbDoc[]; topK: number };
   tools?: Tool[];
-  // OR: just an agentId — config is loaded server-side from public.bankgpt_agents
-  // (used by the embedded /embed/bankgpt.js loader on the bank's host app).
+  guardrails?: Guardrails;
   agentId?: string;
+  sessionId?: string;
   messages: { role: "user" | "assistant"; content: string }[];
   language?: "en" | "am";
   model?: string;
 };
+
+const DEFAULT_REFUSAL = "I can't help with that here — let me hand you to a human agent.";
+
+/* ─── PII redaction (used for logs + optional input/output scrubbing) ─── */
+const PII_PATTERNS: { re: RegExp; tag: string }[] = [
+  { re: /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, tag: "[REDACTED_EMAIL]" },
+  { re: /\b(?:\+?251|0)?9\d{8}\b/g,                    tag: "[REDACTED_MSISDN]" },
+  { re: /\b(?:\d[ -]?){13,19}\b/g,                     tag: "[REDACTED_CARD]" },
+  { re: /\b\d{10,16}\b/g,                              tag: "[REDACTED_ACCOUNT]" },
+];
+function redactPII(s: string): string {
+  let out = s;
+  for (const { re, tag } of PII_PATTERNS) out = out.replace(re, tag);
+  return out;
+}
+
+/* ─── In-isolate rate limit + turn counter (best effort) ─── */
+const RATE_BUCKETS = new Map<string, { count: number; windowStart: number }>();
+const TURN_COUNTERS = new Map<string, number>();
+function checkRateLimit(key: string, perMinute: number): boolean {
+  if (!perMinute || perMinute <= 0) return true;
+  const now = Date.now();
+  const b = RATE_BUCKETS.get(key);
+  if (!b || now - b.windowStart > 60_000) {
+    RATE_BUCKETS.set(key, { count: 1, windowStart: now });
+    return true;
+  }
+  b.count += 1;
+  return b.count <= perMinute;
+}
 
 async function loadPublishedAgent(agentId: string): Promise<
   { agent: AgentDef; kb: { docs: KbDoc[]; topK: number }; tools: Tool[] } | null
