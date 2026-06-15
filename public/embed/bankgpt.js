@@ -580,8 +580,8 @@
 
 
   Widget.prototype.renderInline = function () {
-    this.panel = el("div", { class: "bgpt-inline" }, [
-      this.headerNode(false), this.bodyNode(), this.inputNode(),
+    this.panel = el("div", { class: "bgpt-inline", style: { position: "relative" } }, [
+      this.headerNode(false), this.auditNode(), this.bodyNode(), this.inputNode(),
     ]);
     this.shadow.appendChild(this.panel);
   };
@@ -592,8 +592,8 @@
       class: "bgpt-fullscreen",
       onClick: function (e) { if (e.target === backdrop) self.toggle(false); },
     }, [
-      el("div", { class: "bgpt-panel" }, [
-        this.headerNode(true), this.bodyNode(), this.inputNode(),
+      el("div", { class: "bgpt-panel", style: { position: "relative" } }, [
+        this.headerNode(true), this.auditNode(), this.bodyNode(), this.inputNode(),
       ]),
     ]);
     this.panel = backdrop;
