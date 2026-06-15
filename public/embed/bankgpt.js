@@ -276,6 +276,64 @@
     ]);
   };
 
+  Widget.prototype.auditNode = function () {
+    this.auditEvents = this.auditEvents || [];
+    this.auditPanel = el("div", { class: "bgpt-audit bgpt-hidden", role: "region", "aria-label": "Guardrail audit" });
+    this.renderAudit();
+    return this.auditPanel;
+  };
+
+  Widget.prototype.toggleAudit = function (force) {
+    if (!this.auditPanel) return;
+    var show = typeof force === "boolean" ? force : this.auditPanel.classList.contains("bgpt-hidden");
+    this.auditPanel.classList[show ? "remove" : "add"]("bgpt-hidden");
+    if (show && this.auditDot) this.auditDot.style.display = "none";
+  };
+
+  Widget.prototype.logGuardrail = function (evt) {
+    this.auditEvents = this.auditEvents || [];
+    this.auditEvents.unshift({ ts: new Date(), kind: evt.kind, detail: evt.detail || "", level: evt.level || "warn" });
+    this.auditEvents = this.auditEvents.slice(0, 20);
+    if (this.auditPanel && this.auditPanel.classList.contains("bgpt-hidden") && evt.level !== "ok" && this.auditDot) {
+      this.auditDot.style.display = "block";
+    }
+    this.renderAudit();
+  };
+
+  Widget.prototype.renderAudit = function () {
+    if (!this.auditPanel) return;
+    var g = this.enforcedGuardrails || {};
+    var rows = [
+      ["PII redaction",       g.piiRedaction],
+      ["Profanity filter",    g.profanityFilter],
+      ["Jailbreak detection", g.jailbreakDetection],
+      ["Blocked topics",      typeof g.blockedTopics === "number" ? g.blockedTopics : "—"],
+      ["Allowed languages",   Array.isArray(g.allowedLanguages) && g.allowedLanguages.length ? g.allowedLanguages.join(", ") : "any"],
+      ["Max tokens / reply",  g.maxTokensPerReply || "—"],
+      ["Max turns / session", g.maxTurnsPerSession || "—"],
+      ["Rate limit / min",    g.rateLimitPerMinute || "—"],
+    ];
+    var html = '<h4>Enforced guardrails</h4>';
+    rows.forEach(function (r) {
+      var v = r[1];
+      var cls = v === true ? "on" : v === false ? "off" : "";
+      var disp = v === true ? "ON" : v === false ? "OFF" : String(v);
+      html += '<div class="bgpt-audit-row"><span class="k">' + r[0] + '</span><span class="v ' + cls + '">' + disp + "</span></div>";
+    });
+    html += '<h4 style="margin-top:10px">Recent events</h4>';
+    if (!this.auditEvents || !this.auditEvents.length) {
+      html += '<div class="bgpt-audit-empty">No guardrail activity yet.</div>';
+    } else {
+      this.auditEvents.forEach(function (e) {
+        var t = e.ts.toLocaleTimeString();
+        var safe = String(e.detail || "").replace(/[<>&]/g, function (c) { return { "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c]; });
+        html += '<div class="bgpt-audit-evt ' + (e.level === "ok" ? "ok" : "") + '">' +
+          '<div><div class="t">' + t + '</div><div><b>' + e.kind + '</b>' + (safe ? ' — ' + safe : "") + '</div></div></div>';
+      });
+    }
+    this.auditPanel.innerHTML = html;
+  };
+
   Widget.prototype.bodyNode = function () {
     this.bodyEl = el("div", { class: "bgpt-body", role: "log", "aria-live": "polite" });
     this.pushBot(this.cfg.tagline, true);
