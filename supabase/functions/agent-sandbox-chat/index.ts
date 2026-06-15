@@ -80,7 +80,7 @@ function checkRateLimit(key: string, perMinute: number): boolean {
 }
 
 async function loadPublishedAgent(agentId: string): Promise<
-  { agent: AgentDef; kb: { docs: KbDoc[]; topK: number }; tools: Tool[] } | null
+  { agent: AgentDef; kb: { docs: KbDoc[]; topK: number }; tools: Tool[]; guardrails: Guardrails } | null
 > {
   const url = Deno.env.get("SUPABASE_URL");
   const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -88,7 +88,7 @@ async function loadPublishedAgent(agentId: string): Promise<
   const supa = createClient(url, key, { auth: { persistSession: false } });
   const { data, error } = await supa
     .from("bankgpt_agents")
-    .select("agent_id, bank_name, name, tagline, system_prompt, tone, uses_emoji, kb, tools, published")
+    .select("agent_id, bank_name, name, tagline, system_prompt, tone, uses_emoji, kb, tools, guardrails, published")
     .eq("agent_id", agentId)
     .eq("published", true)
     .maybeSingle();
@@ -107,6 +107,7 @@ async function loadPublishedAgent(agentId: string): Promise<
     },
     kb: { docs: (data.kb?.docs ?? []) as KbDoc[], topK: data.kb?.topK ?? 4 },
     tools: (data.tools ?? []) as Tool[],
+    guardrails: (data.guardrails ?? {}) as Guardrails,
   };
 }
 
