@@ -654,8 +654,21 @@
     // Server-side resolution: backend looks up persona / KB / tools from
     // public.bankgpt_agents using agentId. Inline overrides allowed for
     // host-specific tagline tweaks (rare).
+    if (!this.sessionId) {
+      try {
+        var sk = "bgpt_session_" + this.cfg.agentId;
+        this.sessionId = sessionStorage.getItem(sk);
+        if (!this.sessionId) {
+          this.sessionId = "s_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 8);
+          sessionStorage.setItem(sk, this.sessionId);
+        }
+      } catch (_) {
+        this.sessionId = "s_" + Date.now().toString(36);
+      }
+    }
     var body = {
       agentId: this.cfg.agentId,
+      sessionId: this.sessionId,
       messages: this.messages.slice(-12),
       language: this.cfg.language,
     };
