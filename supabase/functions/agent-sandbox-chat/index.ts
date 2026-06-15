@@ -264,10 +264,11 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Resolve agent/kb/tools — inline body wins; otherwise look up by agentId.
+    // Resolve agent/kb/tools/guardrails — inline body wins; otherwise lookup by agentId.
     let agent = body.agent;
     let kb = body.kb;
     let tools = body.tools;
+    let guardrails: Guardrails = body.guardrails ?? {};
 
     if ((!agent || !agent.name) && body.agentId) {
       const resolved = await loadPublishedAgent(body.agentId);
@@ -281,6 +282,7 @@ Deno.serve(async (req) => {
       agent = resolved.agent;
       kb = kb ?? resolved.kb;
       tools = tools ?? resolved.tools;
+      guardrails = { ...resolved.guardrails, ...(body.guardrails ?? {}) };
     }
 
     if (!agent?.name) {
@@ -288,6 +290,60 @@ Deno.serve(async (req) => {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    const refusal = guardrails.refusalMessage || DEFAULT_REFUSAL;
+    const sessionKey = `${body.agentId ?? agent.name}:${body.sessionId ?? "anon"}`;
+
+    /* ── Guardrail: rate limit per agent+session ── */
+    if (guardrails.rateLimitPerMinute && !checkRateLimit(sessionKey, guardrails.rateLimitPerMinute)) {
+      return new Response(JSON.stringify({
+        reply: refusal, blockedBy: "rate_limit",
+        error: `Rate limit (${guardrails.rateLimitPerMinute}/min) reached.`,
+      }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    /* ── Guardrail: max turns per session ── */
+    if (guardrails.maxTurnsPerSession && guardrails.maxTurnsPerSession > 0) {
+      const turns = (TURN_COUNTERS.get(sessionKey) ?? 0) + 1;
+      TURN_COUNTERS.set(sessionKey, turns);
+      if (turns > guardrails.maxTurnsPerSession) {
+        return new Response(JSON.stringify({
+          reply: refusal, blockedBy: "max_turns",
+          error: `Session turn limit (${guardrails.maxTurnsPerSession}) reached.`,
+        }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+    }
+
+    /* ── Guardrail: allowed language ── */
+    if (guardrails.allowedLanguages?.length && !guardrails.allowedLanguages.includes(language)) {
+      return new Response(JSON.stringify({
+        reply: refusal, blockedBy: `language:${language}`,
+      }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    /* ── Guardrail: pre-filter last user input ── */
+    const lastUser = [...messages].reverse().find((m) => m.role === "user")?.content ?? "";
+    const lowerUser = lastUser.toLowerCase();
+    let blockedBy: string | null = null;
+    if (guardrails.profanityFilter && /\b(damn|shit|fuck|bitch|asshole)\b/i.test(lastUser)) blockedBy = "profanity";
+    if (!blockedBy && guardrails.jailbreakDetection &&
+        /(ignore (all )?(previous|prior) (instructions|rules)|system prompt|jailbreak|developer mode|dan mode|act as)/i.test(lastUser)) {
+      blockedBy = "jailbreak";
+    }
+    if (!blockedBy && guardrails.blockedTopics?.length) {
+      for (const t of guardrails.blockedTopics) {
+        if (t && lowerUser.includes(t.toLowerCase())) { blockedBy = `blocked_topic:${t}`; break; }
+      }
+    }
+    if (blockedBy) {
+      console.log("[guardrail blocked]", sessionKey, blockedBy,
+        guardrails.piiRedaction ? redactPII(lastUser).slice(0, 120) : "(redaction off)");
+      return new Response(JSON.stringify({ reply: refusal, blockedBy }), {
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+
 
     const enabledDocs = (kb?.docs ?? []).filter((d) => d.enabled && d.status === "indexed");
 
