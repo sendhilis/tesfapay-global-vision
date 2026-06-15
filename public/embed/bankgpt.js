@@ -163,7 +163,21 @@
 ".bgpt-send{background:var(--bgpt-accent);color:#fff;border:0;border-radius:10px;padding:0 14px;cursor:pointer;font-weight:600;font-size:13px}\n" +
 ".bgpt-send:disabled{opacity:.5;cursor:not-allowed}\n" +
 ".bgpt-foot{padding:6px 12px 8px;font-size:10px;text-align:center;color:#94a3b8;background:#fff;border-top:1px solid rgba(0,0,0,.04)}\n" +
-"@media (max-width:480px){.bgpt-panel{right:8px;left:8px;width:auto;bottom:84px;height:70vh}}\n";
+".bgpt-audit{position:absolute;top:56px;right:8px;width:300px;max-height:340px;overflow-y:auto;background:#0f172a;color:#e2e8f0;border-radius:10px;box-shadow:0 12px 32px rgba(0,0,0,.35);padding:10px;z-index:10;font-size:11px}\n" +
+".bgpt-audit.bgpt-hidden{display:none}\n" +
+".bgpt-audit h4{margin:0 0 6px;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8}\n" +
+".bgpt-audit-row{display:flex;justify-content:space-between;gap:8px;padding:3px 0;border-bottom:1px solid rgba(255,255,255,.06)}\n" +
+".bgpt-audit-row:last-child{border-bottom:0}\n" +
+".bgpt-audit-row .k{color:#94a3b8}\n" +
+".bgpt-audit-row .v{color:#fbbf24;font-weight:600;text-align:right}\n" +
+".bgpt-audit-row .v.on{color:#34d399}\n" +
+".bgpt-audit-row .v.off{color:#64748b}\n" +
+".bgpt-audit-evt{display:flex;align-items:flex-start;gap:6px;padding:6px;margin-top:4px;border-radius:6px;background:rgba(220,38,38,.18);border-left:3px solid #ef4444}\n" +
+".bgpt-audit-evt.ok{background:rgba(16,185,129,.14);border-left-color:#10b981}\n" +
+".bgpt-audit-evt .t{font-size:9px;color:#94a3b8;margin-bottom:2px}\n" +
+".bgpt-audit-dot{position:absolute;top:6px;right:6px;width:8px;height:8px;border-radius:50%;background:#ef4444;border:2px solid var(--bgpt-accent)}\n" +
+".bgpt-audit-empty{color:#64748b;font-style:italic;padding:4px 0}\n" +
+"@media (max-width:480px){.bgpt-panel{right:8px;left:8px;width:auto;bottom:84px;height:70vh}.bgpt-audit{width:calc(100% - 16px);right:8px}}\n";
 
   // ─── Widget class ────────────────────────────────────────────────────────
   function Widget(cfg) {
