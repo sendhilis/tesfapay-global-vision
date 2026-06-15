@@ -244,6 +244,18 @@
         : '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>',
     }) : null;
 
+    // audit / guardrail status toggle
+    this.auditBtn = el("button", {
+      class: "bgpt-hdrbtn",
+      type: "button",
+      title: "Guardrail audit",
+      style: { position: "relative" },
+      onClick: function () { self.toggleAudit(); },
+      html: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 4v6c0 5-3.5 9-8 10-4.5-1-8-5-8-10V6l8-4z"/></svg>',
+    });
+    this.auditDot = el("span", { class: "bgpt-audit-dot", style: { display: "none" } });
+    this.auditBtn.appendChild(this.auditDot);
+
     var closeBtn = withClose
       ? el("button", { class: "bgpt-close", "aria-label": "Close",
           onClick: function () { self.toggle(false); },
@@ -251,7 +263,7 @@
       : null;
 
     var controls = el("div", { style: { marginLeft: "auto", display: "flex", alignItems: "center" } }, [
-      this.langBtn, this.speakerBtn, closeBtn,
+      this.langBtn, this.speakerBtn, this.auditBtn, closeBtn,
     ]);
 
     return el("div", { class: "bgpt-header" }, [
