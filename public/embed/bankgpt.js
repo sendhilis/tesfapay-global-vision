@@ -784,12 +784,28 @@
       })
       .then(function (res) {
         if (typingEl && typingEl.parentNode) typingEl.parentNode.removeChild(typingEl);
-        if (!res.ok || res.j.error) {
-          var detail = res.j && (res.j.error || res.j.message) ? (res.j.error || res.j.message) : ("HTTP " + res.status);
+        var j = res.j || {};
+        if (j.enforcedGuardrails) {
+          self.enforcedGuardrails = j.enforcedGuardrails;
+          self.renderAudit();
+        }
+        if (j.blockedBy) {
+          var kind = String(j.blockedBy).split(":")[0];
+          var labelMap = { profanity: "Profanity blocked", jailbreak: "Jailbreak attempt blocked",
+            blocked_topic: "Blocked topic", language: "Language not allowed",
+            rate_limit: "Rate limit hit", max_turns: "Max turns reached" };
+          self.logGuardrail({ kind: labelMap[kind] || "Refused", detail: j.blockedBy, level: "warn" });
+        } else if (j.enforcedGuardrails && j.enforcedGuardrails.piiRedaction && /\[REDACTED_/.test(j.reply || "")) {
+          self.logGuardrail({ kind: "PII redacted", detail: "Output scrubbed before reply", level: "warn" });
+        } else if (res.ok && !j.error) {
+          self.logGuardrail({ kind: "Reply OK", detail: (j.groundedCitations || 0) + " grounding source(s)", level: "ok" });
+        }
+        if (!res.ok || j.error) {
+          var detail = j.error || j.message || ("HTTP " + res.status);
           self.pushBot("⚠️ " + detail);
-          console.warn("[BankGPT] backend error", res.status, res.j);
+          console.warn("[BankGPT] backend error", res.status, j);
         } else {
-          self.pushBot(res.j.reply || "(no response)");
+          self.pushBot(j.reply || "(no response)");
         }
       })
       .catch(function (err) {
