@@ -446,21 +446,37 @@ export function applyAction(p: CustomerProfile, a: AgentAction): { profile: Cust
     id: `T${Date.now()}`, date: today, merchant, category, amount,
   });
 
-  // Decide which bucket of money funds a transfer based on the free-form
-  // `fromAccount` label the agent supplies (e.g. "Wallet", "Primary Savings").
-  // Returns the source key + a human label so receipts stay accurate.
-  const resolveSource = (label?: string): { key: "wallet" | "savings"; label: string } => {
+  type BalanceKey = "wallet" | "savings";
+  const etb = (n: number) => `ETB ${n.toLocaleString()}`;
+  const balancesText = () => `Wallet: ${etb(next.walletBalanceETB)} · Savings: ${etb(next.savingsBalanceETB)}`;
+
+  // Decide which bucket funds a transfer from the free-form source label.
+  // "Current", "main" and generic bank/current labels map to walletBalanceETB;
+  // any savings/goal/deposit label maps to savingsBalanceETB.
+  const resolveSource = (label?: string): { key: BalanceKey; label: string } => {
     const l = (label ?? "").toLowerCase();
     if (l.includes("saving") || l.includes("goal") || l.includes("deposit")) {
       return { key: "savings", label: label || "Savings" };
     }
     return { key: "wallet", label: label || "Wallet" };
   };
-  const balanceOf = (key: "wallet" | "savings") =>
+  const balanceOf = (key: BalanceKey) =>
     key === "wallet" ? next.walletBalanceETB : next.savingsBalanceETB;
-  const debit = (key: "wallet" | "savings", amt: number) => {
-    if (key === "wallet") next.walletBalanceETB = Math.max(0, next.walletBalanceETB - amt);
-    else next.savingsBalanceETB = Math.max(0, next.savingsBalanceETB - amt);
+  const debit = (key: BalanceKey, amt: number) => {
+    if (key === "wallet") next.walletBalanceETB -= amt;
+    else next.savingsBalanceETB -= amt;
+  };
+  const credit = (key: BalanceKey, amt: number) => {
+    if (key === "wallet") next.walletBalanceETB += amt;
+    else next.savingsBalanceETB += amt;
+  };
+  const isOwnWalletDestination = (...parts: Array<string | undefined>) => {
+    const text = parts.filter(Boolean).join(" ").toLowerCase();
+    if (!text) return false;
+    const namesWallet = /wallet|mno|mobile money|telebirr|main account|current account/.test(text);
+    const namesSelf = /\b(my|own|self|selam)\b/.test(text);
+    const externalMsisdn = /\b0\d{8,9}\b|\+251/.test(text);
+    return namesWallet && (namesSelf || !externalMsisdn);
   };
 
 
@@ -473,11 +489,11 @@ export function applyAction(p: CustomerProfile, a: AgentAction): { profile: Cust
       const goal = next.savingsGoals.find((g) => g.id === a.goalId)
         ?? next.savingsGoals.find((g) => a.goalName && g.name.toLowerCase().includes(a.goalName.toLowerCase()))
         ?? next.savingsGoals[0];
-      next.walletBalanceETB -= amt;
-      next.savingsBalanceETB += amt;
+      debit("wallet", amt);
+      credit("savings", amt);
       if (goal) goal.saved += amt;
       next.recentTransactions = [newTxn(`Savings → ${goal?.name ?? "savings"}`, "savings", -amt), ...next.recentTransactions].slice(0, 12);
-      return { profile: next, receipt: `Moved ETB ${amt.toLocaleString()} from wallet to ${goal?.name ?? "savings"}.` };
+      return { profile: next, receipt: `Moved ${etb(amt)} from wallet to ${goal?.name ?? "savings"}. ${balancesText()}.` };
     }
     case "savings_withdraw": {
       const amt = Math.max(0, Math.round(a.amount));
@@ -486,17 +502,17 @@ export function applyAction(p: CustomerProfile, a: AgentAction): { profile: Cust
         return { profile: p, receipt: `Not enough saved in goal for ETB ${amt.toLocaleString()} withdrawal.` };
       }
       goal.saved -= amt;
-      next.savingsBalanceETB = Math.max(0, next.savingsBalanceETB - amt);
-      next.walletBalanceETB += amt;
+      debit("savings", amt);
+      credit("wallet", amt);
       next.recentTransactions = [newTxn(`Withdraw ← ${goal.name}`, "savings", amt), ...next.recentTransactions].slice(0, 12);
-      return { profile: next, receipt: `Returned ETB ${amt.toLocaleString()} from ${goal.name} to wallet.` };
+      return { profile: next, receipt: `Returned ${etb(amt)} from ${goal.name} to wallet. ${balancesText()}.` };
     }
     case "tbill_purchase": {
       const amt = Math.max(0, Math.round(a.amount));
       if (amt <= 0 || next.walletBalanceETB < amt) {
         return { profile: p, receipt: `Need ETB ${amt.toLocaleString()} in wallet for T-Bill purchase.` };
       }
-      next.walletBalanceETB -= amt;
+      debit("wallet", amt);
       const tenor = a.tenor ?? "91d";
       const instrument = (tenor === "182d" ? "T-Bill 182d" : tenor === "364d" ? "T-Bill 364d" : "T-Bill 91d") as Investment["instrument"];
       const rate = tenor === "364d" ? 8.8 : tenor === "182d" ? 8.1 : 7.4;
@@ -505,7 +521,7 @@ export function applyAction(p: CustomerProfile, a: AgentAction): { profile: Cust
         maturityDate: new Date(Date.now() + (tenor === "364d" ? 364 : tenor === "182d" ? 182 : 91) * 86400000).toISOString().slice(0, 10),
       });
       next.recentTransactions = [newTxn(`Buy ${instrument}`, "savings", -amt), ...next.recentTransactions].slice(0, 12);
-      return { profile: next, receipt: `Purchased ${instrument} for ETB ${amt.toLocaleString()} at ${rate}%.` };
+      return { profile: next, receipt: `Purchased ${instrument} for ${etb(amt)} at ${rate}%. ${balancesText()}.` };
     }
     case "loan_repay": {
       const amt = Math.max(0, Math.round(a.amount));
@@ -513,11 +529,11 @@ export function applyAction(p: CustomerProfile, a: AgentAction): { profile: Cust
       if (!loan || amt <= 0 || next.walletBalanceETB < amt) {
         return { profile: p, receipt: `Cannot repay ETB ${amt.toLocaleString()} — check wallet and active loans.` };
       }
-      next.walletBalanceETB -= amt;
+      debit("wallet", amt);
       loan.outstanding = Math.max(0, loan.outstanding - amt);
       if (loan.outstanding === 0) loan.status = "closed";
       next.recentTransactions = [newTxn(`Loan repayment — ${loan.product}`, "fees", -amt), ...next.recentTransactions].slice(0, 12);
-      return { profile: next, receipt: `Paid ETB ${amt.toLocaleString()} toward ${loan.product}. Outstanding: ETB ${loan.outstanding.toLocaleString()}.` };
+      return { profile: next, receipt: `Paid ${etb(amt)} toward ${loan.product}. Outstanding: ${etb(loan.outstanding)}. ${balancesText()}.` };
     }
     case "transfer": {
       const amt = Math.max(0, Math.round(a.amount));
@@ -526,8 +542,9 @@ export function applyAction(p: CustomerProfile, a: AgentAction): { profile: Cust
         return { profile: p, receipt: `Insufficient ${src.label} balance for ETB ${amt.toLocaleString()} transfer.` };
       }
       debit(src.key, amt);
+      if (src.key === "savings" && isOwnWalletDestination(a.to)) credit("wallet", amt);
       next.recentTransactions = [newTxn(`Send to ${a.to}`, "transfer", -amt), ...next.recentTransactions].slice(0, 12);
-      return { profile: next, receipt: `Sent ETB ${amt.toLocaleString()} to ${a.to} from ${src.label}. Remaining: ETB ${balanceOf(src.key).toLocaleString()}.` };
+      return { profile: next, receipt: `Sent ${etb(amt)} to ${a.to} from ${src.label}. ${balancesText()}.` };
     }
     case "transfer_bank_to_bank": {
       const amt = Math.max(0, Math.round(a.amount));
@@ -538,7 +555,7 @@ export function applyAction(p: CustomerProfile, a: AgentAction): { profile: Cust
       debit(src.key, amt);
       const dest = [a.toBank, a.toAccount].filter(Boolean).join(" · ") || "external bank";
       next.recentTransactions = [newTxn(`Bank transfer → ${dest}`, "transfer", -amt), ...next.recentTransactions].slice(0, 12);
-      return { profile: next, receipt: `Sent ETB ${amt.toLocaleString()} to ${dest} from ${src.label}. Remaining: ETB ${balanceOf(src.key).toLocaleString()}.` };
+      return { profile: next, receipt: `Sent ${etb(amt)} to ${dest} from ${src.label}. ${balancesText()}.` };
     }
     case "transfer_bank_to_mno": {
       const amt = Math.max(0, Math.round(a.amount));
@@ -548,8 +565,9 @@ export function applyAction(p: CustomerProfile, a: AgentAction): { profile: Cust
       }
       debit(src.key, amt);
       const dest = [a.toWallet, a.toMsisdn].filter(Boolean).join(" · ") || "MNO wallet";
+      if (src.key === "savings" && isOwnWalletDestination(a.toWallet, a.toMsisdn, a.memo)) credit("wallet", amt);
       next.recentTransactions = [newTxn(`Wallet top-up → ${dest}`, "transfer", -amt), ...next.recentTransactions].slice(0, 12);
-      return { profile: next, receipt: `Sent ETB ${amt.toLocaleString()} to ${dest} from ${src.label}. Remaining: ETB ${balanceOf(src.key).toLocaleString()}.` };
+      return { profile: next, receipt: `Sent ${etb(amt)} to ${dest} from ${src.label}. ${balancesText()}.` };
     }
     case "transfer_p2p": {
       const amt = Math.max(0, Math.round(a.amount));
@@ -560,7 +578,7 @@ export function applyAction(p: CustomerProfile, a: AgentAction): { profile: Cust
       debit(src.key, amt);
       const dest = a.toContact || "contact";
       next.recentTransactions = [newTxn(`P2P → ${dest}`, "transfer", -amt), ...next.recentTransactions].slice(0, 12);
-      return { profile: next, receipt: `Sent ETB ${amt.toLocaleString()} to ${dest} from ${src.label}. Remaining: ETB ${balanceOf(src.key).toLocaleString()}.` };
+      return { profile: next, receipt: `Sent ${etb(amt)} to ${dest} from ${src.label}. ${balancesText()}.` };
     }
 
     default:
