@@ -530,12 +530,22 @@ function Simulation({
         } else if (target !== "concierge" && target !== currentAgent) {
           onHandoffFire(currentAgent, target);
         }
-        out.push({ kind: "agent", agentId: target, text: res.reply });
+        out.push({
+          kind: "agent", agentId: target, text: res.reply,
+          charts: res.charts || [], actions: res.actions || [], voiceSummary: res.voiceSummary || "",
+        });
         return out;
       });
       setCurrentAgent(target);
       onSelectAgent(target);
+
+      // Voice — prefer the short chart summary; fall back to the prose itself.
+      if (voiceOn) {
+        const spoken = (res.voiceSummary && res.voiceSummary.trim()) || res.reply;
+        if (spoken && spoken.length < 600) speak(spoken, "en").catch(() => {});
+      }
     } catch (e) {
+
       const msg = e instanceof Error ? e.message : "Failed to reach the AI mesh";
       toast.error(msg);
       setMessages((m) => [...m, {
