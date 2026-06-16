@@ -745,7 +745,31 @@ function Simulation({
         </div>
       )}
 
+      {/* Quick CDP-aware prompts (only when rich customer is loaded) */}
+      {p.customer && (
+        <div className="px-2 py-1.5 border-t border-[var(--line)] bg-white flex flex-wrap gap-1.5">
+          <span className="text-[9px] uppercase tracking-widest text-[var(--ink-soft)] self-center mr-1 inline-flex items-center gap-1">
+            <BarChart3 className="w-3 h-3" /> Try
+          </span>
+          {[
+            "Show my spend this week",
+            "Show my savings this month",
+            "How are my savings goals doing?",
+            "Send ETB 1,500 to my Mother",
+            "Transfer ETB 5,000 to Awash Bank for the landlord",
+            "Top up Telebirr 0912334455 with ETB 800",
+            "Send ETB 2,000 from my savings to my brother at Dashen",
+          ].map((q) => (
+            <button key={q} onClick={() => submit(q)} disabled={!!typing}
+              className="text-[10px] px-2 py-1 rounded-full border border-[var(--line)] bg-white hover:border-[var(--ink)]/40 text-[var(--ink-soft)] disabled:opacity-50">
+              {q}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Composer */}
+
       <form
         onSubmit={(e) => { e.preventDefault(); submit(input); setInput(""); }}
         className="flex items-center gap-2 p-2 border-t border-[var(--line)] bg-white">
