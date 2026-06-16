@@ -626,10 +626,15 @@ function Simulation({
         >
           <Play className="w-2.5 h-2.5" /> {tourRunning ? "Running…" : "Test handoffs"}
         </button>
+        <button onClick={() => setVoiceOn((v) => !v)} title={voiceOn ? "Mute voice summary" : "Enable voice summary"}
+          className={`text-[10px] px-2 py-1 rounded-full border inline-flex items-center gap-1 ${voiceOn ? "bg-[var(--teal-deep)] text-white border-[var(--teal-deep)]" : "border-[var(--line)] text-[var(--ink-soft)]"}`}>
+          {voiceOn ? <Volume2 className="w-3 h-3" /> : <VolumeX className="w-3 h-3" />} Voice
+        </button>
         <button onClick={reset} title="Reset chat"
           className="text-[10px] px-2 py-1 rounded-full border border-[var(--line)] hover:border-[var(--ink)]/40">
           <RotateCcw className="w-3 h-3" />
         </button>
+
       </div>
 
       {/* Messages */}
