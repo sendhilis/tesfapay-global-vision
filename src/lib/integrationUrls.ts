@@ -13,7 +13,7 @@ export type IntegrationEnv = "sandbox" | "uat" | "prod";
 
 export const INTEGRATION_ENVS: IntegrationEnv[] = ["sandbox", "uat", "prod"];
 
-type ModuleId = "mobile-banking" | "abx-lending";
+type ModuleId = "mobile-banking" | "abx-lending" | "bankgpt";
 
 type Overrides = Partial<Record<IntegrationEnv, Partial<Record<ModuleId, string>>>>;
 
@@ -87,8 +87,8 @@ export function clearOverride(moduleId: ModuleId, env: IntegrationEnv) {
  * override before falling back to the registry default.
  */
 export function resolveIframeUrl(moduleId: string, fallback: string): string {
-  if (moduleId !== "mobile-banking" && moduleId !== "abx-lending") return fallback;
+  if (moduleId !== "mobile-banking" && moduleId !== "abx-lending" && moduleId !== "bankgpt") return fallback;
   const env = getActiveEnv();
-  const override = getOverride(moduleId, env).trim();
+  const override = getOverride(moduleId as ModuleId, env).trim();
   return override || fallback;
 }
