@@ -502,17 +502,17 @@ export function applyAction(p: CustomerProfile, a: AgentAction): { profile: Cust
         return { profile: p, receipt: `Not enough saved in goal for ETB ${amt.toLocaleString()} withdrawal.` };
       }
       goal.saved -= amt;
-      next.savingsBalanceETB = Math.max(0, next.savingsBalanceETB - amt);
-      next.walletBalanceETB += amt;
+      debit("savings", amt);
+      credit("wallet", amt);
       next.recentTransactions = [newTxn(`Withdraw ← ${goal.name}`, "savings", amt), ...next.recentTransactions].slice(0, 12);
-      return { profile: next, receipt: `Returned ETB ${amt.toLocaleString()} from ${goal.name} to wallet.` };
+      return { profile: next, receipt: `Returned ${etb(amt)} from ${goal.name} to wallet. ${balancesText()}.` };
     }
     case "tbill_purchase": {
       const amt = Math.max(0, Math.round(a.amount));
       if (amt <= 0 || next.walletBalanceETB < amt) {
         return { profile: p, receipt: `Need ETB ${amt.toLocaleString()} in wallet for T-Bill purchase.` };
       }
-      next.walletBalanceETB -= amt;
+      debit("wallet", amt);
       const tenor = a.tenor ?? "91d";
       const instrument = (tenor === "182d" ? "T-Bill 182d" : tenor === "364d" ? "T-Bill 364d" : "T-Bill 91d") as Investment["instrument"];
       const rate = tenor === "364d" ? 8.8 : tenor === "182d" ? 8.1 : 7.4;
@@ -521,7 +521,7 @@ export function applyAction(p: CustomerProfile, a: AgentAction): { profile: Cust
         maturityDate: new Date(Date.now() + (tenor === "364d" ? 364 : tenor === "182d" ? 182 : 91) * 86400000).toISOString().slice(0, 10),
       });
       next.recentTransactions = [newTxn(`Buy ${instrument}`, "savings", -amt), ...next.recentTransactions].slice(0, 12);
-      return { profile: next, receipt: `Purchased ${instrument} for ETB ${amt.toLocaleString()} at ${rate}%.` };
+      return { profile: next, receipt: `Purchased ${instrument} for ${etb(amt)} at ${rate}%. ${balancesText()}.` };
     }
     case "loan_repay": {
       const amt = Math.max(0, Math.round(a.amount));
@@ -529,11 +529,11 @@ export function applyAction(p: CustomerProfile, a: AgentAction): { profile: Cust
       if (!loan || amt <= 0 || next.walletBalanceETB < amt) {
         return { profile: p, receipt: `Cannot repay ETB ${amt.toLocaleString()} — check wallet and active loans.` };
       }
-      next.walletBalanceETB -= amt;
+      debit("wallet", amt);
       loan.outstanding = Math.max(0, loan.outstanding - amt);
       if (loan.outstanding === 0) loan.status = "closed";
       next.recentTransactions = [newTxn(`Loan repayment — ${loan.product}`, "fees", -amt), ...next.recentTransactions].slice(0, 12);
-      return { profile: next, receipt: `Paid ETB ${amt.toLocaleString()} toward ${loan.product}. Outstanding: ETB ${loan.outstanding.toLocaleString()}.` };
+      return { profile: next, receipt: `Paid ${etb(amt)} toward ${loan.product}. Outstanding: ${etb(loan.outstanding)}. ${balancesText()}.` };
     }
     case "transfer": {
       const amt = Math.max(0, Math.round(a.amount));
