@@ -434,7 +434,10 @@ export type AgentAction =
   | { type: "savings_withdraw"; goalId?: string; goalName?: string; amount: number }
   | { type: "tbill_purchase";   amount: number; tenor?: "91d" | "182d" | "364d" }
   | { type: "loan_repay";       loanId?: string; amount: number }
-  | { type: "transfer";         to: string; amount: number };
+  | { type: "transfer";         to: string; amount: number }
+  | { type: "transfer_bank_to_bank"; amount: number; toBank?: string; toAccount?: string; fromAccount?: string; memo?: string }
+  | { type: "transfer_bank_to_mno";  amount: number; toWallet?: string; toMsisdn?: string; fromAccount?: string; memo?: string }
+  | { type: "transfer_p2p";          amount: number; toContact?: string; fromAccount?: string; memo?: string };
 
 export function applyAction(p: CustomerProfile, a: AgentAction): { profile: CustomerProfile; receipt: string } {
   const next: CustomerProfile = JSON.parse(JSON.stringify(p));
