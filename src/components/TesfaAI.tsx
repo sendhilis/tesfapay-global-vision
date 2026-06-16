@@ -1,29 +1,17 @@
 /**
- * TesfaAI — The live customer-facing widget.
+ * TesfaAI — The live customer-facing widget (Amara).
  *
- * Reads agent identity, color, tone and handoff rules straight from
- * `config.ai.mesh` (configured in the AI Mesh Studio wizard step).
- * Every change the admin makes in the wizard is reflected here on next render —
- * no rebuild, no republish needed.
+ * Routes every message through the same `agent-sandbox-chat` edge function
+ * that powers the Agent Builder Sandbox, using the concierge's live config
+ * from BankConfigContext + the AgentBuilder store. This keeps the widget
+ * in lock-step with whatever the admin tweaks in the wizard — persona,
+ * system prompt, tone, KB, tools, guardrails — with no rebuild required.
  */
 import { useState, useRef, useEffect, useMemo } from "react";
-import { Send, Mic, ChevronDown, Sparkles, Zap } from "lucide-react";
+import { Send, Mic, ChevronDown } from "lucide-react";
 import { useBankConfig } from "@/contexts/BankConfigContext";
-import type { MeshAgent, MeshAgentId } from "@/contexts/BankConfigContext";
-
-function routeIntent(text: string, agents: Record<MeshAgentId, MeshAgent>): MeshAgentId {
-  const t = text.toLowerCase();
-  const candidates: MeshAgentId[] = [
-    "complaintAgent", "loanAgent", "savingsCoach",
-    "investmentCoach", "onboarding",
-  ];
-  for (const id of candidates) {
-    const a = agents[id];
-    if (!a.enabled) continue;
-    if (a.keywords.some((k) => t.includes(k))) return id;
-  }
-  return "concierge";
-}
+import { useAgentBuilder } from "@/components/wizard/modules/bankgpt/agentBuilderStore";
+import { sandboxChat } from "@/components/wizard/modules/bankgpt/voiceUtils";
 
 const FALLBACK_SUGGESTIONS = [
   "Check my balance",
@@ -33,37 +21,30 @@ const FALLBACK_SUGGESTIONS = [
   "I have a complaint",
 ];
 
-function pickReply(a: MeshAgent, firstName: string): string {
-  const raw = a.sampleReplies[Math.floor(Math.random() * a.sampleReplies.length)];
-  return raw.replace(/{firstName}/g, firstName);
-}
-
 type Msg =
-  | { kind: "agent"; agentId: MeshAgentId; text: string }
-  | { kind: "user"; text: string }
-  | { kind: "handoff"; to: MeshAgentId; text: string };
+  | { kind: "agent"; text: string }
+  | { kind: "user"; text: string };
 
 const TesfaAI = () => {
   const cfg = useBankConfig();
-  const mesh = cfg.ai.mesh;
-  const concierge = mesh.agents.concierge;
+  const concierge = cfg.ai.mesh.agents.concierge;
+  const { config: builder } = useAgentBuilder("concierge");
   const firstName = "Selam";
 
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
-  const [typing, setTyping] = useState<MeshAgentId | null>(null);
-  const [currentAgent, setCurrentAgent] = useState<MeshAgentId>("concierge");
+  const [typing, setTyping] = useState(false);
+  const sessionIdRef = useRef<string>(`widget_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Seed greeting from the configured concierge
   useEffect(() => {
     if (messages.length === 0) {
-      setMessages([{
-        kind: "agent", agentId: "concierge",
-        text: (concierge.sampleReplies[0] || `Hi {firstName}! I'm ${concierge.name}.`).replace(/{firstName}/g, firstName),
-      }]);
+      const greet = (concierge.sampleReplies?.[0] || `Hi {firstName}! I'm ${concierge.name}.`)
+        .replace(/{firstName}/g, firstName);
+      setMessages([{ kind: "agent", text: greet }]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [concierge.name]);
@@ -71,37 +52,47 @@ const TesfaAI = () => {
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, open, typing]);
   useEffect(() => { if (open) setTimeout(() => inputRef.current?.focus(), 100); }, [open]);
 
-  const send = (text?: string) => {
+  const send = async (text?: string) => {
     const msg = (text || input).trim();
-    if (!msg) return;
+    if (!msg || typing) return;
     setInput("");
-    setMessages((m) => [...m, { kind: "user", text: msg }]);
+    const next: Msg[] = [...messages, { kind: "user", text: msg }];
+    setMessages(next);
+    setTyping(true);
 
-    const target = routeIntent(msg, mesh.agents);
-    const handingOff = target !== currentAgent && target !== "concierge";
-    setTyping(target);
+    try {
+      const tools = Object.entries(builder.tools)
+        .filter(([, t]: any) => t.enabled)
+        .map(([id, t]: any) => ({ id, label: id.replace(/_/g, " "), approval: t.approval, dailyLimit: t.dailyLimit }));
 
-    window.setTimeout(() => {
-      setMessages((m) => {
-        const out = [...m];
-        if (handingOff) {
-          out.push({
-            kind: "handoff", to: target,
-            text: (mesh.agents[target].handoffMessage || `Connecting you to ${mesh.agents[target].name}…`),
-          });
-        }
-        const greet = handingOff
-          ? mesh.agents[target].greetingOnHandoff.replace(/{firstName}/g, firstName)
-          : pickReply(mesh.agents[target], firstName);
-        out.push({ kind: "agent", agentId: target, text: greet });
-        return out;
-      });
-      setCurrentAgent(target);
-      setTyping(null);
-    }, 700);
+      const res = await sandboxChat({
+        agent: {
+          name: concierge.name,
+          tagline: concierge.tagline,
+          systemPrompt: concierge.systemPrompt,
+          tone: concierge.tone,
+          usesEmoji: concierge.usesEmoji,
+          bankName: cfg.bank?.name,
+        },
+        kb: { docs: builder.kb.docs as any, topK: builder.kb.topK },
+        tools,
+        guardrails: builder.guardrails as any,
+        messages: next.map((m) => ({ role: m.kind === "user" ? "user" : "assistant", content: m.text })),
+        language: "en",
+        sessionId: sessionIdRef.current,
+        agentId: "concierge",
+      } as any);
+
+      setMessages((m) => [...m, { kind: "agent", text: res.reply || "(no reply)" }]);
+    } catch (e) {
+      console.warn("[TesfaAI] sandboxChat failed", e);
+      setMessages((m) => [...m, { kind: "agent", text: "I'm having trouble reaching the AI right now. Please try again in a moment." }]);
+    } finally {
+      setTyping(false);
+    }
   };
 
-  const active = mesh.agents[currentAgent];
+  const active = concierge;
 
   const renderText = (text: string) => {
     const parts = text.split(/\*\*(.*?)\*\*/g);
@@ -117,7 +108,6 @@ const TesfaAI = () => {
 
   return (
     <>
-      {/* Floating button — colour = concierge colour */}
       <button
         onClick={() => setOpen(true)}
         aria-label={`Open ${concierge.name}`}
@@ -131,19 +121,12 @@ const TesfaAI = () => {
         <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center text-[9px] text-white font-bold">1</span>
       </button>
 
-      {/* Chat panel */}
       {open && (
-        <div
-          className="fixed left-1/2 -translate-x-1/2 w-full max-w-md z-50 animate-slide-up"
-          style={{ bottom: "72px" }}
-        >
-          <div className="glass border border-border rounded-t-3xl shadow-2xl overflow-hidden flex flex-col"
-            style={{ maxHeight: "70dvh" }}>
-            {/* Header — shows currently-talking agent */}
+        <div className="fixed left-1/2 -translate-x-1/2 w-full max-w-md z-50 animate-slide-up" style={{ bottom: "72px" }}>
+          <div className="glass border border-border rounded-t-3xl shadow-2xl overflow-hidden flex flex-col" style={{ maxHeight: "70dvh" }}>
             <div className="flex items-center gap-3 p-4 border-b border-border flex-shrink-0"
               style={{ background: `${active.color}18`, borderLeft: `3px solid ${active.color}` }}>
-              <div className="w-9 h-9 rounded-xl grid place-items-center font-bold text-white text-sm"
-                style={{ background: active.color }}>
+              <div className="w-9 h-9 rounded-xl grid place-items-center font-bold text-white text-sm" style={{ background: active.color }}>
                 {active.avatarStyle === "initial" ? active.name[0] : active.emoji}
               </div>
               <div className="flex-1 min-w-0">
@@ -153,46 +136,28 @@ const TesfaAI = () => {
                   <p className="text-[10px] text-muted-foreground truncate">{active.tagline}</p>
                 </div>
               </div>
-              <button
-                onClick={() => setOpen(false)}
-                aria-label="Close"
-                className="p-2 glass rounded-xl min-w-[36px] min-h-[36px] flex items-center justify-center"
-              >
+              <button onClick={() => setOpen(false)} aria-label="Close"
+                className="p-2 glass rounded-xl min-w-[36px] min-h-[36px] flex items-center justify-center">
                 <ChevronDown className="w-4 h-4 text-muted-foreground" />
               </button>
             </div>
 
-            {/* Messages */}
             <div className="flex-1 overflow-y-auto p-4 space-y-2.5 scrollbar-none min-h-0">
               {messages.map((m, i) => {
-                if (m.kind === "handoff") {
-                  const to = mesh.agents[m.to];
-                  return (
-                    <div key={i} className="my-1.5">
-                      <div className="mx-auto max-w-[88%] px-3 py-2 rounded-xl text-center text-[11px] italic flex items-center justify-center gap-2"
-                        style={{ background: `${to.color}1c`, color: to.color, border: `1px dashed ${to.color}55` }}>
-                        <Zap className="w-3 h-3" />
-                        {m.text}
-                      </div>
-                    </div>
-                  );
-                }
                 if (m.kind === "user") {
                   return (
                     <div key={i} className="flex justify-end">
-                      <div className="max-w-[80%] rounded-2xl rounded-br-sm px-3 py-2 text-xs text-white"
-                        style={{ background: concierge.color }}>
+                      <div className="max-w-[80%] rounded-2xl rounded-br-sm px-3 py-2 text-xs text-white" style={{ background: concierge.color }}>
                         {m.text}
                       </div>
                     </div>
                   );
                 }
-                const a = mesh.agents[m.agentId];
                 return (
                   <div key={i} className="flex justify-start">
-                    <div className="max-w-[80%] rounded-2xl rounded-bl-sm px-3 py-2 text-xs leading-relaxed glass text-foreground border"
-                      style={{ borderLeft: `3px solid ${a.color}` }}>
-                      <div className="text-[9px] uppercase tracking-widest mb-0.5 font-semibold" style={{ color: a.color }}>{a.name}</div>
+                    <div className="max-w-[80%] rounded-2xl rounded-bl-sm px-3 py-2 text-xs leading-relaxed glass text-foreground border whitespace-pre-wrap"
+                      style={{ borderLeft: `3px solid ${active.color}` }}>
+                      <div className="text-[9px] uppercase tracking-widest mb-0.5 font-semibold" style={{ color: active.color }}>{active.name}</div>
                       {renderText(m.text)}
                     </div>
                   </div>
@@ -200,12 +165,11 @@ const TesfaAI = () => {
               })}
               {typing && (
                 <div className="flex justify-start">
-                  <div className="glass rounded-2xl rounded-bl-sm px-4 py-3 border"
-                    style={{ borderLeft: `3px solid ${mesh.agents[typing].color}` }}>
+                  <div className="glass rounded-2xl rounded-bl-sm px-4 py-3 border" style={{ borderLeft: `3px solid ${active.color}` }}>
                     <div className="flex gap-1">
-                      <div className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: mesh.agents[typing].color, animationDelay: "0ms" }} />
-                      <div className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: mesh.agents[typing].color, animationDelay: "150ms" }} />
-                      <div className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: mesh.agents[typing].color, animationDelay: "300ms" }} />
+                      <div className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: active.color, animationDelay: "0ms" }} />
+                      <div className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: active.color, animationDelay: "150ms" }} />
+                      <div className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: active.color, animationDelay: "300ms" }} />
                     </div>
                   </div>
                 </div>
@@ -213,19 +177,17 @@ const TesfaAI = () => {
               <div ref={bottomRef} />
             </div>
 
-            {/* Suggestions */}
             <div className="px-4 pb-2 flex-shrink-0">
               <div className="flex gap-2 overflow-x-auto scrollbar-none pb-1">
                 {FALLBACK_SUGGESTIONS.map(s => (
-                  <button key={s} onClick={() => send(s)}
-                    className="flex-shrink-0 glass text-xs px-3 py-1.5 rounded-xl text-muted-foreground hover:text-foreground border border-border transition-colors min-h-[36px]">
+                  <button key={s} onClick={() => send(s)} disabled={typing}
+                    className="flex-shrink-0 glass text-xs px-3 py-1.5 rounded-xl text-muted-foreground hover:text-foreground border border-border transition-colors min-h-[36px] disabled:opacity-50">
                     {s}
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* Input */}
             <div className="flex items-center gap-2 px-4 py-3 border-t border-border flex-shrink-0">
               <input
                 ref={inputRef}
@@ -234,13 +196,13 @@ const TesfaAI = () => {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && send()}
+                disabled={typing}
               />
-              <button aria-label="Voice"
-                className="p-2.5 glass rounded-xl text-muted-foreground min-w-[44px] min-h-[44px] flex items-center justify-center">
+              <button aria-label="Voice" className="p-2.5 glass rounded-xl text-muted-foreground min-w-[44px] min-h-[44px] flex items-center justify-center">
                 <Mic className="w-4 h-4" />
               </button>
-              <button onClick={() => send()} aria-label="Send"
-                className="p-2.5 rounded-xl min-w-[44px] min-h-[44px] flex items-center justify-center text-white"
+              <button onClick={() => send()} aria-label="Send" disabled={typing}
+                className="p-2.5 rounded-xl min-w-[44px] min-h-[44px] flex items-center justify-center text-white disabled:opacity-50"
                 style={{ background: concierge.color }}>
                 <Send className="w-4 h-4" />
               </button>
