@@ -446,21 +446,37 @@ export function applyAction(p: CustomerProfile, a: AgentAction): { profile: Cust
     id: `T${Date.now()}`, date: today, merchant, category, amount,
   });
 
-  // Decide which bucket of money funds a transfer based on the free-form
-  // `fromAccount` label the agent supplies (e.g. "Wallet", "Primary Savings").
-  // Returns the source key + a human label so receipts stay accurate.
-  const resolveSource = (label?: string): { key: "wallet" | "savings"; label: string } => {
+  type BalanceKey = "wallet" | "savings";
+  const etb = (n: number) => `ETB ${n.toLocaleString()}`;
+  const balancesText = () => `Wallet: ${etb(next.walletBalanceETB)} · Savings: ${etb(next.savingsBalanceETB)}`;
+
+  // Decide which bucket funds a transfer from the free-form source label.
+  // "Current", "main" and generic bank/current labels map to walletBalanceETB;
+  // any savings/goal/deposit label maps to savingsBalanceETB.
+  const resolveSource = (label?: string): { key: BalanceKey; label: string } => {
     const l = (label ?? "").toLowerCase();
     if (l.includes("saving") || l.includes("goal") || l.includes("deposit")) {
       return { key: "savings", label: label || "Savings" };
     }
     return { key: "wallet", label: label || "Wallet" };
   };
-  const balanceOf = (key: "wallet" | "savings") =>
+  const balanceOf = (key: BalanceKey) =>
     key === "wallet" ? next.walletBalanceETB : next.savingsBalanceETB;
-  const debit = (key: "wallet" | "savings", amt: number) => {
-    if (key === "wallet") next.walletBalanceETB = Math.max(0, next.walletBalanceETB - amt);
-    else next.savingsBalanceETB = Math.max(0, next.savingsBalanceETB - amt);
+  const debit = (key: BalanceKey, amt: number) => {
+    if (key === "wallet") next.walletBalanceETB -= amt;
+    else next.savingsBalanceETB -= amt;
+  };
+  const credit = (key: BalanceKey, amt: number) => {
+    if (key === "wallet") next.walletBalanceETB += amt;
+    else next.savingsBalanceETB += amt;
+  };
+  const isOwnWalletDestination = (...parts: Array<string | undefined>) => {
+    const text = parts.filter(Boolean).join(" ").toLowerCase();
+    if (!text) return false;
+    const namesWallet = /wallet|mno|mobile money|telebirr|main account|current account/.test(text);
+    const namesSelf = /\b(my|own|self|selam)\b/.test(text);
+    const externalMsisdn = /\b0\d{8,9}\b|\+251/.test(text);
+    return namesWallet && (namesSelf || !externalMsisdn);
   };
 
 
@@ -473,11 +489,11 @@ export function applyAction(p: CustomerProfile, a: AgentAction): { profile: Cust
       const goal = next.savingsGoals.find((g) => g.id === a.goalId)
         ?? next.savingsGoals.find((g) => a.goalName && g.name.toLowerCase().includes(a.goalName.toLowerCase()))
         ?? next.savingsGoals[0];
-      next.walletBalanceETB -= amt;
-      next.savingsBalanceETB += amt;
+      debit("wallet", amt);
+      credit("savings", amt);
       if (goal) goal.saved += amt;
       next.recentTransactions = [newTxn(`Savings → ${goal?.name ?? "savings"}`, "savings", -amt), ...next.recentTransactions].slice(0, 12);
-      return { profile: next, receipt: `Moved ETB ${amt.toLocaleString()} from wallet to ${goal?.name ?? "savings"}.` };
+      return { profile: next, receipt: `Moved ${etb(amt)} from wallet to ${goal?.name ?? "savings"}. ${balancesText()}.` };
     }
     case "savings_withdraw": {
       const amt = Math.max(0, Math.round(a.amount));
