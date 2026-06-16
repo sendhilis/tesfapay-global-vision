@@ -20,7 +20,7 @@ import {
 } from "@/lib/integrationUrls";
 
 type ModuleRow = {
-  id: "mobile-banking" | "abx-lending";
+  id: "mobile-banking" | "abx-lending" | "bankgpt";
   name: string;
   envVarName: string;
   defaultUrl: string;
@@ -41,6 +41,13 @@ const MODULES: ModuleRow[] = [
     envVarName: "VITE_ABX_LENDING_URL",
     defaultUrl: "https://abxlending.techurate.world",
     buildTimeValue: import.meta.env.VITE_ABX_LENDING_URL as string | undefined,
+  },
+  {
+    id: "bankgpt",
+    name: "BankGPT · AI Mesh",
+    envVarName: "VITE_BANKGPT_URL",
+    defaultUrl: "/platform/bankgpt",
+    buildTimeValue: import.meta.env.VITE_BANKGPT_URL as string | undefined,
   },
 ];
 
