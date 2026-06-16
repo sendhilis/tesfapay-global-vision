@@ -13,7 +13,7 @@ export type IntegrationEnv = "sandbox" | "uat" | "prod";
 
 export const INTEGRATION_ENVS: IntegrationEnv[] = ["sandbox", "uat", "prod"];
 
-type ModuleId = "mobile-banking" | "abx-lending";
+type ModuleId = "mobile-banking" | "abx-lending" | "bankgpt";
 
 type Overrides = Partial<Record<IntegrationEnv, Partial<Record<ModuleId, string>>>>;
 
