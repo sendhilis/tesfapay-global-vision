@@ -419,8 +419,8 @@ function ConfigPanel({
 type ChatMsg =
   | { kind: "user"; text: string }
   | { kind: "agent"; agentId: MeshAgentId; text: string; charts?: ChartBlock[]; actions?: ActionBlock[]; voiceSummary?: string }
-  | { kind: "handoff"; from: MeshAgentId; to: MeshAgentId; text: string }
-  | { kind: "system"; text: string };
+  | { kind: "handoff"; from: MeshAgentId; to: MeshAgentId; text: string };
+
 
 
 function pickReply(a: MeshAgent, firstName: string): string {
