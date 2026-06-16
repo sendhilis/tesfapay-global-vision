@@ -450,7 +450,9 @@ function Simulation({
   const [typing, setTyping] = useState<MeshAgentId | null>(null);
   const [tourRunning, setTourRunning] = useState(false);
   const [tourResults, setTourResults] = useState<{ ok: boolean; expected: MeshAgentId; got: MeshAgentId }[]>([]);
+  const [voiceOn, setVoiceOn] = useState(true);
   const bottomRef = useRef<HTMLDivElement>(null);
+
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, typing]);
 
