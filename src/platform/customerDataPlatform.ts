@@ -542,8 +542,9 @@ export function applyAction(p: CustomerProfile, a: AgentAction): { profile: Cust
         return { profile: p, receipt: `Insufficient ${src.label} balance for ETB ${amt.toLocaleString()} transfer.` };
       }
       debit(src.key, amt);
+      if (src.key === "savings" && isOwnWalletDestination(a.to)) credit("wallet", amt);
       next.recentTransactions = [newTxn(`Send to ${a.to}`, "transfer", -amt), ...next.recentTransactions].slice(0, 12);
-      return { profile: next, receipt: `Sent ETB ${amt.toLocaleString()} to ${a.to} from ${src.label}. Remaining: ETB ${balanceOf(src.key).toLocaleString()}.` };
+      return { profile: next, receipt: `Sent ${etb(amt)} to ${a.to} from ${src.label}. ${balancesText()}.` };
     }
     case "transfer_bank_to_bank": {
       const amt = Math.max(0, Math.round(a.amount));
@@ -554,7 +555,7 @@ export function applyAction(p: CustomerProfile, a: AgentAction): { profile: Cust
       debit(src.key, amt);
       const dest = [a.toBank, a.toAccount].filter(Boolean).join(" · ") || "external bank";
       next.recentTransactions = [newTxn(`Bank transfer → ${dest}`, "transfer", -amt), ...next.recentTransactions].slice(0, 12);
-      return { profile: next, receipt: `Sent ETB ${amt.toLocaleString()} to ${dest} from ${src.label}. Remaining: ETB ${balanceOf(src.key).toLocaleString()}.` };
+      return { profile: next, receipt: `Sent ${etb(amt)} to ${dest} from ${src.label}. ${balancesText()}.` };
     }
     case "transfer_bank_to_mno": {
       const amt = Math.max(0, Math.round(a.amount));
@@ -564,8 +565,9 @@ export function applyAction(p: CustomerProfile, a: AgentAction): { profile: Cust
       }
       debit(src.key, amt);
       const dest = [a.toWallet, a.toMsisdn].filter(Boolean).join(" · ") || "MNO wallet";
+      if (src.key === "savings" && isOwnWalletDestination(a.toWallet, a.toMsisdn, a.memo)) credit("wallet", amt);
       next.recentTransactions = [newTxn(`Wallet top-up → ${dest}`, "transfer", -amt), ...next.recentTransactions].slice(0, 12);
-      return { profile: next, receipt: `Sent ETB ${amt.toLocaleString()} to ${dest} from ${src.label}. Remaining: ETB ${balanceOf(src.key).toLocaleString()}.` };
+      return { profile: next, receipt: `Sent ${etb(amt)} to ${dest} from ${src.label}. ${balancesText()}.` };
     }
     case "transfer_p2p": {
       const amt = Math.max(0, Math.round(a.amount));
@@ -576,7 +578,7 @@ export function applyAction(p: CustomerProfile, a: AgentAction): { profile: Cust
       debit(src.key, amt);
       const dest = a.toContact || "contact";
       next.recentTransactions = [newTxn(`P2P → ${dest}`, "transfer", -amt), ...next.recentTransactions].slice(0, 12);
-      return { profile: next, receipt: `Sent ETB ${amt.toLocaleString()} to ${dest} from ${src.label}. Remaining: ETB ${balanceOf(src.key).toLocaleString()}.` };
+      return { profile: next, receipt: `Sent ${etb(amt)} to ${dest} from ${src.label}. ${balancesText()}.` };
     }
 
     default:
