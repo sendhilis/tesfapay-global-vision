@@ -206,17 +206,22 @@ Deno.serve(async (req) => {
     const data = await aiRes.json();
     const raw = data?.choices?.[0]?.message?.content?.trim() || "(no reply)";
 
-    // Extract any fenced code block and classify as chart or action based on shape.
-    // The model sometimes tags blocks ```json instead of ```chart, so we accept any tag
-    // and strip every fenced block so raw JSON never leaks into the chat UI.
+    // Extract any fenced code block and classify as chart / action / voice.
     const charts: unknown[] = [];
     const actions: unknown[] = [];
+    let voiceSummary = "";
     const ACTION_TYPES = new Set([
-      "savings_deposit", "savings_withdraw", "tbill_purchase", "loan_repay", "transfer",
+      "savings_deposit", "savings_withdraw", "tbill_purchase", "loan_repay",
+      "transfer", "transfer_bank_to_bank", "transfer_bank_to_mno", "transfer_p2p",
     ]);
     const CHART_TYPES = new Set(["pie", "donut", "bar", "line"]);
-    const stripped = raw.replace(/```[a-zA-Z0-9_-]*\s*([\s\S]*?)```/g, (_m: string, body: string) => {
-      const txt = body.trim();
+    const stripped = raw.replace(/```([a-zA-Z0-9_-]*)\s*([\s\S]*?)```/g, (_m: string, tag: string, body: string) => {
+      const txt = (body || "").trim();
+      const lowerTag = (tag || "").toLowerCase();
+      if (lowerTag === "voice") {
+        if (!voiceSummary) voiceSummary = txt.replace(/\s+/g, " ").trim();
+        return "";
+      }
       try {
         const parsed = JSON.parse(txt);
         const t = (parsed && typeof parsed === "object" ? (parsed as { type?: string }).type : "") || "";
@@ -240,9 +245,11 @@ Deno.serve(async (req) => {
       reply: stripped || raw,
       charts,
       actions,
+      voiceSummary,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
+
   } catch (e) {
     console.error("mesh-chat error", e);
     const msg = e instanceof Error ? e.message : "Unknown error";
