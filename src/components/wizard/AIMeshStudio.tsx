@@ -19,10 +19,14 @@ import { toast } from "sonner";
 import { Diamond } from "./AbxLogo";
 import {
   Bot, Send, Sparkles, Lock, Play, RotateCcw, MessageSquare,
-  CheckCircle2, Zap, User as UserIcon, Rocket
+  CheckCircle2, Zap, User as UserIcon, Rocket, Volume2, VolumeX, BarChart3
 } from "lucide-react";
 import OnboardingDemo from "./onboarding/OnboardingDemo";
 import EqubDemo from "./equb/EqubDemo";
+import { AMARA_DEFAULT_CUSTOMER } from "./modules/bankgpt/cdp/richCustomerProfile";
+import { ChartBlockView, ActionBlockView, type ChartBlock, type ActionBlock } from "./modules/bankgpt/MeshChatBlocks";
+import { speak } from "./modules/bankgpt/voiceUtils";
+
 
 const EQUB_KEYWORDS = ["equb", "ekub", "iqub", "እቁብ", "ቁጠባ ክበብ", "savings circle", "savings group", "rotating savings"];
 function isEqubIntent(text: string): boolean {
@@ -51,12 +55,13 @@ function routeIntent(
   return "concierge";
 }
 
-const PERSONAS: Record<string, { firstName: string; line: string; avatar: string }> = {
-  Selam:  { firstName: "Selam",  line: "Urban hustler, 24, sends money weekly",  avatar: "S" },
+const PERSONAS: Record<string, { firstName: string; line: string; avatar: string; customer?: typeof AMARA_DEFAULT_CUSTOMER }> = {
+  Selam:  { firstName: AMARA_DEFAULT_CUSTOMER.firstName, line: `${AMARA_DEFAULT_CUSTOMER.occupation} · ${AMARA_DEFAULT_CUSTOMER.city}`, avatar: "S", customer: AMARA_DEFAULT_CUSTOMER },
   Bekele: { firstName: "Bekele", line: "Market trader, cash-heavy, needs credit", avatar: "B" },
   Tigist: { firstName: "Tigist", line: "Teacher, salaried, saving for school",    avatar: "T" },
   Dawit:  { firstName: "Dawit",  line: "Diaspora son, sends remittances home",    avatar: "D" },
 };
+
 
 const SCRIPTED_TOUR: { text: string; expect: MeshAgentId }[] = [
   { text: "Hi",                                  expect: "concierge" },
@@ -413,8 +418,10 @@ function ConfigPanel({
 /* ------------------------------------------------------------------ */
 type ChatMsg =
   | { kind: "user"; text: string }
-  | { kind: "agent"; agentId: MeshAgentId; text: string }
+  | { kind: "agent"; agentId: MeshAgentId; text: string; charts?: ChartBlock[]; actions?: ActionBlock[]; voiceSummary?: string }
   | { kind: "handoff"; from: MeshAgentId; to: MeshAgentId; text: string };
+
+
 
 function pickReply(a: MeshAgent, firstName: string): string {
   const raw = a.sampleReplies[Math.floor(Math.random() * a.sampleReplies.length)];
@@ -443,7 +450,9 @@ function Simulation({
   const [typing, setTyping] = useState<MeshAgentId | null>(null);
   const [tourRunning, setTourRunning] = useState(false);
   const [tourResults, setTourResults] = useState<{ ok: boolean; expected: MeshAgentId; got: MeshAgentId }[]>([]);
+  const [voiceOn, setVoiceOn] = useState(true);
   const bottomRef = useRef<HTMLDivElement>(null);
+
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, typing]);
 
@@ -481,12 +490,22 @@ function Simulation({
         persona: { firstName: p.firstName, line: p.line },
         bankName,
         messages: payloadMessages,
+        customer: p.customer ?? null,
+        language: p.customer?.primaryLanguage === "am" ? "en" : "en",
       },
     });
     if (error) throw error;
     if (data?.error) throw new Error(data.error);
-    return data as { targetAgentId: MeshAgentId; handoff: { to: MeshAgentId; text: string } | null; reply: string };
+    return data as {
+      targetAgentId: MeshAgentId;
+      handoff: { to: MeshAgentId; text: string } | null;
+      reply: string;
+      charts?: ChartBlock[];
+      actions?: ActionBlock[];
+      voiceSummary?: string;
+    };
   };
+
 
   const submit = async (text: string) => {
     if (!text.trim() || typing) return;
@@ -511,12 +530,22 @@ function Simulation({
         } else if (target !== "concierge" && target !== currentAgent) {
           onHandoffFire(currentAgent, target);
         }
-        out.push({ kind: "agent", agentId: target, text: res.reply });
+        out.push({
+          kind: "agent", agentId: target, text: res.reply,
+          charts: res.charts || [], actions: res.actions || [], voiceSummary: res.voiceSummary || "",
+        });
         return out;
       });
       setCurrentAgent(target);
       onSelectAgent(target);
+
+      // Voice — prefer the short chart summary; fall back to the prose itself.
+      if (voiceOn) {
+        const spoken = (res.voiceSummary && res.voiceSummary.trim()) || res.reply;
+        if (spoken && spoken.length < 600) speak(spoken, "en").catch(() => {});
+      }
     } catch (e) {
+
       const msg = e instanceof Error ? e.message : "Failed to reach the AI mesh";
       toast.error(msg);
       setMessages((m) => [...m, {
@@ -597,10 +626,15 @@ function Simulation({
         >
           <Play className="w-2.5 h-2.5" /> {tourRunning ? "Running…" : "Test handoffs"}
         </button>
+        <button onClick={() => setVoiceOn((v) => !v)} title={voiceOn ? "Mute voice summary" : "Enable voice summary"}
+          className={`text-[10px] px-2 py-1 rounded-full border inline-flex items-center gap-1 ${voiceOn ? "bg-[var(--teal-deep)] text-white border-[var(--teal-deep)]" : "border-[var(--line)] text-[var(--ink-soft)]"}`}>
+          {voiceOn ? <Volume2 className="w-3 h-3" /> : <VolumeX className="w-3 h-3" />} Voice
+        </button>
         <button onClick={reset} title="Reset chat"
           className="text-[10px] px-2 py-1 rounded-full border border-[var(--line)] hover:border-[var(--ink)]/40">
           <RotateCcw className="w-3 h-3" />
         </button>
+
       </div>
 
       {/* Messages */}
@@ -654,10 +688,31 @@ function Simulation({
                     <Rocket className="w-3.5 h-3.5" /> Launch eQUB Live · የጓደኞች ቤት
                   </button>
                 )}
+                {(m.charts && m.charts.length > 0) && m.charts.map((c, ci) => (
+                  <ChartBlockView key={`c-${ci}`} chart={c} />
+                ))}
+                {(m.actions && m.actions.length > 0) && m.actions.map((act, ai) => (
+                  <ActionBlockView
+                    key={`a-${ai}`}
+                    action={act}
+                    onConfirm={(x) => toast.success(`✓ ${x.type.replace(/_/g, " ")} confirmed — ETB ${x.amount?.toLocaleString() ?? ""}`)}
+                    onCancel={() => toast("Cancelled")}
+                  />
+                ))}
+                {m.voiceSummary && voiceOn && (
+                  <button
+                    onClick={() => speak(m.voiceSummary!, "en").catch(() => {})}
+                    className="mt-2 inline-flex items-center gap-1 text-[10px] uppercase tracking-widest text-[var(--ink-soft)] hover:text-[var(--ink)]"
+                    title="Replay voice summary"
+                  >
+                    <Volume2 className="w-3 h-3" /> Replay summary
+                  </button>
+                )}
               </div>
             </div>
           );
         })}
+
         {typing && (
           <div className="flex items-end gap-2">
             <AgentChip a={agents[typing]} size={22} />
@@ -690,7 +745,31 @@ function Simulation({
         </div>
       )}
 
+      {/* Quick CDP-aware prompts (only when rich customer is loaded) */}
+      {p.customer && (
+        <div className="px-2 py-1.5 border-t border-[var(--line)] bg-white flex flex-wrap gap-1.5">
+          <span className="text-[9px] uppercase tracking-widest text-[var(--ink-soft)] self-center mr-1 inline-flex items-center gap-1">
+            <BarChart3 className="w-3 h-3" /> Try
+          </span>
+          {[
+            "Show my spend this week",
+            "Show my savings this month",
+            "How are my savings goals doing?",
+            "Send ETB 1,500 to my Mother",
+            "Transfer ETB 5,000 to Awash Bank for the landlord",
+            "Top up Telebirr 0912334455 with ETB 800",
+            "Send ETB 2,000 from my savings to my brother at Dashen",
+          ].map((q) => (
+            <button key={q} onClick={() => submit(q)} disabled={!!typing}
+              className="text-[10px] px-2 py-1 rounded-full border border-[var(--line)] bg-white hover:border-[var(--ink)]/40 text-[var(--ink-soft)] disabled:opacity-50">
+              {q}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Composer */}
+
       <form
         onSubmit={(e) => { e.preventDefault(); submit(input); setInput(""); }}
         className="flex items-center gap-2 p-2 border-t border-[var(--line)] bg-white">

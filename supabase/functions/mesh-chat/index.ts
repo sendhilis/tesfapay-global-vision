@@ -67,16 +67,38 @@ Chart block schema:
 - Pull data ONLY from CUSTOMER_PROFILE_JSON. Never invent numbers.
 - Max 2 chart blocks per reply.
 
-Action block — ONLY when the user asks to move money:
+Action block — ONLY when the user asks to move money. Pick the most specific type:
 {
-  "type": "savings_deposit" | "savings_withdraw" | "tbill_purchase" | "loan_repay" | "transfer",
+  "type":
+      "transfer_bank_to_bank"   // to another bank account (use "toBank" + "toAccount")
+    | "transfer_bank_to_mno"    // to an MNO wallet (use "toWallet" + "toMsisdn")
+    | "transfer_p2p"            // to a saved individual (use "toContact")
+    | "savings_deposit" | "savings_withdraw" | "tbill_purchase" | "loan_repay",
   "amount": 1000,
+  "currency": "ETB",
+  "fromAccount": "Primary Savings",
+  "toBank": "Awash Bank",
+  "toAccount": "01300123456",
+  "toWallet": "Telebirr",
+  "toMsisdn": "0911223344",
+  "toContact": "Mother",
   "goalId": "SG-1",
   "loanId": "LN-44210",
   "tenor": "91d"|"182d"|"364d",
-  "to": "Mother"
+  "memo": "September rent"
 }
-Confirm the action in plain prose (e.g. "Moving ETB 1,000 to your goal…").
+Only include fields that apply to the chosen type. Pull bank names, wallet names
+and contacts ONLY from CUSTOMER_PROFILE_JSON.beneficiaries. Confirm in plain prose
+(e.g. "Moving ETB 1,000 from your Primary Savings to Awash Bank …").
+
+VOICE SUMMARY (REQUIRED whenever a chart block is included):
+After the prose, append ONE extra fenced block tagged \`\`\`voice with a single
+spoken-style sentence (<= 22 words) that summarises the chart headline insight
+naturally when read aloud. No markdown, no raw numbers-only lists.
+Example:
+\`\`\`voice
+Food and groceries lead your week at thirty-two percent, up six points from last week.
+\`\`\`
 
 PROSE RULES:
 - Keep text tight: 1-3 short sentences before/after the chart.
@@ -184,17 +206,22 @@ Deno.serve(async (req) => {
     const data = await aiRes.json();
     const raw = data?.choices?.[0]?.message?.content?.trim() || "(no reply)";
 
-    // Extract any fenced code block and classify as chart or action based on shape.
-    // The model sometimes tags blocks ```json instead of ```chart, so we accept any tag
-    // and strip every fenced block so raw JSON never leaks into the chat UI.
+    // Extract any fenced code block and classify as chart / action / voice.
     const charts: unknown[] = [];
     const actions: unknown[] = [];
+    let voiceSummary = "";
     const ACTION_TYPES = new Set([
-      "savings_deposit", "savings_withdraw", "tbill_purchase", "loan_repay", "transfer",
+      "savings_deposit", "savings_withdraw", "tbill_purchase", "loan_repay",
+      "transfer", "transfer_bank_to_bank", "transfer_bank_to_mno", "transfer_p2p",
     ]);
     const CHART_TYPES = new Set(["pie", "donut", "bar", "line"]);
-    const stripped = raw.replace(/```[a-zA-Z0-9_-]*\s*([\s\S]*?)```/g, (_m: string, body: string) => {
-      const txt = body.trim();
+    const stripped = raw.replace(/```([a-zA-Z0-9_-]*)\s*([\s\S]*?)```/g, (_m: string, tag: string, body: string) => {
+      const txt = (body || "").trim();
+      const lowerTag = (tag || "").toLowerCase();
+      if (lowerTag === "voice") {
+        if (!voiceSummary) voiceSummary = txt.replace(/\s+/g, " ").trim();
+        return "";
+      }
       try {
         const parsed = JSON.parse(txt);
         const t = (parsed && typeof parsed === "object" ? (parsed as { type?: string }).type : "") || "";
@@ -218,9 +245,11 @@ Deno.serve(async (req) => {
       reply: stripped || raw,
       charts,
       actions,
+      voiceSummary,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
+
   } catch (e) {
     console.error("mesh-chat error", e);
     const msg = e instanceof Error ? e.message : "Unknown error";
