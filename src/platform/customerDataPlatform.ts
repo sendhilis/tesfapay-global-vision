@@ -446,6 +446,24 @@ export function applyAction(p: CustomerProfile, a: AgentAction): { profile: Cust
     id: `T${Date.now()}`, date: today, merchant, category, amount,
   });
 
+  // Decide which bucket of money funds a transfer based on the free-form
+  // `fromAccount` label the agent supplies (e.g. "Wallet", "Primary Savings").
+  // Returns the source key + a human label so receipts stay accurate.
+  const resolveSource = (label?: string): { key: "wallet" | "savings"; label: string } => {
+    const l = (label ?? "").toLowerCase();
+    if (l.includes("saving") || l.includes("goal") || l.includes("deposit")) {
+      return { key: "savings", label: label || "Savings" };
+    }
+    return { key: "wallet", label: label || "Wallet" };
+  };
+  const balanceOf = (key: "wallet" | "savings") =>
+    key === "wallet" ? next.walletBalanceETB : next.savingsBalanceETB;
+  const debit = (key: "wallet" | "savings", amt: number) => {
+    if (key === "wallet") next.walletBalanceETB = Math.max(0, next.walletBalanceETB - amt);
+    else next.savingsBalanceETB = Math.max(0, next.savingsBalanceETB - amt);
+  };
+
+
   switch (a.type) {
     case "savings_deposit": {
       const amt = Math.max(0, Math.round(a.amount));
