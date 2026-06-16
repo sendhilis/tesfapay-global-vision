@@ -446,6 +446,24 @@ export function applyAction(p: CustomerProfile, a: AgentAction): { profile: Cust
     id: `T${Date.now()}`, date: today, merchant, category, amount,
   });
 
+  // Decide which bucket of money funds a transfer based on the free-form
+  // `fromAccount` label the agent supplies (e.g. "Wallet", "Primary Savings").
+  // Returns the source key + a human label so receipts stay accurate.
+  const resolveSource = (label?: string): { key: "wallet" | "savings"; label: string } => {
+    const l = (label ?? "").toLowerCase();
+    if (l.includes("saving") || l.includes("goal") || l.includes("deposit")) {
+      return { key: "savings", label: label || "Savings" };
+    }
+    return { key: "wallet", label: label || "Wallet" };
+  };
+  const balanceOf = (key: "wallet" | "savings") =>
+    key === "wallet" ? next.walletBalanceETB : next.savingsBalanceETB;
+  const debit = (key: "wallet" | "savings", amt: number) => {
+    if (key === "wallet") next.walletBalanceETB = Math.max(0, next.walletBalanceETB - amt);
+    else next.savingsBalanceETB = Math.max(0, next.savingsBalanceETB - amt);
+  };
+
+
   switch (a.type) {
     case "savings_deposit": {
       const amt = Math.max(0, Math.round(a.amount));
@@ -503,43 +521,48 @@ export function applyAction(p: CustomerProfile, a: AgentAction): { profile: Cust
     }
     case "transfer": {
       const amt = Math.max(0, Math.round(a.amount));
-      if (amt <= 0 || next.walletBalanceETB < amt) {
-        return { profile: p, receipt: `Insufficient wallet balance for ETB ${amt.toLocaleString()} transfer.` };
+      const src = resolveSource((a as any).fromAccount);
+      if (amt <= 0 || balanceOf(src.key) < amt) {
+        return { profile: p, receipt: `Insufficient ${src.label} balance for ETB ${amt.toLocaleString()} transfer.` };
       }
-      next.walletBalanceETB -= amt;
+      debit(src.key, amt);
       next.recentTransactions = [newTxn(`Send to ${a.to}`, "transfer", -amt), ...next.recentTransactions].slice(0, 12);
-      return { profile: next, receipt: `Sent ETB ${amt.toLocaleString()} to ${a.to}.` };
+      return { profile: next, receipt: `Sent ETB ${amt.toLocaleString()} to ${a.to} from ${src.label}. Remaining: ETB ${balanceOf(src.key).toLocaleString()}.` };
     }
     case "transfer_bank_to_bank": {
       const amt = Math.max(0, Math.round(a.amount));
-      if (amt <= 0 || next.walletBalanceETB < amt) {
-        return { profile: p, receipt: `Insufficient balance for ETB ${amt.toLocaleString()} bank transfer.` };
+      const src = resolveSource(a.fromAccount);
+      if (amt <= 0 || balanceOf(src.key) < amt) {
+        return { profile: p, receipt: `Insufficient ${src.label} balance for ETB ${amt.toLocaleString()} bank transfer.` };
       }
-      next.walletBalanceETB -= amt;
+      debit(src.key, amt);
       const dest = [a.toBank, a.toAccount].filter(Boolean).join(" · ") || "external bank";
       next.recentTransactions = [newTxn(`Bank transfer → ${dest}`, "transfer", -amt), ...next.recentTransactions].slice(0, 12);
-      return { profile: next, receipt: `Sent ETB ${amt.toLocaleString()} to ${dest}.` };
+      return { profile: next, receipt: `Sent ETB ${amt.toLocaleString()} to ${dest} from ${src.label}. Remaining: ETB ${balanceOf(src.key).toLocaleString()}.` };
     }
     case "transfer_bank_to_mno": {
       const amt = Math.max(0, Math.round(a.amount));
-      if (amt <= 0 || next.walletBalanceETB < amt) {
-        return { profile: p, receipt: `Insufficient balance for ETB ${amt.toLocaleString()} wallet top-up.` };
+      const src = resolveSource(a.fromAccount);
+      if (amt <= 0 || balanceOf(src.key) < amt) {
+        return { profile: p, receipt: `Insufficient ${src.label} balance for ETB ${amt.toLocaleString()} wallet top-up.` };
       }
-      next.walletBalanceETB -= amt;
+      debit(src.key, amt);
       const dest = [a.toWallet, a.toMsisdn].filter(Boolean).join(" · ") || "MNO wallet";
       next.recentTransactions = [newTxn(`Wallet top-up → ${dest}`, "transfer", -amt), ...next.recentTransactions].slice(0, 12);
-      return { profile: next, receipt: `Sent ETB ${amt.toLocaleString()} to ${dest}.` };
+      return { profile: next, receipt: `Sent ETB ${amt.toLocaleString()} to ${dest} from ${src.label}. Remaining: ETB ${balanceOf(src.key).toLocaleString()}.` };
     }
     case "transfer_p2p": {
       const amt = Math.max(0, Math.round(a.amount));
-      if (amt <= 0 || next.walletBalanceETB < amt) {
-        return { profile: p, receipt: `Insufficient balance for ETB ${amt.toLocaleString()} P2P transfer.` };
+      const src = resolveSource(a.fromAccount);
+      if (amt <= 0 || balanceOf(src.key) < amt) {
+        return { profile: p, receipt: `Insufficient ${src.label} balance for ETB ${amt.toLocaleString()} P2P transfer.` };
       }
-      next.walletBalanceETB -= amt;
+      debit(src.key, amt);
       const dest = a.toContact || "contact";
       next.recentTransactions = [newTxn(`P2P → ${dest}`, "transfer", -amt), ...next.recentTransactions].slice(0, 12);
-      return { profile: next, receipt: `Sent ETB ${amt.toLocaleString()} to ${dest}.` };
+      return { profile: next, receipt: `Sent ETB ${amt.toLocaleString()} to ${dest} from ${src.label}. Remaining: ETB ${balanceOf(src.key).toLocaleString()}.` };
     }
+
     default:
       return { profile: p, receipt: `Unsupported action.` };
   }
