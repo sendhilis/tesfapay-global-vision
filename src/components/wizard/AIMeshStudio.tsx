@@ -19,10 +19,14 @@ import { toast } from "sonner";
 import { Diamond } from "./AbxLogo";
 import {
   Bot, Send, Sparkles, Lock, Play, RotateCcw, MessageSquare,
-  CheckCircle2, Zap, User as UserIcon, Rocket
+  CheckCircle2, Zap, User as UserIcon, Rocket, Volume2, VolumeX, BarChart3
 } from "lucide-react";
 import OnboardingDemo from "./onboarding/OnboardingDemo";
 import EqubDemo from "./equb/EqubDemo";
+import { AMARA_DEFAULT_CUSTOMER } from "./modules/bankgpt/cdp/richCustomerProfile";
+import { ChartBlockView, ActionBlockView, type ChartBlock, type ActionBlock } from "./modules/bankgpt/MeshChatBlocks";
+import { speak } from "./modules/bankgpt/voiceUtils";
+
 
 const EQUB_KEYWORDS = ["equb", "ekub", "iqub", "እቁብ", "ቁጠባ ክበብ", "savings circle", "savings group", "rotating savings"];
 function isEqubIntent(text: string): boolean {
