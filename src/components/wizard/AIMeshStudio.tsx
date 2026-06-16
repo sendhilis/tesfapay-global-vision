@@ -490,12 +490,22 @@ function Simulation({
         persona: { firstName: p.firstName, line: p.line },
         bankName,
         messages: payloadMessages,
+        customer: p.customer ?? null,
+        language: p.customer?.primaryLanguage === "am" ? "en" : "en",
       },
     });
     if (error) throw error;
     if (data?.error) throw new Error(data.error);
-    return data as { targetAgentId: MeshAgentId; handoff: { to: MeshAgentId; text: string } | null; reply: string };
+    return data as {
+      targetAgentId: MeshAgentId;
+      handoff: { to: MeshAgentId; text: string } | null;
+      reply: string;
+      charts?: ChartBlock[];
+      actions?: ActionBlock[];
+      voiceSummary?: string;
+    };
   };
+
 
   const submit = async (text: string) => {
     if (!text.trim() || typing) return;
