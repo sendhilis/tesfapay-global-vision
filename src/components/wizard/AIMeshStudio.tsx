@@ -55,12 +55,13 @@ function routeIntent(
   return "concierge";
 }
 
-const PERSONAS: Record<string, { firstName: string; line: string; avatar: string }> = {
-  Selam:  { firstName: "Selam",  line: "Urban hustler, 24, sends money weekly",  avatar: "S" },
+const PERSONAS: Record<string, { firstName: string; line: string; avatar: string; customer?: typeof AMARA_DEFAULT_CUSTOMER }> = {
+  Selam:  { firstName: AMARA_DEFAULT_CUSTOMER.firstName, line: `${AMARA_DEFAULT_CUSTOMER.occupation} · ${AMARA_DEFAULT_CUSTOMER.city}`, avatar: "S", customer: AMARA_DEFAULT_CUSTOMER },
   Bekele: { firstName: "Bekele", line: "Market trader, cash-heavy, needs credit", avatar: "B" },
   Tigist: { firstName: "Tigist", line: "Teacher, salaried, saving for school",    avatar: "T" },
   Dawit:  { firstName: "Dawit",  line: "Diaspora son, sends remittances home",    avatar: "D" },
 };
+
 
 const SCRIPTED_TOUR: { text: string; expect: MeshAgentId }[] = [
   { text: "Hi",                                  expect: "concierge" },
