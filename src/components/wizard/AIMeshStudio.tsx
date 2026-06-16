@@ -683,10 +683,31 @@ function Simulation({
                     <Rocket className="w-3.5 h-3.5" /> Launch eQUB Live · የጓደኞች ቤት
                   </button>
                 )}
+                {(m.charts && m.charts.length > 0) && m.charts.map((c, ci) => (
+                  <ChartBlockView key={`c-${ci}`} chart={c} />
+                ))}
+                {(m.actions && m.actions.length > 0) && m.actions.map((act, ai) => (
+                  <ActionBlockView
+                    key={`a-${ai}`}
+                    action={act}
+                    onConfirm={(x) => toast.success(`✓ ${x.type.replace(/_/g, " ")} confirmed — ETB ${x.amount?.toLocaleString() ?? ""}`)}
+                    onCancel={() => toast("Cancelled")}
+                  />
+                ))}
+                {m.voiceSummary && voiceOn && (
+                  <button
+                    onClick={() => speak(m.voiceSummary!, "en").catch(() => {})}
+                    className="mt-2 inline-flex items-center gap-1 text-[10px] uppercase tracking-widest text-[var(--ink-soft)] hover:text-[var(--ink)]"
+                    title="Replay voice summary"
+                  >
+                    <Volume2 className="w-3 h-3" /> Replay summary
+                  </button>
+                )}
               </div>
             </div>
           );
         })}
+
         {typing && (
           <div className="flex items-end gap-2">
             <AgentChip a={agents[typing]} size={22} />
