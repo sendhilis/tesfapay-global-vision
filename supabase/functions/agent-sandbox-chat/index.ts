@@ -9,7 +9,7 @@ import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 type Tone = { formal_casual: number; terse_verbose: number; reserved_expressive: number };
-type KbDoc = { name: string; type: string; status: string; enabled: boolean; source?: string };
+type KbDoc = { id?: string; name: string; type: string; status: string; enabled: boolean; source?: string };
 type Tool = { id: string; label: string; approval: string; dailyLimit?: number };
 type Page = { url: string; finalUrl: string; html: string; text: string };
 
@@ -47,7 +47,258 @@ type Body = {
   messages: { role: "user" | "assistant"; content: string }[];
   language?: "en" | "am";
   model?: string;
+  customer?: Record<string, unknown>;
 };
+
+/* ─── Analytical output protocol — matches mesh-chat so the embedded
+       widget can render charts / actions / voice summary identically. ─── */
+const VIZ_PROTOCOL = `
+ANALYTICAL OUTPUT PROTOCOL — STRICT
+This is a polished conversational UI. NEVER show JSON, code, schemas, field
+names, or the word "json" in your prose. The user must only see clean text
+plus rendered charts.
+
+When numbers, trends, breakdowns, allocations, comparisons or scores are
+relevant, attach visualisations using fenced blocks tagged exactly
+\`\`\`chart (for charts) or \`\`\`action (for money movements). The host app
+parses and renders these blocks — they are invisible to the user.
+
+Chart block schema:
+{
+  "type": "pie" | "donut" | "bar" | "line",
+  "title": "Short chart title",
+  "currency": "ETB" | null,
+  "data": [ { "name": "Label", "value": 123 }, ... ]
+}
+- pie/donut for category breakdowns; bar for comparisons; line for trends.
+- If CUSTOMER_PROFILE_JSON is provided, pull data ONLY from it. Otherwise use
+  the most plausible illustrative figures and label the chart accordingly.
+- Max 2 chart blocks per reply.
+
+Action block — ONLY when the user asks to move money. Pick the most specific type:
+{
+  "type":
+      "transfer_bank_to_bank" | "transfer_bank_to_mno" | "transfer_p2p"
+    | "savings_deposit" | "savings_withdraw" | "tbill_purchase" | "loan_repay",
+  "amount": 1000,
+  "currency": "ETB",
+  "fromAccount": "Primary Savings",
+  "toBank": "Awash Bank",
+  "toAccount": "01300123456",
+  "toWallet": "Telebirr",
+  "toMsisdn": "0911223344",
+  "toContact": "Mother",
+  "memo": "September rent"
+}
+Only include fields that apply to the chosen type. Confirm in plain prose.
+
+VOICE SUMMARY (REQUIRED whenever a chart block is included):
+After the prose, append ONE extra fenced block tagged \`\`\`voice with a single
+spoken-style sentence (<= 22 words) that summarises the chart headline insight
+naturally when read aloud.
+
+PROSE RULES:
+- Keep text tight: 1-3 short sentences before/after the chart.
+- Refer to the chart naturally ("as you can see below").
+- Never write \`\`\`json or paste raw data into your reply.
+`;
+
+const CHART_TYPES = new Set(["pie", "donut", "bar", "line"]);
+const ACTION_TYPES = new Set([
+  "savings_deposit", "savings_withdraw", "tbill_purchase", "loan_repay",
+  "transfer", "transfer_bank_to_bank", "transfer_bank_to_mno", "transfer_p2p",
+]);
+
+function asNum(v: unknown): number {
+  return typeof v === "number" && Number.isFinite(v) ? v : Number(String(v || "").replace(/[^0-9.-]/g, "")) || 0;
+}
+
+function asRecord(v: unknown): Record<string, unknown> {
+  return v && typeof v === "object" && !Array.isArray(v) ? v as Record<string, unknown> : {};
+}
+
+function asRecords(v: unknown): Record<string, unknown>[] {
+  return Array.isArray(v) ? v.map(asRecord).filter((r) => Object.keys(r).length > 0) : [];
+}
+
+function inferSpendFromCustomer(customer: Record<string, unknown> | undefined) {
+  if (!customer) return null;
+  const c = customer;
+  const spend = asRecord(c.spend);
+  const normalizePoint = (x: Record<string, unknown>, fallbackName: string) => ({
+    name: String(x.name || x.day || x.date || x.category || x.merchant || x.counterparty || fallbackName),
+    value: Math.abs(asNum(x.value ?? x.amount ?? x.total ?? x.debit ?? 0)),
+  });
+  const recentTransactions = asRecords(c.recentTransactions);
+  const txns = recentTransactions.length ? recentTransactions : asRecords(c.last7Transactions);
+  const debitTxns = txns.filter((t) => t.direction === "debit" || asNum(t.amount) < 0);
+  const derivedCategoryTotals = new Map<string, number>();
+  const derivedDayTotals = new Map<string, number>();
+  for (const t of debitTxns) {
+    const amount = Math.abs(asNum(t.amount));
+    if (!amount) continue;
+    const category = String(t.category || t.merchantCategory || t.counterparty || t.merchant || "Spending");
+    const day = String(t.day || t.date || t.postedAt || t.txnDate || "Recent").slice(0, 12);
+    derivedCategoryTotals.set(category, (derivedCategoryTotals.get(category) ?? 0) + amount);
+    derivedDayTotals.set(day, (derivedDayTotals.get(day) ?? 0) + amount);
+  }
+  const explicitWeekly = asRecords(spend.weeklyByDay).map((x) => normalizePoint(x, "Day")).filter((x) => x.value > 0);
+  const explicitCategories = (asRecords(spend.categoryBreakdown).length ? asRecords(spend.categoryBreakdown) : asRecords(c.spendByCategory))
+    .map((x) => normalizePoint(x, "Spending"))
+    .filter((x) => x.value > 0);
+  const weeklyByDay = explicitWeekly.length ? explicitWeekly : [...derivedDayTotals.entries()].map(([name, value]) => ({ name, value }));
+  const categories = explicitCategories.length ? explicitCategories : [...derivedCategoryTotals.entries()].map(([name, value]) => ({ name, value }));
+  const debitTotal = debitTxns
+    .reduce((sum, t) => sum + Math.abs(asNum(t.amount)), 0);
+  const total = weeklyByDay.reduce((sum, d) => sum + asNum(d.value), 0) || debitTotal || categories.reduce((sum, d) => sum + asNum(d.value), 0);
+  if (!total && !weeklyByDay.length && !categories.length) return null;
+  const top = categories.slice().sort((a, b) => asNum(b.value) - asNum(a.value))[0];
+  return { total, weeklyByDay, categories, txns: debitTxns.length ? debitTxns : txns, topName: String(top?.name || spend.topCategory || "spending"), currency: String(c.currency || spend.currency || "ETB") };
+}
+
+function maybeDirectSpendAnswer(lastUser: string, customer: Record<string, unknown> | undefined) {
+  const text = lastUser.toLowerCase();
+  const spendIntent = /(spend|spends|spending|spent|expense|expenses|outflow|outflows|transaction|transactions|breakdown|where.*money|how much.*(spent|spend))/i.test(text);
+  const chartIntent = /(chart|graph|visual|breakdown|pie|donut|bar|category|categories|by day|per day|weekly|trend)/i.test(text);
+  if (!spendIntent && !chartIntent) return null;
+  const s = inferSpendFromCustomer(customer);
+  if (!s) return null;
+  const total = Math.round(s.total);
+  const charts = [];
+  if (s.categories.length) charts.push({ type: "donut", title: "Spend by category", currency: s.currency, data: s.categories.slice(0, 8) });
+  if (s.weeklyByDay.length) charts.push({ type: "bar", title: "Spend by day (last 7 days)", currency: s.currency, data: s.weeklyByDay.slice(0, 7) });
+  const txLine = s.txns.slice(0, 3).map((t) => `${t.counterparty || t.merchant || t.category}: ${s.currency} ${Math.abs(asNum(t.amount)).toLocaleString()}`).join("; ");
+  return {
+    reply: `Your spend totals ${s.currency} ${total.toLocaleString()} for the period shown. The biggest area was ${s.topName}; recent debits include ${txLine || "the transactions shown below"}.`,
+    charts,
+    actions: [],
+    voiceSummary: `Your spend was ${s.currency} ${total.toLocaleString()}, led by ${s.topName}.`,
+  };
+}
+
+function customerCurrency(customer: Record<string, unknown>): string {
+  return String(customer.currency || customer.currencyCode || "ETB");
+}
+
+function money(currency: string, value: unknown): string {
+  return `${currency} ${Math.round(asNum(value)).toLocaleString()}`;
+}
+
+function inferAccounts(customer: Record<string, unknown>) {
+  const currency = customerCurrency(customer);
+  const explicit = asRecords(customer.accounts).map((a, i) => ({
+    name: String(a.name || a.nickname || a.productName || a.type || `Account ${i + 1}`),
+    type: String(a.type || a.productType || "account"),
+    balance: asNum(a.availableBalance ?? a.currentBalance ?? a.ledgerBalance ?? a.balance ?? a.amount),
+  })).filter((a) => a.name && Number.isFinite(a.balance));
+
+  if (explicit.length) return { currency, accounts: explicit };
+
+  const derived: { name: string; type: string; balance: number }[] = [];
+  const wallet = asNum(customer.walletBalanceETB ?? customer.walletBalance ?? customer.balance);
+  const savings = asNum(customer.savingsBalanceETB ?? customer.savingsBalance);
+  if (wallet || "walletBalanceETB" in customer || "walletBalance" in customer || "balance" in customer) {
+    derived.push({ name: "Wallet", type: "wallet", balance: wallet });
+  }
+  if (savings || "savingsBalanceETB" in customer || "savingsBalance" in customer) {
+    derived.push({ name: "Savings", type: "savings", balance: savings });
+  }
+  return { currency, accounts: derived };
+}
+
+function maybeDirectCustomerAnswer(lastUser: string, customer: Record<string, unknown> | undefined) {
+  if (!customer) return null;
+  const text = lastUser.toLowerCase();
+  const currency = customerCurrency(customer);
+  const enforcedGuardrails = undefined;
+
+  if (/(balance|balances|available balance|wallet balance|savings balance|how much.*(have|left)|check my balance)/i.test(text)) {
+    const { accounts } = inferAccounts(customer);
+    if (accounts.length) {
+      const total = accounts.reduce((sum, a) => sum + a.balance, 0);
+      return {
+        reply: `Your available balance is ${money(currency, total)} across ${accounts.length} account${accounts.length === 1 ? "" : "s"}. ${accounts.slice(0, 3).map((a) => `${a.name}: ${money(currency, a.balance)}`).join("; ")}.`,
+        charts: [{ type: "bar", title: "Current balances", currency, data: accounts.slice(0, 8).map((a) => ({ name: a.name, value: a.balance })) }],
+        actions: [],
+        voiceSummary: `Your available balance is ${money(currency, total)}.`,
+        enforcedGuardrails,
+      };
+    }
+  }
+
+  if (/(loan|borrow|credit|eligib|pre.?approved|limit)/i.test(text)) {
+    const signals = asRecord(customer.signals);
+    const loanEligibility = asRecord(customer.loanEligibility);
+    const preApprovedLoan = asRecord(customer.preApprovedLoan);
+    const eligible = asNum(signals.eligibleForLoanETB ?? customer.eligibleForLoanETB ?? loanEligibility.eligibleAmount ?? loanEligibility.amount ?? preApprovedLoan.amount ?? preApprovedLoan.limit);
+    const scores = asRecord(customer.scores);
+    const creditScore = asNum(scores.credit ?? customer.creditScore);
+    const activeLoans = asRecords(customer.loans).filter((l) => String(l.status || "active") !== "closed");
+    const outstanding = activeLoans.reduce((sum, l) => sum + asNum(l.outstanding ?? l.balance), 0);
+    const chartData = [
+      ...(eligible ? [{ name: "Eligible limit", value: eligible }] : []),
+      ...(outstanding ? [{ name: "Active outstanding", value: outstanding }] : []),
+    ];
+    return {
+      reply: eligible
+        ? `You are pre-approved for up to ${money(currency, eligible)}${creditScore ? ` with a credit score of ${creditScore}` : ""}. ${outstanding ? `Active loan outstanding is ${money(currency, outstanding)}.` : "No active loan outstanding is visible."}`
+        : `${outstanding ? `Your active loan outstanding is ${money(currency, outstanding)}.` : "I do not see a current pre-approved loan limit in your profile."}${creditScore ? ` Your credit score is ${creditScore}.` : ""}`,
+      charts: chartData.length ? [{ type: "bar", title: "Loan position", currency, data: chartData }] : [],
+      actions: [],
+      voiceSummary: eligible ? `You are pre-approved for ${money(currency, eligible)}.` : "No pre-approved loan limit is visible right now.",
+      enforcedGuardrails,
+    };
+  }
+
+  if (/(recent transaction|recent transactions|last transaction|transactions|activity|history|go ahead)/i.test(text)) {
+    const txns = asRecords(customer.recentTransactions).length ? asRecords(customer.recentTransactions) : asRecords(customer.last7Transactions);
+    if (txns.length) {
+      const rows = txns.slice(0, 5).map((t) => {
+        const amount = asNum(t.amount ?? t.value ?? t.total);
+        const label = String(t.merchant || t.counterparty || t.description || t.category || "Transaction");
+        const date = String(t.date || t.day || t.postedAt || "Recent");
+        return { date, label, amount, category: String(t.category || label) };
+      });
+      const lines = rows.slice(0, 3).map((r) => `${r.date} — ${r.label}: ${money(currency, Math.abs(r.amount))}`).join("; ");
+      return {
+        reply: `Here are your latest transactions. ${lines}.`,
+        charts: [{ type: "bar", title: "Recent transaction amounts", currency, data: rows.map((r) => ({ name: r.category.slice(0, 18), value: Math.abs(r.amount) })) }],
+        actions: [],
+        voiceSummary: `I found ${rows.length} recent transactions in your profile.`,
+        enforcedGuardrails,
+      };
+    }
+  }
+
+  return maybeDirectSpendAnswer(lastUser, customer);
+}
+
+function extractBlocks(raw: string): { stripped: string; charts: unknown[]; actions: unknown[]; voiceSummary: string } {
+  const charts: unknown[] = [];
+  const actions: unknown[] = [];
+  let voiceSummary = "";
+  const stripped = raw.replace(/```([a-zA-Z0-9_-]*)\s*([\s\S]*?)```/g, (_m: string, tag: string, body: string) => {
+    const txt = (body || "").trim();
+    const lowerTag = (tag || "").toLowerCase();
+    if (lowerTag === "voice") {
+      if (!voiceSummary) voiceSummary = txt.replace(/\s+/g, " ").trim();
+      return "";
+    }
+    try {
+      const parsed = JSON.parse(txt);
+      const t = (parsed && typeof parsed === "object" ? (parsed as { type?: string }).type : "") || "";
+      if (CHART_TYPES.has(t) && Array.isArray((parsed as { data?: unknown }).data)) {
+        charts.push(parsed);
+      } else if (ACTION_TYPES.has(t)) {
+        actions.push(parsed);
+      }
+    } catch (e) {
+      console.warn("Unparseable fenced block, dropping:", e);
+    }
+    return "";
+  }).replace(/\n{3,}/g, "\n\n").trim();
+  return { stripped, charts, actions, voiceSummary };
+}
 
 const DEFAULT_REFUSAL = "I can't help with that here — let me hand you to a human agent.";
 
@@ -247,13 +498,6 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      return new Response(JSON.stringify({ error: "LOVABLE_API_KEY not configured" }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
     const body = (await req.json()) as Body;
     const language = body.language ?? "en";
     const messages = body.messages;
@@ -343,6 +587,28 @@ Deno.serve(async (req) => {
       });
     }
 
+    const recentIntentText = messages.slice(-4).map((m) => m.content).join("\n");
+    const directCustomer = maybeDirectCustomerAnswer(recentIntentText, body.customer);
+    if (directCustomer) {
+      return new Response(JSON.stringify({
+        ...directCustomer,
+        groundedCitations: 1,
+        groundedSources: ["CUSTOMER_PROFILE_JSON"],
+        derivedBank: null,
+        language,
+        enforcedGuardrails: {
+          piiRedaction: !!guardrails.piiRedaction,
+          profanityFilter: !!guardrails.profanityFilter,
+          jailbreakDetection: !!guardrails.jailbreakDetection,
+          blockedTopics: guardrails.blockedTopics?.length ?? 0,
+          allowedLanguages: guardrails.allowedLanguages ?? [],
+          maxTokensPerReply: guardrails.maxTokensPerReply ?? null,
+          maxTurnsPerSession: guardrails.maxTurnsPerSession ?? null,
+          rateLimitPerMinute: guardrails.rateLimitPerMinute ?? null,
+        },
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
 
 
     const enabledDocs = (kb?.docs ?? []).filter((d) => d.enabled && d.status === "indexed");
@@ -356,8 +622,8 @@ Deno.serve(async (req) => {
     // 2) Uploaded file docs (PDF/DOCX/MD/TXT) — extracted text was stored at
     //    ingest time in `bankgpt_kb_contents`. Pull those by doc id.
     const uploadedDocIds = enabledDocs
-      .filter((d) => !urlDocs.includes(d) && (d as any).id)
-      .map((d) => (d as any).id as string);
+      .filter((d) => !urlDocs.includes(d) && d.id)
+      .map((d) => d.id as string);
     let uploadedSources: { url: string; name: string; text: string }[] = [];
     if (uploadedDocIds.length) {
       try {
@@ -373,8 +639,8 @@ Deno.serve(async (req) => {
             console.warn("kb contents fetch failed", error.message);
           } else if (data) {
             uploadedSources = data
-              .filter((r: any) => r.content && r.char_count > 0)
-              .map((r: any) => ({ url: `kb://${r.doc_id}`, name: r.name, text: r.content as string }));
+              .filter((r) => r.content && r.char_count > 0)
+              .map((r) => ({ url: `kb://${r.doc_id}`, name: r.name, text: r.content as string }));
           }
         }
       } catch (e) {
@@ -444,6 +710,19 @@ For any of these, walk the user through the steps inside this wallet app, ask on
       ? `GUARDRAILS (HARD RULES — must obey):\n${guardrailDirectives.map((d) => `  • ${d}`).join("\n")}\nIf you must refuse, reply exactly: "${refusal}"`
       : "";
 
+    const customerBlock = body.customer
+      ? [
+          `IDENTITY ALREADY VERIFIED — the customer is signed in to this wallet app and their full 360° profile is provided below as CUSTOMER_PROFILE_JSON.`,
+          `HARD RULE: NEVER ask the customer for their account number, card number, "last 4 digits", CIF, customer ID, OTP, date of birth, PIN, or any other identity-verification field. Treat any such question as a bug.`,
+          `If the customer mentions an account by nickname (e.g. "wallet", "savings", "salary account", "main", "current"), match it case-insensitively against the accounts in the profile (name, type, nickname, productName). If no nickname is given, default to the primary wallet / current account in the profile. If they only have one account of the relevant type, just use it without asking.`,
+          `Quote real balances, real transactions, real loan terms and real eligibility figures directly from this JSON. Never invent numbers. When the answer involves more than one number, also emit a fenced \`\`\`chart block per the VIZ_PROTOCOL.`,
+          `CUSTOMER_PROFILE_JSON:`,
+          "```json",
+          JSON.stringify(body.customer, null, 2),
+          "```",
+        ].join("\n")
+      : `NO CUSTOMER PROFILE was attached to this request. Do NOT ask the user for account numbers or identity details — instead say plainly: "I can't see your account data right now — please refresh the page so I can reconnect to your profile." Then offer a human handoff.`;
+
     const system = [
       `You are ${agent.name}, an AI specialist agent for ${bankName}.`,
       `Role: ${agent.tagline}`,
@@ -455,11 +734,20 @@ For any of these, walk the user through the steps inside this wallet app, ask on
       standardServicesBlock,
       kbBlock,
       toolBlock,
+      customerBlock,
+      VIZ_PROTOCOL,
       guardrailBlock,
-      `Be concrete, warm, helpful. Never say "as an AI". Never mention OpenAI, Google or Gemini. Never output JSON or code fences.`,
+      `Be concrete, warm, helpful. Never say "as an AI". Never mention OpenAI, Google or Gemini. Prose must never contain raw JSON — only the fenced \`\`\`chart / \`\`\`action / \`\`\`voice blocks described in the protocol.`,
     ].filter(Boolean).join("\n\n");
 
     const recent = messages.slice(-10).map((m) => ({ role: m.role, content: m.content }));
+
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) {
+      return new Response(JSON.stringify({ error: "LOVABLE_API_KEY not configured" }), {
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const aiPayload: Record<string, unknown> = {
       model: body.model || "google/gemini-2.5-flash",
@@ -493,18 +781,22 @@ For any of these, walk the user through the steps inside this wallet app, ask on
     }
 
     const data = await aiRes.json();
-    let reply = data?.choices?.[0]?.message?.content?.trim()
-      ?.replace(/```[\s\S]*?```/g, "")
-      ?.trim() || "(no reply)";
+    const raw = data?.choices?.[0]?.message?.content?.trim() || "(no reply)";
+    const { stripped, charts, actions, voiceSummary } = extractBlocks(raw);
+    let reply = stripped || raw;
 
     if (guardrails.piiRedaction) reply = redactPII(reply);
 
     console.log("[agent-sandbox-chat]", sessionKey,
       "sources=", allSources.length, "lang=", language,
+      "charts=", charts.length, "actions=", actions.length,
       "user=", guardrails.piiRedaction ? redactPII(lastUser).slice(0, 80) : "(redaction off)");
 
     return new Response(JSON.stringify({
       reply,
+      charts,
+      actions,
+      voiceSummary,
       groundedCitations: allSources.length,
       groundedSources: allSources.map((s) => s.url),
       derivedBank,

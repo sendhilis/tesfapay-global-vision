@@ -1,4 +1,5 @@
 import { Fragment, useRef, useState, type ReactNode } from "react";
+import { useNavigate } from "react-router-dom";
 import { useWizard, type BankConfig } from "@/contexts/BankConfigContext";
 import { Diamond } from "./AbxLogo";
 import { THEME_LIST, ABX_THEMES, type ThemeId } from "@/lib/abx-themes";
@@ -829,6 +830,7 @@ export function W35_NBE() {
 
 export function W36_Review() {
   const { config, goTo, publish, published } = useWizard();
+  const navigate = useNavigate();
   const checks = [
     { name: "Identity & Brand", pass: !!config.bank.name && !!config.brand.primaryColor },
     { name: "Languages", pass: config.bank.supportedLanguages.length >= 1 },
@@ -852,7 +854,7 @@ export function W36_Review() {
           <div className="text-[10px] uppercase tracking-widest text-[var(--teal)]">Completeness</div>
           <div className="mt-3 font-serif text-7xl">{score}<span className="text-2xl text-white/40">%</span></div>
           <div className="mt-4 h-1 bg-white/10 rounded-full overflow-hidden"><div className="h-full bg-[var(--teal)]" style={{ width: `${score}%` }} /></div>
-          <button id="w36-golive" onClick={async () => { if (score < 100) { const first = checks.findIndex(c => !c.pass); if (first >= 0) goTo(first * 3); return; } await publish(); window.location.href = "/"; }} className={`mt-6 w-full py-3 rounded-lg font-medium text-[14px] transition ${score === 100 ? "bg-[var(--teal)] text-[var(--ink)] hover:opacity-90" : "bg-white/10 text-white/60 hover:text-white cursor-pointer"}`}>
+          <button id="w36-golive" onClick={async () => { if (score < 100) { const first = checks.findIndex(c => !c.pass); if (first >= 0) goTo(first * 3); return; } await publish(); navigate("/launchpad"); }} className={`mt-6 w-full py-3 rounded-lg font-medium text-[14px] transition ${score === 100 ? "bg-[var(--teal)] text-[var(--ink)] hover:opacity-90" : "bg-white/10 text-white/60 hover:text-white cursor-pointer"}`}>
             {published ? "✓ Published & Live · Open Launchpad" : score === 100 ? "Publish BankConfig & Go Live" : "Jump to first incomplete"}
           </button>
         </div>

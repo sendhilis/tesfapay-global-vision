@@ -29,6 +29,10 @@
 (function () {
   "use strict";
   if (typeof window === "undefined") return;
+  var WIDGET_VERSION = "2026.06.17-directdata";
+  try { console.info("[BankGPT] widget loader v" + WIDGET_VERSION); } catch (_) {}
+  window.__BANKGPT_WIDGET_VERSION__ = WIDGET_VERSION;
+
 
   // ─── locate our own <script> tag ─────────────────────────────────────────
   var script =
@@ -74,6 +78,50 @@
 
   function trim(s) { return (s || "").trim(); }
 
+  var AMARA_FALLBACK_CUSTOMER = {
+    customerId: "CDP-CUST-001",
+    fullName: "Selam Tadesse",
+    firstName: "Selam",
+    primaryLanguage: "am",
+    city: "Addis Ababa",
+    occupation: "Nurse · Black Lion Hospital",
+    currency: "ETB",
+    accounts: [
+      { id: "ACC-1", name: "Primary Savings", type: "savings", provider: "ABX Bank", balance: 64320 },
+      { id: "ACC-2", name: "Current Account", type: "current", provider: "ABX Bank", balance: 12480 },
+      { id: "ACC-3", name: "Telebirr Wallet", type: "wallet", provider: "Telebirr", balance: 3850 }
+    ],
+    spend: {
+      monthlyTotal: 19400,
+      topCategory: "Groceries",
+      weeklyByDay: [
+        { name: "Mon", value: 560 }, { name: "Tue", value: 720 }, { name: "Wed", value: 640 },
+        { name: "Thu", value: 810 }, { name: "Fri", value: 690 }, { name: "Sat", value: 1180 }, { name: "Sun", value: 1040 }
+      ],
+      categoryBreakdown: [
+        { name: "Groceries", value: 4200 }, { name: "Transport", value: 2850 }, { name: "Utilities", value: 2200 },
+        { name: "Remittance", value: 1500 }, { name: "Food", value: 1380 }, { name: "Airtime", value: 760 }
+      ]
+    },
+    recentTransactions: [
+      { date: "Today 11:02", direction: "debit", amount: 850, category: "Transport", counterparty: "Ride ET", channel: "MNO wallet" },
+      { date: "Yesterday", direction: "debit", amount: 3200, category: "Groceries", counterparty: "Shoa Supermarket", channel: "Card" },
+      { date: "Yesterday", direction: "debit", amount: 400, category: "Airtime", counterparty: "Ethio Telecom", channel: "Telebirr" },
+      { date: "2 days ago", direction: "debit", amount: 1500, category: "Remittance", counterparty: "Mother (Bahir Dar)", channel: "P2P" },
+      { date: "3 days ago", direction: "debit", amount: 2200, category: "Utilities", counterparty: "EEU electricity", channel: "Biller" },
+      { date: "5 days ago", direction: "debit", amount: 780, category: "Food", counterparty: "Kategna Restaurant", channel: "Card" }
+    ]
+  };
+
+  function resolveCustomerProfile() {
+    if (ds.customer) {
+      try { return JSON.parse(ds.customer); } catch (e) { console.warn("[BankGPT] invalid data-customer JSON", e); }
+    }
+    if (window.BankGPTCustomer && typeof window.BankGPTCustomer === "object") return window.BankGPTCustomer;
+    if (window.ABX_CDP_CUSTOMER && typeof window.ABX_CDP_CUSTOMER === "object") return window.ABX_CDP_CUSTOMER;
+    return AMARA_FALLBACK_CUSTOMER;
+  }
+
   // ─── helpers ─────────────────────────────────────────────────────────────
   function el(tag, attrs, children) {
     var node = document.createElement(tag);
@@ -112,6 +160,188 @@
     h = h.replace(/\n/g, "<br/>");
     return h;
   }
+
+  function extractEmbeddedBlocks(text) {
+    var charts = [], actions = [], voiceSummary = "";
+    var stripped = String(text || "").replace(/```([a-zA-Z0-9_-]*)\s*([\s\S]*?)```/g, function (_m, tag, body) {
+      var lower = String(tag || "").toLowerCase();
+      var raw = String(body || "").trim();
+      if (lower === "voice") {
+        if (!voiceSummary) voiceSummary = raw.replace(/\s+/g, " ").trim();
+        return "";
+      }
+      try {
+        var parsed = JSON.parse(raw);
+        var t = parsed && parsed.type;
+        if ((t === "pie" || t === "donut" || t === "bar" || t === "line") && Array.isArray(parsed.data)) charts.push(parsed);
+        else if (t) actions.push(parsed);
+      } catch (_) {}
+      return "";
+    }).replace(/\n{3,}/g, "\n\n").trim();
+    return { text: stripped, charts: charts, actions: actions, voiceSummary: voiceSummary };
+  }
+
+  // ─── chart / action renderers (inline SVG, no external deps) ─────────────
+  var CHART_PALETTE = ["#0B3D2E", "#D4AF37", "#1d4ed8", "#dc2626", "#0891b2", "#7c3aed", "#ea580c", "#16a34a"];
+
+  function fmtCurrency(v, ccy) {
+    var n = Number(v) || 0;
+    try {
+      return new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(n) + (ccy ? " " + ccy : "");
+    } catch (_) { return String(n) + (ccy ? " " + ccy : ""); }
+  }
+
+  function pointName(d, fallback) {
+    return String((d && (d.name || d.label || d.category || d.day || d.date || d.merchant || d.counterparty)) || fallback || "");
+  }
+
+  function pointValue(d) {
+    var raw = d && (d.value != null ? d.value : d.amount != null ? d.amount : d.total != null ? d.total : d.debit);
+    return Math.abs(Number(String(raw == null ? 0 : raw).replace(/[^0-9.-]/g, ""))) || 0;
+  }
+
+  function chartSVG(chart) {
+    var type = (chart && chart.type) || "bar";
+    var data = Array.isArray(chart && chart.data) ? chart.data.slice(0, 12) : [];
+    if (!data.length) return "";
+    var ccy = chart.currency || "";
+    var W = 320, H = 180, pad = 24;
+    if (type === "pie" || type === "donut") {
+      var total = data.reduce(function (s, d) { return s + pointValue(d); }, 0) || 1;
+      var cx = W / 2, cy = H / 2, r = 70, ir = type === "donut" ? 38 : 0;
+      var ang = -Math.PI / 2, paths = "";
+      data.forEach(function (d, i) {
+        var v = pointValue(d);
+        var slice = (v / total) * Math.PI * 2;
+        if (slice >= Math.PI * 2 - 0.0001) slice = Math.PI * 2 - 0.0001;
+        var a2 = ang + slice;
+        var large = slice > Math.PI ? 1 : 0;
+        var x1 = cx + r * Math.cos(ang), y1 = cy + r * Math.sin(ang);
+        var x2 = cx + r * Math.cos(a2), y2 = cy + r * Math.sin(a2);
+        var color = CHART_PALETTE[i % CHART_PALETTE.length];
+        if (ir > 0) {
+          var ix1 = cx + ir * Math.cos(a2), iy1 = cy + ir * Math.sin(a2);
+          var ix2 = cx + ir * Math.cos(ang), iy2 = cy + ir * Math.sin(ang);
+          paths += '<path d="M ' + x1 + ' ' + y1 +
+            ' A ' + r + ' ' + r + ' 0 ' + large + ' 1 ' + x2 + ' ' + y2 +
+            ' L ' + ix1 + ' ' + iy1 +
+            ' A ' + ir + ' ' + ir + ' 0 ' + large + ' 0 ' + ix2 + ' ' + iy2 +
+            ' Z" fill="' + color + '"/>';
+        } else {
+          paths += '<path d="M ' + cx + ' ' + cy + ' L ' + x1 + ' ' + y1 +
+            ' A ' + r + ' ' + r + ' 0 ' + large + ' 1 ' + x2 + ' ' + y2 + ' Z" fill="' + color + '"/>';
+        }
+        ang = a2;
+      });
+      return '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img">' + paths + '</svg>';
+    }
+    var max = data.reduce(function (m, d) { var v = pointValue(d); return v > m ? v : m; }, 0) || 1;
+    var innerW = W - pad * 2, innerH = H - pad * 2;
+    if (type === "line") {
+      var step = data.length > 1 ? innerW / (data.length - 1) : 0;
+      var pts = data.map(function (d, i) {
+        var v = pointValue(d);
+        var x = pad + i * step;
+        var y = pad + innerH - (v / max) * innerH;
+        return x + "," + y;
+      }).join(" ");
+      var ticks = "";
+      data.forEach(function (d, i) {
+        var x = pad + i * step;
+        ticks += '<text x="' + x + '" y="' + (H - 6) + '" font-size="9" text-anchor="middle" fill="#64748b">' +
+          escapeHtml(pointName(d, "").slice(0, 6)) + '</text>';
+      });
+      return '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img">' +
+        '<polyline fill="none" stroke="' + CHART_PALETTE[0] + '" stroke-width="2.5" points="' + pts + '"/>' +
+        ticks + '</svg>';
+    }
+    // bar
+    var bw = innerW / data.length;
+    var bars = "";
+    data.forEach(function (d, i) {
+      var v = pointValue(d);
+      var h = (v / max) * innerH;
+      var x = pad + i * bw + 2;
+      var y = pad + innerH - h;
+      var color = CHART_PALETTE[i % CHART_PALETTE.length];
+      bars += '<rect x="' + x + '" y="' + y + '" width="' + (bw - 4) + '" height="' + h +
+        '" rx="3" fill="' + color + '"/>' +
+        '<text x="' + (x + (bw - 4) / 2) + '" y="' + (H - 6) +
+        '" font-size="9" text-anchor="middle" fill="#64748b">' +
+        escapeHtml(pointName(d, "").slice(0, 8)) + '</text>';
+    });
+    return '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + escapeHtml(chart.title || "") + '">' +
+      bars + '</svg>';
+  }
+
+  function chartLegend(chart) {
+    var data = Array.isArray(chart && chart.data) ? chart.data.slice(0, 12) : [];
+    if (!data.length) return "";
+    var ccy = chart.currency || "";
+    return data.map(function (d, i) {
+      var color = CHART_PALETTE[i % CHART_PALETTE.length];
+      return '<span><i style="background:' + color + '"></i>' +
+        escapeHtml(pointName(d, "")) + ' · ' +
+        escapeHtml(fmtCurrency(pointValue(d), ccy)) + '</span>';
+    }).join("");
+  }
+
+  function chartNode(chart) {
+    var card = el("div", { class: "bgpt-chart" });
+    var html = "";
+    if (chart && chart.title) html += '<div class="bgpt-chart-title">' + escapeHtml(chart.title) + "</div>";
+    html += chartSVG(chart);
+    html += '<div class="bgpt-chart-legend">' + chartLegend(chart) + "</div>";
+    card.innerHTML = html;
+    return card;
+  }
+
+  function actionLabel(t) {
+    return ({
+      transfer_bank_to_bank: "Bank transfer",
+      transfer_bank_to_mno: "Wallet transfer",
+      transfer_p2p: "Send to contact",
+      savings_deposit: "Savings deposit",
+      savings_withdraw: "Savings withdrawal",
+      tbill_purchase: "T-Bill purchase",
+      loan_repay: "Loan repayment",
+      transfer: "Transfer",
+    })[t] || "Action";
+  }
+
+  function actionNode(action, onConfirm) {
+    var rows = [
+      ["Amount", action.amount != null ? fmtCurrency(action.amount, action.currency || "ETB") : null],
+      ["From", action.fromAccount],
+      ["To bank", action.toBank],
+      ["To account", action.toAccount],
+      ["To wallet", action.toWallet],
+      ["To MSISDN", action.toMsisdn],
+      ["To contact", action.toContact],
+      ["Memo", action.memo],
+    ].filter(function (r) { return r[1]; });
+    var card = el("div", { class: "bgpt-action" });
+    var html = '<div class="bgpt-action-h">' + escapeHtml(actionLabel(action.type)) + "</div>";
+    rows.forEach(function (r) {
+      html += '<div class="bgpt-action-row"><span>' + escapeHtml(r[0]) +
+        '</span><span class="v">' + escapeHtml(String(r[1])) + "</span></div>";
+    });
+    html += '<div class="bgpt-action-cta">' +
+      '<button data-bgpt-action="confirm">Confirm</button>' +
+      '<button class="sec" data-bgpt-action="cancel">Cancel</button></div>';
+    card.innerHTML = html;
+    card.querySelectorAll("[data-bgpt-action]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var kind = b.getAttribute("data-bgpt-action");
+        if (onConfirm) onConfirm(kind, action);
+        b.parentNode.innerHTML = kind === "confirm"
+          ? '<span style="font-size:11px;color:#16a34a;font-weight:600">✓ Confirmed (simulated)</span>'
+          : '<span style="font-size:11px;color:#94a3b8">Cancelled</span>';
+      });
+    });
+    return card;
+  }
+
 
   // ─── styles (scoped to Shadow DOM) ───────────────────────────────────────
   var CSS = "\n" +
@@ -177,6 +407,24 @@
 ".bgpt-audit-evt .t{font-size:9px;color:#94a3b8;margin-bottom:2px}\n" +
 ".bgpt-audit-dot{position:absolute;top:6px;right:6px;width:8px;height:8px;border-radius:50%;background:#ef4444;border:2px solid var(--bgpt-accent)}\n" +
 ".bgpt-audit-empty{color:#64748b;font-style:italic;padding:4px 0}\n" +
+".bgpt-chart{margin:6px 0 4px;padding:10px;background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:12px;max-width:100%}\n" +
+".bgpt-chart-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#475569;margin-bottom:6px}\n" +
+".bgpt-chart svg{display:block;width:100%;height:auto;overflow:visible}\n" +
+".bgpt-chart-legend{display:flex;flex-wrap:wrap;gap:6px 10px;margin-top:8px;font-size:11px;color:#334155}\n" +
+".bgpt-chart-legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:middle}\n" +
+".bgpt-action{margin:6px 0 4px;padding:10px 12px;background:#fff;border:1px solid rgba(0,0,0,.08);border-left:3px solid var(--bgpt-primary);border-radius:10px;font-size:12.5px}\n" +
+".bgpt-action-h{font-weight:700;color:var(--bgpt-accent);margin-bottom:4px;font-size:12px}\n" +
+".bgpt-action-row{display:flex;justify-content:space-between;gap:8px;padding:1px 0;color:#475569}\n" +
+".bgpt-action-row .v{color:#0f172a;font-weight:600;text-align:right}\n" +
+".bgpt-action-cta{margin-top:8px;display:flex;gap:6px}\n" +
+".bgpt-action-cta button{flex:1;background:var(--bgpt-accent);color:#fff;border:0;border-radius:8px;padding:6px 10px;font-size:12px;font-weight:600;cursor:pointer}\n" +
+".bgpt-action-cta button.sec{background:#f1f5f9;color:#0f172a}\n" +
+".bgpt-quick{display:flex;flex-wrap:wrap;gap:6px;padding:8px 12px 4px;border-top:1px solid rgba(0,0,0,.06);background:linear-gradient(180deg,rgba(248,250,252,.6),rgba(255,255,255,0))}\n" +
+".bgpt-quick-label{width:100%;font-size:10.5px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px}\n" +
+".bgpt-chip{display:inline-flex;align-items:center;gap:5px;background:#fff;border:1px solid rgba(15,23,42,.12);color:#0f172a;border-radius:999px;padding:6px 11px;font-size:12px;font-weight:500;cursor:pointer;transition:all .15s ease;white-space:nowrap}\n" +
+".bgpt-chip:hover{border-color:var(--bgpt-primary);color:var(--bgpt-primary);background:rgba(59,130,246,.06);transform:translateY(-1px)}\n" +
+".bgpt-chip:active{transform:translateY(0)}\n" +
+".bgpt-chip svg{width:12px;height:12px}\n" +
 "@media (max-width:480px){.bgpt-panel{right:8px;left:8px;width:auto;bottom:84px;height:70vh}.bgpt-audit{width:calc(100% - 16px);right:8px}}\n";
 
   // ─── Widget class ────────────────────────────────────────────────────────
@@ -372,11 +620,48 @@
     }, [self.cfg.language === "am" ? "ላክ" : "Send"]);
 
     return el("div", {}, [
+      this.quickActionsNode(),
       el("div", { class: "bgpt-input" }, [this.textareaEl, this.micBtn, this.sendBtn]),
       el("div", { class: "bgpt-foot" }, [
         "Powered by BankGPT · " + escapeHtml(this.cfg.bankName),
       ]),
     ]);
+  };
+
+  Widget.prototype.quickActionsNode = function () {
+    var self = this;
+    var am = this.cfg.language === "am";
+    var presets = [
+      { en: "Check my balance",        am: "ቀሪ ሂሳቤን ይመልከቱ",      icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/></svg>' },
+      { en: "Last week's spend",       am: "ያለፈው ሳምንት ወጪ",       icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-6"/></svg>' },
+      { en: "Spending breakdown",      am: "የወጪ ምድብ",             icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9v9z"/><path d="M21 12A9 9 0 0 0 12 3v9z"/></svg>' },
+      { en: "Loan eligibility",        am: "የብድር ብቁነት",          icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>' },
+      { en: "Recent transactions",     am: "የቅርብ ግብይቶች",         icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>' },
+      { en: "Transfer money",          am: "ገንዘብ ያስተላልፉ",        icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>' },
+    ];
+    var chips = [
+      el("div", { class: "bgpt-quick-label" }, [am ? "በፍጥነት ይጀምሩ" : "Quick actions"]),
+    ];
+    presets.forEach(function (p) {
+      var label = am ? p.am : p.en;
+      chips.push(el("button", {
+        class: "bgpt-chip",
+        type: "button",
+        title: label,
+        onClick: function () { self.unlockAudio(); self.sendPreset(label); },
+        html: p.icon + '<span>' + escapeHtml(label) + '</span>',
+      }));
+    });
+    this.quickEl = el("div", { class: "bgpt-quick" }, chips);
+    return this.quickEl;
+  };
+
+  Widget.prototype.sendPreset = function (text) {
+    if (this.pending || !text) return;
+    if (this.textareaEl) { this.textareaEl.value = ""; this.textareaEl.style.height = "auto"; }
+    this.pushUser(text);
+    this.messages.push({ role: "user", content: text });
+    this.callBackend();
   };
 
   Widget.prototype.toggleLanguage = function () {
@@ -685,16 +970,40 @@
     this.bodyEl.scrollTop = this.bodyEl.scrollHeight;
   };
 
-  Widget.prototype.pushBot = function (text, skipHistory) {
-    var node = el("div", { class: "bgpt-msg bgpt-bot" }, [
-      el("div", { class: "bgpt-bubble", html: mdLite(text) }),
-    ]);
-    this.bodyEl.appendChild(node);
+  Widget.prototype.pushBot = function (text, skipHistory, extras) {
+    extras = extras || {};
+    var embedded = extractEmbeddedBlocks(text);
+    if (!Array.isArray(extras.charts) || !extras.charts.length) extras.charts = embedded.charts;
+    if (!Array.isArray(extras.actions) || !extras.actions.length) extras.actions = embedded.actions;
+    if (!extras.voiceSummary) extras.voiceSummary = embedded.voiceSummary;
+    text = embedded.text || text;
+
+    var bubble = el("div", { class: "bgpt-bubble", html: mdLite(text) });
+    var wrap = el("div", { class: "bgpt-msg bgpt-bot" }, [bubble]);
+    this.bodyEl.appendChild(wrap);
+
+    var charts = Array.isArray(extras.charts) ? extras.charts : [];
+    var actions = Array.isArray(extras.actions) ? extras.actions : [];
+    var self = this;
+    charts.forEach(function (c) {
+      var holder = el("div", { class: "bgpt-msg bgpt-bot" }, [chartNode(c)]);
+      self.bodyEl.appendChild(holder);
+    });
+    actions.forEach(function (a) {
+      var holder = el("div", { class: "bgpt-msg bgpt-bot" }, [
+        actionNode(a, function (kind) {
+          self.logGuardrail({ kind: "Action " + kind, detail: a.type, level: kind === "confirm" ? "ok" : "warn" });
+        }),
+      ]);
+      self.bodyEl.appendChild(holder);
+    });
+
     this.bodyEl.scrollTop = this.bodyEl.scrollHeight;
     if (!skipHistory) {
       this.messages.push({ role: "assistant", content: text });
       if (this.cfg.voice && this.cfg.autoSpeak && text && text.indexOf("⚠️") !== 0) {
-        try { this.speak(text); } catch (_) {}
+        var spoken = (extras.voiceSummary && String(extras.voiceSummary).trim()) || text;
+        try { this.speak(spoken); } catch (_) {}
       }
     }
   };
@@ -755,6 +1064,7 @@
       sessionId: this.sessionId,
       messages: this.messages.slice(-12),
       language: this.cfg.language,
+      customer: resolveCustomerProfile(),
     };
     if (this.cfg.systemPromptOverride) {
       body.agent = {
@@ -805,7 +1115,11 @@
           self.pushBot("⚠️ " + detail);
           console.warn("[BankGPT] backend error", res.status, j);
         } else {
-          self.pushBot(j.reply || "(no response)");
+          self.pushBot(j.reply || "(no response)", false, {
+            charts: j.charts || [],
+            actions: j.actions || [],
+            voiceSummary: j.voiceSummary || "",
+          });
         }
       })
       .catch(function (err) {

@@ -17,7 +17,7 @@ export default defineConfig(({ mode }) => ({
     VitePWA({
       registerType: "autoUpdate",
       injectRegister: "auto",
-      includeAssets: ["favicon.ico", "robots.txt", "icon-192.png", "icon-512.png"],
+      includeAssets: ["favicon.png", "robots.txt"],
       devOptions: {
         enabled: false,
       },
@@ -30,9 +30,9 @@ export default defineConfig(({ mode }) => ({
         navigateFallbackDenylist: [/^\/~oauth/],
       },
       manifest: {
-        name: "ABX — Global Bank Ethiopia",
-        short_name: "ABX",
-        description: "Ethiopia's premier mobile e-wallet by Global Bank Ethiopia",
+        name: "ABX Banking Wizard",
+        short_name: "ABX Wizard",
+        description: "ABX Banking Wizard — design, configure, and launch intelligent banking experiences.",
         theme_color: "#1a6645",
         background_color: "#0d1520",
         display: "standalone",
@@ -42,13 +42,11 @@ export default defineConfig(({ mode }) => ({
         lang: "en",
         categories: ["finance", "utilities"],
         icons: [
-          { src: "/icon-192.png", sizes: "192x192", type: "image/png" },
-          { src: "/icon-512.png", sizes: "512x512", type: "image/png" },
-          { src: "/icon-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
-          { src: "/favicon.ico", sizes: "48x48", type: "image/x-icon" },
+          { src: "/favicon.png", sizes: "512x512", type: "image/png" },
+          { src: "/favicon.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
         ],
         screenshots: [
-          { src: "/icon-512.png", sizes: "512x512", type: "image/png", form_factor: "narrow" },
+          { src: "/favicon.png", sizes: "512x512", type: "image/png", form_factor: "narrow" },
         ],
       },
     }),
