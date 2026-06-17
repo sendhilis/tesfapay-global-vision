@@ -868,12 +868,17 @@ function StepWidget({ agentMeta, config, update, logAudit }: any) {
   const supaKey = (import.meta as any).env?.VITE_SUPABASE_PUBLISHABLE_KEY || "<anon-key>";
   // Minimal embed snippet — the loader sends only the agent id; the chat
   // function resolves persona, KB, and tools from public.bankgpt_agents.
-  const snippet = `<script async src="${loaderOrigin}/embed/bankgpt.js"
+  // Cache-bust the loader URL so host browsers always pick up the latest
+  // widget build (otherwise stale cached bankgpt.js misses the customer
+  // payload / chart rendering fixes and the widget appears "broken").
+  const embedVersion = "2026.06.17-directdata";
+  const snippet = `<script async src="${loaderOrigin}/embed/bankgpt.js?v=${embedVersion}"
   data-agent="${agentMeta.id}"
   data-style="${config.widget.style}"
   data-api="${supaUrl}"
   data-key="${supaKey}"
   data-language="en"></script>`;
+
 
   async function publishToRegistry() {
     setPublishState("publishing");

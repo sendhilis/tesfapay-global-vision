@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.kyc-verify]
 verify_jwt = false
+
+[functions.bank-config-publish]
+verify_jwt = false

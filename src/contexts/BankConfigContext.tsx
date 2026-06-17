@@ -623,25 +623,17 @@ export function WizardProvider({ children }: { children: ReactNode }) {
         if (cancelled) return;
         if (!error && data?.config) {
           const remote = data.config as Partial<BankConfig>;
-          // Merge in any unsaved local changes so wizard toggles that
-          // failed to reach the DB (e.g. RLS-blocked saves) survive a
-          // reload. We take the UNION of enabledModules.
-          let localUnsaved: Partial<BankConfig> | null = null;
-          try {
-            const raw = typeof window !== "undefined" ? window.localStorage.getItem(STORAGE_KEY) : null;
-            if (raw) {
-              const parsed = JSON.parse(raw);
-              if (parsed?.config) localUnsaved = parsed.config as Partial<BankConfig>;
-            }
-          } catch { /* ignore */ }
-          const mergedEnabled = Array.from(new Set([
-            ...((remote.enabledModules as string[] | undefined) ?? []),
-            ...((localUnsaved?.enabledModules as string[] | undefined) ?? []),
-          ]));
+          // Remote BankConfig is the single source of truth for which
+          // platform modules are enabled. Do NOT union with stale
+          // localStorage — that caused the wizard to show only the 2
+          // modules the user picked while Launchpad/Go-Live re-inflated
+          // to the older 7-module set from a previous session.
           setConfig({
             ...defaultBankConfig,
             ...remote,
-            ...(mergedEnabled.length ? { enabledModules: mergedEnabled } : {}),
+            ...(Array.isArray(remote.enabledModules)
+              ? { enabledModules: remote.enabledModules as string[] }
+              : {}),
           });
           setPublished(!!data.is_published);
           setLastSyncedAt(new Date(data.updated_at).getTime());
@@ -693,7 +685,8 @@ export function WizardProvider({ children }: { children: ReactNode }) {
     } catch { /* ignore */ }
   }, [config, stepIdx, completed, published]);
 
-  // Debounced auto-save of config + published flag to DB
+  // Debounced auto-save of config + published flag via edge function
+  // (service-role write — RLS on bank_configs blocks anon writes).
   useEffect(() => {
     if (!hydrated.current || skipRemoteSave.current) return;
     setSyncState("saving");
@@ -701,14 +694,12 @@ export function WizardProvider({ children }: { children: ReactNode }) {
       const stamp = Date.now();
       localWriteAt.current = stamp;
       try {
-        const { error } = await supabase
-          .from("bank_configs")
-          .upsert({
-            id: REMOTE_CONFIG_ID,
+        const { error } = await supabase.functions.invoke("bank-config-publish", {
+          body: {
             config: JSON.parse(JSON.stringify(config)),
-            is_published: published,
-            updated_at: new Date(stamp).toISOString(),
-          });
+            isPublished: published,
+          },
+        });
         if (error) throw error;
         setLastSyncedAt(stamp);
         setSyncState("saved");
@@ -763,14 +754,12 @@ export function WizardProvider({ children }: { children: ReactNode }) {
     const stamp = Date.now();
     localWriteAt.current = stamp;
     try {
-      const { error } = await supabase
-        .from("bank_configs")
-        .upsert({
-          id: REMOTE_CONFIG_ID,
+      const { error } = await supabase.functions.invoke("bank-config-publish", {
+        body: {
           config: JSON.parse(JSON.stringify(config)),
-          is_published: published,
-          updated_at: new Date(stamp).toISOString(),
-        });
+          isPublished: published,
+        },
+      });
       if (error) throw error;
       setLastSyncedAt(stamp);
       setSyncState("saved");
@@ -785,21 +774,90 @@ export function WizardProvider({ children }: { children: ReactNode }) {
     setSyncState("saving");
     const stamp = Date.now();
     localWriteAt.current = stamp;
+
+    // ── GO-LIVE diagnostic snapshot ─────────────────────────────────
+    // Surfaces the exact branding + enabled modules being published so
+    // operators can verify in DevTools that the wizard state lands in
+    // BankConfig as expected.
     try {
-      const { error } = await supabase
-        .from("bank_configs")
-        .upsert({
-          id: REMOTE_CONFIG_ID,
+      const brand = config.brand ?? ({} as BankConfig["brand"]);
+      const enabledModuleIds = config.enabledModules ?? [];
+      const enabledAgents = Object.entries(config.ai?.agents ?? {})
+        .filter(([, a]) => (a as { enabled?: boolean })?.enabled)
+        .map(([id]) => id);
+      // eslint-disable-next-line no-console
+      console.groupCollapsed(
+        `%c[ABX · GO LIVE] ${config.bank?.name ?? "(unnamed bank)"}`,
+        "color:#0ea5a4;font-weight:bold;",
+      );
+      // eslint-disable-next-line no-console
+      console.log("Bank:", {
+        name: config.bank?.name,
+        shortName: config.bank?.shortName,
+        tagline: config.bank?.tagline,
+        country: config.bank?.country,
+        languages: config.bank?.supportedLanguages,
+      });
+      // eslint-disable-next-line no-console
+      console.log("Branding:", {
+        themeId: config.themeId,
+        accentShift: config.accentShift,
+        primaryColor: brand.primaryColor,
+        secondaryColor: (brand as { secondaryColor?: string }).secondaryColor,
+        accentColor: (brand as { accentColor?: string }).accentColor,
+        fontHeading: (brand as { fontHeading?: string }).fontHeading,
+        fontBody: (brand as { fontBody?: string }).fontBody,
+        logoUrl: (brand as { logoUrl?: string }).logoUrl,
+        monogram: (brand as { monogram?: string }).monogram,
+      });
+      // eslint-disable-next-line no-console
+      console.log(
+        `Enabled platform modules (${enabledModuleIds.length}):`,
+        enabledModuleIds,
+      );
+      // eslint-disable-next-line no-console
+      console.log(
+        `Enabled AI mesh agents (${enabledAgents.length}):`,
+        enabledAgents,
+      );
+      // eslint-disable-next-line no-console
+      console.groupEnd();
+    } catch (logErr) {
+      // eslint-disable-next-line no-console
+      console.warn("[BankConfig] go-live diagnostic log failed:", logErr);
+    }
+
+    try {
+      const { error } = await supabase.functions.invoke("bank-config-publish", {
+        body: {
           config: JSON.parse(JSON.stringify(config)),
-          is_published: true,
-          updated_at: new Date(stamp).toISOString(),
-        });
+          isPublished: true,
+        },
+      });
       if (error) throw error;
       setLastSyncedAt(stamp);
       setSyncState("saved");
+      // eslint-disable-next-line no-console
+      console.info(
+        "%c[ABX · GO LIVE] BankConfig published ✓",
+        "color:#16a34a;font-weight:bold;",
+        { stamp, id: REMOTE_CONFIG_ID, enabledModules: config.enabledModules },
+      );
     } catch (e) {
-      console.warn("[BankConfig] publish failed:", e);
+      // Surface loudly — silent failures previously caused production
+      // Launchpad to keep reading a stale module set.
+      console.error("[BankConfig] publish failed:", e);
       setSyncState("error");
+      try {
+        if (typeof window !== "undefined") {
+          alert(
+            "Publish failed — your module selection was NOT saved.\n\n" +
+              (e instanceof Error ? e.message : String(e)) +
+              "\n\nOpen the browser console for details, then try again.",
+          );
+        }
+      } catch { /* ignore */ }
+      throw e;
     }
   }, [config]);
 
